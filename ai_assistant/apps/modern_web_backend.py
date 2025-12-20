@@ -292,6 +292,10 @@ class ModernAssistant:
         self.wake_word_detector = None
         self.current_language = "hinglish"
         
+        # Stop generation tracking
+        self.active_requests = {}  # request_id -> session_id
+        self.stop_flags = {}  # request_id -> threading.Event()
+        
         # Initialize components
         self.init_multimodal_ai()
         self.init_conversational_ai()
@@ -663,13 +667,30 @@ class ModernAssistant:
         
         return network_stats
     
-    def process_command(self, command_text, model_preference=None):
+    def stop_generation(self, request_id):
+        """Stop ongoing generation for a specific request"""
+        if request_id in self.stop_flags:
+            self.stop_flags[request_id].set()
+            print(f"🛑 Stop flag set for request: {request_id}")
+        if request_id in self.active_requests:
+            del self.active_requests[request_id]
+    
+    def process_command(self, command_text, model_preference=None, request_id=None):
         """Process user command with multilingual support"""
         log_query(command_text)
+        
+        # Set up stop flag for this request if request_id provided
+        if request_id:
+            self.stop_flags[request_id] = threading.Event()
+        
         try:
+            # Check if generation was stopped
+            if request_id and self.stop_flags.get(request_id) and self.stop_flags[request_id].is_set():
+                return "Generation stopped by user"
+            
             # Process with multilingual support first
             if self.multilingual:
-                response = self.process_multilingual_command(command_text, model_preference)
+                response = self.process_multilingual_command(command_text, model_preference, request_id)
                 log_reply(response)
                 return response
             
@@ -679,6 +700,10 @@ class ModernAssistant:
                     save_to_memory("user", f"Command: {command_text}")
             except Exception as mem_err:
                 print(f"Memory save error (non-fatal): {mem_err}")
+            
+            # Check again before AI processing
+            if request_id and self.stop_flags.get(request_id) and self.stop_flags[request_id].is_set():
+                return "Generation stopped by user"
             
             # Use conversational AI if available
             if self.conversational_ai:
@@ -693,11 +718,19 @@ class ModernAssistant:
             error_details = traceback.format_exc()
             print(f"Command processing error details:\n{error_details}")
             return f"Error processing command: {str(e)}"
+        finally:
+            # Clean up stop flag
+            if request_id and request_id in self.stop_flags:
+                del self.stop_flags[request_id]
     
-    def process_multilingual_command(self, command_text, model_preference=None):
+    def process_multilingual_command(self, command_text, model_preference=None, request_id=None):
         """Process command with full multilingual support"""
         log_query(command_text)
         try:
+            # Check if generation was stopped
+            if request_id and self.stop_flags.get(request_id) and self.stop_flags[request_id].is_set():
+                return "Generation stopped by user"
+            
             # Detect language
             language_context = self.multilingual.detect_language(command_text)
             log_module_usage('multilingual', 'detect_language')
@@ -2302,6 +2335,50 @@ def handle_connect():
 def handle_disconnect():
     """Handle client disconnection"""
     print(f"Client disconnected: {request.sid}")
+    # Clean up any active generations for this client
+    if hasattr(assistant, 'active_requests'):
+        active_reqs = [req_id for req_id, sid in assistant.active_requests.items() if sid == request.sid]
+        for req_id in active_reqs:
+            assistant.stop_generation(req_id)
+
+@socketio.on('stop_generation')
+def handle_stop_generation(data):
+    """Handle request to stop ongoing AI generation"""
+    try:
+        request_id = data.get('requestId')
+        
+        if not request_id:
+            emit('stop_generation_response', {
+                'success': False,
+                'error': 'No request ID provided',
+                'timestamp': datetime.now().isoformat()
+            })
+            return
+        
+        # Stop the generation
+        if hasattr(assistant, 'stop_generation'):
+            assistant.stop_generation(request_id)
+            
+        emit('stop_generation_response', {
+            'success': True,
+            'requestId': request_id,
+            'message': 'Generation stopped',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        # Log the stop action
+        if audit_logger:
+            audit_logger.log_event('stop_generation', f"Generation stopped: {request_id}", request.sid)
+        
+        print(f"🛑 Generation stopped: {request_id}")
+        
+    except Exception as e:
+        print(f"❌ Error stopping generation: {str(e)}")
+        emit('stop_generation_response', {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        })
 
 @socketio.on('command')
 def handle_command(data):
@@ -2321,6 +2398,7 @@ def handle_command(data):
         command = data.get('command', '')
         message = data.get('message', command)  # Support both 'command' and 'message'
         model = data.get('model')  # Get model preference
+        request_id = data.get('requestId')  # Get request ID for stop functionality
         
         if command or message:
             # Use the actual command/message
@@ -2330,8 +2408,16 @@ def handle_command(data):
             if audit_logger:
                 audit_logger.log_event('websocket_command', f"WebSocket command: {user_input[:100]}", request.sid)
             
+            # Track active request
+            if request_id and hasattr(assistant, 'active_requests'):
+                assistant.active_requests[request_id] = request.sid
+            
             # Process command with proper error handling
-            response = assistant.process_command(user_input, model_preference=model)
+            response = assistant.process_command(user_input, model_preference=model, request_id=request_id)
+            
+            # Clean up active request tracking
+            if request_id and hasattr(assistant, 'active_requests'):
+                assistant.active_requests.pop(request_id, None)
             
             # Enhanced response format
             emit('command_response', {

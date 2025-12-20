@@ -88,6 +88,28 @@ except ImportError as e:
     AUTOMATION_AVAILABLE = False
     # Fallback functions will be defined below
 
+# Import Learning Router for automatic AI training
+try:
+    from auto_learning_router import LearningDataRouter
+    learning_router = LearningDataRouter()
+    LEARNING_ROUTER_AVAILABLE = True
+    print("✅ Learning router initialized - AI will learn from all interactions")
+except ImportError as e:
+    print(f"⚠️ Learning router not available: {e}")
+    learning_router = None
+    LEARNING_ROUTER_AVAILABLE = False
+
+# Import Smart Memory Retrieval for answering from past conversations
+try:
+    from smart_memory_retrieval import SmartMemoryRetrieval, enhance_response_with_memory
+    memory_retriever = SmartMemoryRetrieval()
+    SMART_MEMORY_AVAILABLE = True
+    print("✅ Smart memory retrieval initialized - AI can answer from past conversations")
+except ImportError as e:
+    print(f"⚠️ Smart memory retrieval not available: {e}")
+    memory_retriever = None
+    SMART_MEMORY_AVAILABLE = False
+
 # Import multimodal AI if available
 try:
     from ai_assistant.multimodal import MultiModalAI
@@ -633,6 +655,16 @@ class ModernAssistant:
             try:
                 if AUTOMATION_AVAILABLE:
                     save_to_memory("user", f"Command: {command_text}")
+                    
+                # Route to learning systems
+                if LEARNING_ROUTER_AVAILABLE and learning_router:
+                    learning_router.route_conversation(
+                        speaker="user",
+                        content=command_text,
+                        category="command",
+                        importance=3,
+                        success=True
+                    )
             except Exception as mem_err:
                 print(f"Memory save error (non-fatal): {mem_err}")
             
@@ -683,6 +715,16 @@ class ModernAssistant:
             try:
                 if AUTOMATION_AVAILABLE:
                     save_to_memory("user", f"Command ({language_context.detected_language.value}): {command_text}")
+                    
+                # Route to learning systems for both voice and chat
+                if LEARNING_ROUTER_AVAILABLE and learning_router:
+                    learning_router.route_conversation(
+                        speaker="user",
+                        content=command_text,
+                        category="command",
+                        importance=4,  # Higher importance for multilingual commands
+                        success=True
+                    )
             except Exception as mem_err:
                 print(f"Memory save error (non-fatal): {mem_err}")
                 # Continue processing even if memory save fails
@@ -888,6 +930,17 @@ Just speak naturally - I understand context! ðŸŽ‰"""
             if context is None:
                 context = {}
             
+            # 0. CHECK SMART MEMORY FIRST (for questions)
+            if '?' in message and SMART_MEMORY_AVAILABLE and memory_retriever:
+                try:
+                    memory_answer = memory_retriever.answer_from_memory(message)
+                    if memory_answer:
+                        # Found answer in memory!
+                        response_text = f"💭 **From Memory**: {memory_answer}\n\n"
+                        features_used.append("memory_retrieval")
+                except Exception as e:
+                    print(f"Memory retrieval error: {e}")
+            
             # 1. MOOD DETECTION
             if self.conversational_ai and message:
                 mood = self.conversational_ai.detect_mood(message).value
@@ -1046,6 +1099,27 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                     # Save to memory
                     save_to_memory("enhanced_chat", f"User: {message}\nResponse: {response_text}")
                     features_used.append("memory_storage")
+                    
+                    # Route to learning systems - BOTH VOICE AND CHAT
+                    if LEARNING_ROUTER_AVAILABLE and learning_router:
+                        # Determine if it's a question
+                        is_question = '?' in message
+                        learning_router.route_conversation(
+                            speaker="user",
+                            content=message,
+                            category="question" if is_question else "chat",
+                            importance=4 if is_question else 3,
+                            success=True
+                        )
+                        # Also route the response
+                        learning_router.route_conversation(
+                            speaker="assistant",
+                            content=response_text,
+                            category="response",
+                            importance=3,
+                            success=True
+                        )
+                        features_used.append("ai_learning")
                     
                     # Save knowledge if it's informational
                     if any(word in processed_message.lower() for word in ['learn', 'remember', 'know', 'fact']):
@@ -1581,6 +1655,153 @@ def learning_dashboard():
 
 # ==================== LEARNING SYSTEMS ENDPOINTS ====================
 # Comprehensive API for all 27 learning systems
+
+# Import Learning Dashboard API
+try:
+    from learning_dashboard_api import LearningDashboardAPI
+    dashboard_api = LearningDashboardAPI()
+    DASHBOARD_API_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Dashboard API not available: {e}")
+    dashboard_api = None
+    DASHBOARD_API_AVAILABLE = False
+
+@app.route('/api/learning/dashboard')
+@jwt_required(optional=True)
+def api_learning_dashboard():
+    """Get complete learning dashboard data"""
+    try:
+        if not DASHBOARD_API_AVAILABLE or not dashboard_api:
+            return jsonify({"error": "Dashboard API not available"}), 503
+        
+        data = dashboard_api.get_dashboard_data()
+        return jsonify({
+            "success": True,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Dashboard API error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/learning/databases')
+@jwt_required(optional=True)
+def api_learning_databases():
+    """Get list of all learning databases with stats"""
+    try:
+        if not DASHBOARD_API_AVAILABLE or not dashboard_api:
+            return jsonify({"error": "Dashboard API not available"}), 503
+        
+        databases = dashboard_api.get_database_stats()
+        return jsonify({
+            "success": True,
+            "databases": databases,
+            "total": len(databases)
+        })
+    except Exception as e:
+        logger.error(f"Databases API error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/learning/database/<db_name>/<table_name>')
+@jwt_required(optional=True)
+def api_database_content(db_name, table_name):
+    """Get content from a specific database table"""
+    try:
+        if not DASHBOARD_API_AVAILABLE or not dashboard_api:
+            return jsonify({"error": "Dashboard API not available"}), 503
+        
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        content = dashboard_api.get_database_content(db_name, table_name, limit, offset)
+        return jsonify({
+            "success": True,
+            "database": db_name,
+            "table": table_name,
+            "content": content
+        })
+    except Exception as e:
+        logger.error(f"Database content error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/learning/memory/search')
+@jwt_required(optional=True)
+def api_memory_search():
+    """Search memory database"""
+    try:
+        if not DASHBOARD_API_AVAILABLE or not dashboard_api:
+            return jsonify({"error": "Dashboard API not available"}), 503
+        
+        query = request.args.get('q', '')
+        limit = request.args.get('limit', 20, type=int)
+        
+        if not query:
+            return jsonify({"error": "Query parameter 'q' required"}), 400
+        
+        results = dashboard_api.search_memory(query, limit)
+        return jsonify({
+            "success": True,
+            "query": query,
+            "results": results,
+            "count": len(results)
+        })
+    except Exception as e:
+        logger.error(f"Memory search error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/learning/documentation')
+@jwt_required(optional=True)
+def api_learning_documentation():
+    """Serve HOW_AI_LEARNS.md documentation"""
+    try:
+        doc_path = Path(__file__).parent.parent.parent / 'HOW_AI_LEARNS.md'
+        
+        if not doc_path.exists():
+            return jsonify({"error": "Documentation not found"}), 404
+        
+        with open(doc_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return jsonify({
+            "success": True,
+            "content": content,
+            "format": "markdown"
+        })
+    except Exception as e:
+        logger.error(f"Documentation API error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/logs/recent')
+@jwt_required(optional=True)
+def api_logs_recent():
+    """Get recent log entries"""
+    try:
+        log_dir = Path(__file__).parent.parent.parent / 'logs'
+        
+        # Get most recent log file
+        log_files = list(log_dir.glob('**/*.log'))
+        if not log_files:
+            return jsonify({"error": "No log files found"}), 404
+        
+        # Sort by modification time
+        latest_log = max(log_files, key=lambda p: p.stat().st_mtime)
+        
+        # Read last N lines
+        limit = request.args.get('limit', 100, type=int)
+        
+        with open(latest_log, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            recent_lines = lines[-limit:]
+        
+        return jsonify({
+            "success": True,
+            "log_file": latest_log.name,
+            "lines": recent_lines,
+            "total_lines": len(lines)
+        })
+    except Exception as e:
+        logger.error(f"Logs API error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/learning/stats/all')
 @jwt_required(optional=True)

@@ -20,7 +20,10 @@ __author__ = "YourDaddy AI Assistant"
 from .core import *
 from .memory import *
 from .system import *
-from .google_calendar import *
+try:
+    from .google_calendar import *
+except ImportError:
+    pass  # Google Calendar dependencies not available
 from .email_handler import *
 from .music import *
 from .file_ops import *

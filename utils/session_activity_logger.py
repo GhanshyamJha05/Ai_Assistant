@@ -17,7 +17,8 @@ class SessionActivityLogger:
     
     def __init__(self):
         self.session_id = SessionManager.get_current_session()
-        self.activities_dir = Path('logs/activities')
+        self.current_date = SessionManager.get_current_date()
+        self.activities_dir = Path('logs') / self.current_date / 'activities'
         self.activities_dir.mkdir(parents=True, exist_ok=True)
         
         # Category-specific loggers

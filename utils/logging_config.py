@@ -32,12 +32,19 @@ class SessionManager:
     
     _current_session = None
     _session_start_time = None
+    _current_date = None
+    
+    @classmethod
+    def get_current_date(cls):
+        """Get current date in YYYY-MM-DD format for folder organization"""
+        return datetime.now().strftime('%Y-%m-%d')
     
     @classmethod
     def start_new_session(cls):
         """Start a new logging session with timestamp"""
         cls._session_start_time = datetime.now()
-        cls._current_session = cls._session_start_time.strftime('%Y%m%d_%H%M%S')
+        cls._current_session = cls._session_start_time.strftime('%H%M%S')  # Only time, not date
+        cls._current_date = cls.get_current_date()
         
         # Create session info file
         session_info = {
@@ -48,15 +55,16 @@ class SessionManager:
             'platform': sys.platform
         }
         
-        # Save session info
-        session_file = Path('logs/sessions') / f'session_{cls._current_session}.json'
+        # Save session info in date-based folder
+        date_folder = cls.get_current_date()
+        session_file = Path('logs') / date_folder / 'sessions' / f'session_{cls._current_session}.json'
         session_file.parent.mkdir(parents=True, exist_ok=True)
         
         import json
         with open(session_file, 'w') as f:
             json.dump(session_info, f, indent=2)
         
-        print(f"📅 New session started: {cls._current_session}")
+        print(f"📅 New session started: {date_folder}/{cls._current_session}")
         return cls._current_session
     
     @classmethod
@@ -78,22 +86,33 @@ class LoggingConfig:
     # Base log directory structure
     BASE_LOG_DIR = Path("logs")
     
-    # Module-specific log directories
-    LOG_DIRS = {
-        'app': BASE_LOG_DIR / 'app',              # Main application logs
-        'modules': BASE_LOG_DIR / 'modules',      # Module-specific logs
-        'backend': BASE_LOG_DIR / 'backend',      # Web backend logs
-        'api': BASE_LOG_DIR / 'api',              # API request/response logs
-        'security': BASE_LOG_DIR / 'security',    # Security and authentication logs
-        'errors': BASE_LOG_DIR / 'errors',        # All error logs
-        'performance': BASE_LOG_DIR / 'performance',  # Performance metrics
-        'integration': BASE_LOG_DIR / 'integration',  # Third-party integrations
-        'voice': BASE_LOG_DIR / 'voice',          # Voice recognition logs
-        'multimodal': BASE_LOG_DIR / 'multimodal',  # Multimodal AI logs
-        'system': BASE_LOG_DIR / 'system',        # System operations logs
-        'sessions': BASE_LOG_DIR / 'sessions',    # Session information
-        'activities': BASE_LOG_DIR / 'activities', # User activities per session
-    }
+    @classmethod
+    def get_dated_log_dirs(cls):
+        """Get log directories organized by current date"""
+        current_date = SessionManager.get_current_date()
+        date_base = cls.BASE_LOG_DIR / current_date
+        
+        return {
+            'app': date_base / 'app',              # Main application logs
+            'modules': date_base / 'modules',      # Module-specific logs
+            'backend': date_base / 'backend',      # Web backend logs
+            'api': date_base / 'api',              # API request/response logs
+            'security': date_base / 'security',    # Security and authentication logs
+            'errors': date_base / 'errors',        # All error logs
+            'performance': date_base / 'performance',  # Performance metrics
+            'integration': date_base / 'integration',  # Third-party integrations
+            'voice': date_base / 'voice',          # Voice recognition logs
+            'multimodal': date_base / 'multimodal',  # Multimodal AI logs
+            'system': date_base / 'system',        # System operations logs
+            'sessions': date_base / 'sessions',    # Session information
+            'activities': date_base / 'activities', # User activities per session
+        }
+    
+    # Keep LOG_DIRS as property for backward compatibility
+    @classmethod
+    @property
+    def LOG_DIRS(cls):
+        return cls.get_dated_log_dirs()
     
     # Log format templates
     DETAILED_FORMAT = '%(asctime)s | %(name)s | %(levelname)-8s | [%(filename)s:%(lineno)d] | %(funcName)s | %(message)s'
@@ -123,8 +142,9 @@ class LoggingConfig:
         if cls._initialized:
             return
         
-        # Create all log directories
-        for log_dir in cls.LOG_DIRS.values():
+        # Create all log directories with date-based structure
+        log_dirs = cls.get_dated_log_dirs()
+        for log_dir in log_dirs.values():
             log_dir.mkdir(parents=True, exist_ok=True)
         
         # Create a README in logs directory
@@ -241,7 +261,8 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """
         cls.initialize()
         
-        log_dir = cls.LOG_DIRS.get(log_category, cls.LOG_DIRS['modules'])
+        log_dirs = cls.get_dated_log_dirs()
+        log_dir = log_dirs.get(log_category, log_dirs['modules'])
         
         if use_session_files:
             session_id = SessionManager.get_current_session()

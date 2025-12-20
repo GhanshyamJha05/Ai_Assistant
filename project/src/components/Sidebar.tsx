@@ -1,4 +1,4 @@
-import { Home, LayoutDashboard, Grid3x3, Mic, MessageSquare, Settings, LogOut, User, Activity } from 'lucide-react';
+import { Home, LayoutDashboard, Grid3x3, Mic, MessageSquare, Settings, LogOut, User, Activity, Brain } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: string;
@@ -19,6 +19,7 @@ const Sidebar = ({ activeSection, setActiveSection, username, onLogout }: Sideba
   const menuItems: MenuItem[] = [
     { id: 'command', icon: Home, label: 'Command' },
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { id: 'learning', icon: Brain, label: 'AI Learning' },
     { id: 'advanced', icon: Activity, label: 'Adv. Dashboard', isExternal: true, href: '/dashboard' },
     { id: 'apps', icon: Grid3x3, label: 'Apps' },
     { id: 'voice', icon: Mic, label: 'Voice' },

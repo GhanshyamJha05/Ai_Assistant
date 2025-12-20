@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, MoreVertical, Copy, Check, RefreshCw, Edit2, Sparkles, ChevronDown, Trash2 } from 'lucide-react';
+import { Send, Paperclip, MoreVertical, Copy, Check, RefreshCw, Edit2, Sparkles, ChevronDown, Trash2, Square } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,6 +36,7 @@ const ConversationSpace = () => {
   const [showSessions, setShowSessions] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -114,6 +115,7 @@ const ConversationSpace = () => {
           return updated;
         });
         setIsProcessing(false);
+        setCurrentRequestId(null);
       } else {
         setMessages((prev) => {
           const updated = [...prev];
@@ -318,8 +320,11 @@ const ConversationSpace = () => {
     setIsProcessing(true);
 
     try {
+      const requestId = `req-${Date.now()}`;
+      setCurrentRequestId(requestId);
+      
       if (socket && isConnected) {
-        socket.emit('command', { message: text, model: selectedModel });
+        socket.emit('command', { message: text, model: selectedModel, requestId });
       } else {
         // Fallback to REST API
         const response = await fetch('/api/command', {
@@ -367,13 +372,19 @@ const ConversationSpace = () => {
   };
 
   const stopGeneration = () => {
+    // Emit stop signal to backend
+    if (socket && isConnected && currentRequestId) {
+      socket.emit('stop_generation', { requestId: currentRequestId });
+    }
+    
     setIsProcessing(false);
+    setCurrentRequestId(null);
     setMessages(prev => {
       const updated = [...prev];
       const lastMsg = updated[updated.length - 1];
       if (lastMsg?.isStreaming) {
         lastMsg.isStreaming = false;
-        lastMsg.text += ' [Generation stopped]';
+        lastMsg.text += ' [Generation stopped by user]';
       }
       return updated;
     });
@@ -609,6 +620,20 @@ const ConversationSpace = () => {
                         ))}
                       </div>
                     )}
+                    
+                    {/* Regenerate button - Show prominently for the last AI message */}
+                    {message.sender === 'ai' && !message.isStreaming && index === messages.filter(m => m.text && m.text.trim() !== '').length - 1 && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          onClick={() => handleRegenerate(message.id)}
+                          className="px-3 py-1.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#00CEC9]/50 transition-all flex items-center gap-1.5"
+                          title="Regenerate response"
+                        >
+                          <RefreshCw size={14} className="text-white/70" />
+                          <span className="text-white/70">Regenerate</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
@@ -653,18 +678,24 @@ const ConversationSpace = () => {
                 </div>
               </div>
 
-              <button
-                onClick={handleSend}
-                disabled={isProcessing || !inputText.trim()}
-                className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
-                title="Send message"
-              >
-                {isProcessing ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
+              {isProcessing ? (
+                <button
+                  onClick={stopGeneration}
+                  className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0"
+                  title="Stop generation"
+                >
+                  <Square size={16} fill="currentColor" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!inputText.trim()}
+                  className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
+                  title="Send message"
+                >
                   <Send size={20} />
-                )}
-              </button>
+                </button>
+              )}
             </div>
             
             <div className="mt-2 text-xs text-white/40 text-center">

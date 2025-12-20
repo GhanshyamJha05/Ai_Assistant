@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import CommandCenter from './components/CommandCenter';
 import Dashboard from './components/Dashboard';
+import LearningDashboard from './components/LearningDashboard';
 import ApplicationGrid from './components/ApplicationGrid';
 import VoiceInterface from './components/VoiceInterface';
 import ConversationSpace from './components/ConversationSpace';
@@ -148,6 +149,8 @@ function App() {
           return <CommandCenter language={language} setLanguage={setLanguage} />;
         case 'dashboard':
           return <Dashboard language={language} />;
+        case 'learning':
+          return <LearningDashboard />;
         case 'apps':
           return <ApplicationGrid language={language} />;
         case 'voice':

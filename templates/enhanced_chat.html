@@ -280,6 +280,39 @@
             background-color: #1a7f64;
         }
 
+        .stop-btn {
+            background-color: #ef4444;
+            /* Red color for stop button */
+            color: white;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .stop-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .regenerate-btn {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+
+        .regenerate-btn:hover {
+            background-color: var(--hover-color);
+            color: var(--text-primary);
+            border-color: var(--accent-color);
+        }
+
         .disclaimer {
             font-size: 12px;
             color: var(--text-secondary);
@@ -360,6 +393,21 @@
         <div class="new-chat-btn" onclick="clearChat()">
             <span>+</span> New chat
         </div>
+        <script>
+        // Initialize variables
+        let socket;
+        let isConnected = false;
+        let selectedImage = null;
+        let currentContext = null;
+        let isProcessing = false;
+        let currentRequestId = null;
+        let lastUserMessage = null;
+        let lastAIMessageElement = null;
+        
+        socket = io();
+        
+        socket.on('connect', function() {
+        isConnected = true;
         console.log('Connected to server');
         });
 
@@ -439,11 +487,15 @@
         }
 
         showTyping();
+        isProcessing = true;
+        currentRequestId = 'req-' + Date.now();
+        updateSendButton();
 
         socket.emit('enhanced_chat', {
         message: message,
         context: currentContext || {},
-        image: selectedImage
+        image: selectedImage,
+        requestId: currentRequestId
         });
 
         // Clear input and image
@@ -458,6 +510,11 @@
         const messagesContainer = document.getElementById('chat-messages');
         const messageElement = document.createElement('div');
         messageElement.className = `message ${sender}`;
+
+        // Track last user message for regeneration
+        if (sender === 'user') {
+            lastUserMessage = content;
+        }
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
@@ -479,6 +536,16 @@
 
         messageElement.appendChild(avatar);
         messageElement.appendChild(messageContent);
+
+        // Add regenerate button for AI messages
+        if (sender === 'assistant' || sender === 'ai') {
+            const regenerateBtn = document.createElement('button');
+            regenerateBtn.className = 'regenerate-btn';
+            regenerateBtn.innerHTML = '↻ Regenerate';
+            regenerateBtn.onclick = () => regenerateResponse();
+            messageContent.appendChild(regenerateBtn);
+            lastAIMessageElement = messageElement;
+        }
 
         // Add suggestions if available
         if (metadata.suggestions && metadata.suggestions.length > 0) {
@@ -521,6 +588,34 @@
 
         function hideTyping() {
         document.getElementById('typing-indicator').style.display = 'none';
+        isProcessing = false;
+        currentRequestId = null;
+        updateSendButton();
+        }
+
+        function stopGeneration() {
+        if (currentRequestId) {
+            socket.emit('stop_generation', { requestId: currentRequestId });
+        }
+        hideTyping();
+        addMessage('[Generation stopped by user]', 'assistant');
+        }
+
+        function updateSendButton() {
+        const sendBtn = document.getElementById('send-btn');
+        if (!sendBtn) return;
+        
+        if (isProcessing) {
+            sendBtn.className = 'action-btn stop-btn';
+            sendBtn.innerHTML = '■';
+            sendBtn.onclick = stopGeneration;
+            sendBtn.title = 'Stop generation';
+        } else {
+            sendBtn.className = 'action-btn send-btn';
+            sendBtn.innerHTML = '➤';
+            sendBtn.onclick = sendMessage;
+            sendBtn.title = 'Send message';
+        }
         }
 
         // Image preview functions
@@ -550,6 +645,31 @@
         });
         }
 
+        function regenerateResponse() {
+        if (!lastUserMessage) {
+            console.error('No previous message to regenerate');
+            return;
+        }
+        
+        // Remove last AI response if it exists
+        if (lastAIMessageElement && lastAIMessageElement.parentNode) {
+            lastAIMessageElement.parentNode.removeChild(lastAIMessageElement);
+        }
+        
+        // Resend the last user message
+        showTyping();
+        isProcessing = true;
+        currentRequestId = 'req-' + Date.now();
+        updateSendButton();
+        
+        socket.emit('enhanced_chat', {
+            message: lastUserMessage,
+            context: currentContext || {},
+            image: null,
+            requestId: currentRequestId
+        });
+        }
+
         function clearChat() {
         document.getElementById('chat-messages').innerHTML = `
         <div class="message assistant">
@@ -559,6 +679,8 @@
             </div>
         </div>
         `;
+        lastUserMessage = null;
+        lastAIMessageElement = null;
         }
         </script>
 </body>
