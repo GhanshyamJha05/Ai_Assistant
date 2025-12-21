@@ -1,0 +1,282 @@
+Exception in thread Thread-1:
+Traceback (most recent call last):
+  File "F:\bn/assitant\ai_assistant\modules\app_discovery.py", line 261, in _background_refresh
+    print("\U0001f504 Background app refresh started...")
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f504' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\threading.py", line 980, in _bootstrap_inner
+    self.run()
+  File "C:\Program Files\Python39\lib\threading.py", line 917, in run
+    self._target(*self._args, **self._kwargs)
+  File "F:\bn/assitant\ai_assistant\modules\app_discovery.py", line 272, in _background_refresh
+    print(f"\u26a0\ufe0f Background refresh failed: {e}")
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+======================================================================
+TESTING ONLINE LEARNING SYSTEM
+======================================================================
+
+[1/5] Testing imports...
+WARNING: Encryption not available - sensitive data will not be encrypted
+WARNING: Google Calendar dependencies not found. Calendar features will be disabled.
+WARNING: Gmail dependencies not found. Email features will be disabled.
+Warning: yt_dlp not available. YouTube download features disabled.
+📅 New session started: 2025-12-21/181712
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: advanced_speech_recognizer
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: advanced_voice
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: neural_voice_engine
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: wake_word_detector
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: secrets_manager
+2025-12-21 18:17:12 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: encryption
+C:\Users\hp\AppData\Roaming\Python\Python39\site-packages\google\api_core\_python_version_support.py:252: FutureWarning: You are using a Python version (3.9.13) past its end of life. Google will update google.api_core with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+2025-12-21 18:17:16 | INFO     | 📅 Session started at 2025-12-21 18:17:12 - Module: multilingual
+2025-12-21 18:17:51,594 - OnlineLearningTrainer - INFO - Database initialized at data/online_learning.db
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 157, in _init_learning_systems
+    self.logger.info("✓ HistoricalRAG initialized")
+Message: '✓ HistoricalRAG initialized'
+Arguments: ()
+2025-12-21 18:17:58,565 - OnlineLearningTrainer - INFO - ✓ HistoricalRAG initialized
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 163, in _init_learning_systems
+    self.logger.info("✓ ConversationClusterer initialized")
+Message: '✓ ConversationClusterer initialized'
+Arguments: ()
+2025-12-21 18:17:58,581 - OnlineLearningTrainer - INFO - ✓ ConversationClusterer initialized
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 169, in _init_learning_systems
+    self.logger.info("✓ IntentClassifier initialized")
+Message: '✓ IntentClassifier initialized'
+Arguments: ()
+2025-12-21 18:18:04,330 - OnlineLearningTrainer - INFO - ✓ IntentClassifier initialized
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 175, in _init_learning_systems
+    self.logger.info("✓ PersonalKnowledgeGraph initialized")
+Message: '✓ PersonalKnowledgeGraph initialized'
+Arguments: ()
+2025-12-21 18:18:04,335 - OnlineLearningTrainer - INFO - ✓ PersonalKnowledgeGraph initialized
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 184, in _init_learning_systems
+    self.logger.info("✓ SemanticMemory (memory module) initialized")
+Message: '✓ SemanticMemory (memory module) initialized'
+Arguments: ()
+2025-12-21 18:18:04,337 - OnlineLearningTrainer - INFO - ✓ SemanticMemory (memory module) initialized
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 37, in <module>
+    trainer = OnlineLearningTrainer()
+  File "F:\bn/assitant\online_learning_trainer.py", line 68, in __init__
+    self.learning_systems = self._init_learning_systems()
+  File "F:\bn/assitant\online_learning_trainer.py", line 188, in _init_learning_systems
+    self.logger.info("✓ FeedbackLearning initialized")
+Message: '✓ FeedbackLearning initialized'
+Arguments: ()
+2025-12-21 18:18:04,356 - OnlineLearningTrainer - INFO - ✓ FeedbackLearning initialized
+2025-12-21 18:18:04,359 - OnlineLearningTrainer - INFO - OnlineLearningTrainer initialized successfully
+2025-12-21 18:18:04,359 - OnlineLearningTrainer - INFO - Collecting technology news...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 51, in <module>
+    num_articles = trainer.collect_news(max_articles=5)
+  File "F:\bn/assitant\online_learning_trainer.py", line 227, in collect_news
+    self.logger.info(f"✓ Collected {category} news")
+Message: '✓ Collected technology news'
+Arguments: ()
+2025-12-21 18:18:11,913 - OnlineLearningTrainer - INFO - ✓ Collected technology news
+2025-12-21 18:18:13,919 - OnlineLearningTrainer - INFO - Collecting business news...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2717' in position 60: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 51, in <module>
+    num_articles = trainer.collect_news(max_articles=5)
+  File "F:\bn/assitant\online_learning_trainer.py", line 229, in collect_news
+    self.logger.warning(f"✗ No content for {category} news")
+Message: '✗ No content for business news'
+Arguments: ()
+2025-12-21 18:18:14,611 - OnlineLearningTrainer - WARNING - ✗ No content for business news
+2025-12-21 18:18:16,624 - OnlineLearningTrainer - INFO - Collecting general news...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 51, in <module>
+    num_articles = trainer.collect_news(max_articles=5)
+  File "F:\bn/assitant\online_learning_trainer.py", line 227, in collect_news
+    self.logger.info(f"✓ Collected {category} news")
+Message: '✓ Collected general news'
+Arguments: ()
+2025-12-21 18:18:17,856 - OnlineLearningTrainer - INFO - ✓ Collected general news
+2025-12-21 18:18:19,871 - OnlineLearningTrainer - INFO - Total articles collected: 2
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 61, in <module>
+    num_weather = trainer.collect_weather_patterns(cities=['London', 'New York'])
+  File "F:\bn/assitant\online_learning_trainer.py", line 269, in collect_weather_patterns
+    self.logger.info(f"✓ Collected weather for {city}")
+Message: '✓ Collected weather for London'
+Arguments: ()
+2025-12-21 18:18:22,304 - OnlineLearningTrainer - INFO - ✓ Collected weather for London
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\logging\__init__.py", line 1086, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 57: character maps to <undefined>
+Call stack:
+  File "F:\bn\assitant\test_online_learning.py", line 61, in <module>
+    num_weather = trainer.collect_weather_patterns(cities=['London', 'New York'])
+  File "F:\bn/assitant\online_learning_trainer.py", line 269, in collect_weather_patterns
+    self.logger.info(f"✓ Collected weather for {city}")
+Message: '✓ Collected weather for New York'
+Arguments: ()
+2025-12-21 18:18:25,832 - OnlineLearningTrainer - INFO - ✓ Collected weather for New York
+2025-12-21 18:18:26,846 - OnlineLearningTrainer - ERROR - HistoricalRAG learning error: 'HistoricalRAG' object has no attribute 'add_document'
+2025-12-21 18:18:26,846 - OnlineLearningTrainer - ERROR - SemanticMemory learning error: save_to_memory() got an unexpected keyword argument 'message'
+2025-12-21 18:18:26,847 - OnlineLearningTrainer - ERROR - KnowledgeGraph learning error: 'PersonalKnowledgeGraph' object has no attribute 'add_entity'
+2025-12-21 18:18:26,851 - OnlineLearningTrainer - ERROR - HistoricalRAG learning error: 'HistoricalRAG' object has no attribute 'add_document'
+2025-12-21 18:18:26,852 - OnlineLearningTrainer - ERROR - SemanticMemory learning error: save_to_memory() got an unexpected keyword argument 'message'
+2025-12-21 18:18:26,852 - OnlineLearningTrainer - ERROR - KnowledgeGraph learning error: 'PersonalKnowledgeGraph' object has no attribute 'add_entity'
+2025-12-21 18:18:26,853 - OnlineLearningTrainer - ERROR - Weather learning error: Expecting value: line 1 column 1 (char 0)
+2025-12-21 18:18:26,853 - OnlineLearningTrainer - ERROR - Weather learning error: Expecting value: line 1 column 1 (char 0)
+2025-12-21 18:18:26,933 - OnlineLearningTrainer - INFO - Processing complete: {'processed': 4, 'successful': 4, 'failed': 0, 'systems_updated': 3}
+Traceback (most recent call last):
+  File "F:\bn\assitant\test_online_learning.py", line 75, in <module>
+    print(f"  ✓ Systems updated: {', '.join(stats['systems_updated'])}")
+TypeError: can only join an iterable
+  ✓ WebScrapingManager imported
+  ✓ HistoricalRAG imported
+  ✓ PersonalKnowledgeGraph imported
+  ✓ Memory module imported
+  ✓ OnlineLearningTrainer imported
+  ✓ All imports successful!
+
+[2/5] Initializing OnlineLearningTrainer...
+  ✓ Trainer initialized successfully
+  ✓ Learning systems loaded: 6
+    - historical_rag
+    - conversation_clusterer
+    - intent_classifier
+    - knowledge_graph
+    - semantic_memory
+    - feedback_learning
+
+[3/5] Collecting news from internet...
+  ✓ Collected 2 articles
+
+[4/5] Collecting weather data...
+  ✓ Collected 2 weather records
+
+[5/5] Processing data and feeding to AI learning systems...
+  ✓ Processed 4 items
+  ✓ Successfully learned: 4
+  ✓ Failed: 0
+  ✗ Processing failed: can only join an iterable
+
+======================================================================
+LEARNING STATISTICS
+======================================================================
+Total Collected: 11
+Total Processed: 11
+Processing Rate: 100.0%
+Systems Updated: 0
+
+======================================================================
+TEST COMPLETE!
+======================================================================
+
+Next steps:
+1. Check logs/online_learning.log for detailed logs
+2. Check data/online_learning.db for collected data
+3. Run 'python online_learning_trainer.py' for interactive mode
+4. Run 'python schedule_online_learning.py' for automated daily learning
