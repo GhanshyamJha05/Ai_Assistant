@@ -74,12 +74,16 @@ class OnlineLearningTrainer:
         logger = logging.getLogger("OnlineLearningTrainer")
         logger.setLevel(logging.INFO)
         
-        # Create logs directory if needed
-        log_dir = Path("logs")
-        log_dir.mkdir(exist_ok=True)
+        # Create date-based logs directory structure
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        log_dir = Path("logs") / today
+        log_dir.mkdir(parents=True, exist_ok=True)
         
-        # File handler
-        fh = logging.FileHandler(log_dir / "online_learning.log")
+        # File handler with timestamp
+        timestamp = datetime.now().strftime("%H%M%S")
+        log_file = f"online_learning_{timestamp}.log"
+        fh = logging.FileHandler(log_dir / log_file)
         fh.setLevel(logging.INFO)
         
         # Console handler
