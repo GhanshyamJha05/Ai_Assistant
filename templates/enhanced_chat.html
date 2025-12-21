@@ -313,6 +313,44 @@
             border-color: var(--accent-color);
         }
 
+        .feedback-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .feedback-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .feedback-btn:hover {
+            background-color: var(--hover-color);
+            color: var(--text-primary);
+        }
+
+        .feedback-btn.active-up {
+            background-color: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+
+        .feedback-btn.active-down {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
         .disclaimer {
             font-size: 12px;
             color: var(--text-secondary);
@@ -403,6 +441,7 @@
         let currentRequestId = null;
         let lastUserMessage = null;
         let lastAIMessageElement = null;
+        let messageFeedback = {}; // Track feedback for each message
         
         socket = io();
         
@@ -433,6 +472,14 @@
         socket.on('screen_analysis_response', function(data) {
         hideTyping();
         addMessage('🖥️ Screen Analysis: ' + data.analysis, 'assistant');
+        });
+        
+        socket.on('feedback_response', function(data) {
+        if (data.success) {
+            console.log('✅ Feedback recorded:', data.message);
+        } else {
+            console.error('❌ Feedback error:', data.error);
+        }
         });
         }
 
@@ -539,11 +586,31 @@
 
         // Add regenerate button for AI messages
         if (sender === 'assistant' || sender === 'ai') {
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'feedback-buttons';
+            
+            // Thumbs up button
+            const thumbsUpBtn = document.createElement('button');
+            thumbsUpBtn.className = 'feedback-btn';
+            thumbsUpBtn.innerHTML = '👍 Good';
+            thumbsUpBtn.onclick = () => handleFeedback(messageElement, 'up', content);
+            actionButtons.appendChild(thumbsUpBtn);
+            
+            // Thumbs down button
+            const thumbsDownBtn = document.createElement('button');
+            thumbsDownBtn.className = 'feedback-btn';
+            thumbsDownBtn.innerHTML = '👎 Poor';
+            thumbsDownBtn.onclick = () => handleFeedback(messageElement, 'down', content);
+            actionButtons.appendChild(thumbsDownBtn);
+            
+            // Regenerate button
             const regenerateBtn = document.createElement('button');
             regenerateBtn.className = 'regenerate-btn';
             regenerateBtn.innerHTML = '↻ Regenerate';
             regenerateBtn.onclick = () => regenerateResponse();
-            messageContent.appendChild(regenerateBtn);
+            actionButtons.appendChild(regenerateBtn);
+            
+            messageContent.appendChild(actionButtons);
             lastAIMessageElement = messageElement;
         }
 
@@ -668,6 +735,44 @@
             image: null,
             requestId: currentRequestId
         });
+        }
+
+        function handleFeedback(messageElement, feedback, messageText) {
+        const messageId = 'msg-' + Date.now();
+        const buttons = messageElement.querySelectorAll('.feedback-btn');
+        
+        // Toggle feedback
+        buttons.forEach(btn => {
+            if (feedback === 'up' && btn.innerHTML.includes('Good')) {
+                if (btn.classList.contains('active-up')) {
+                    btn.classList.remove('active-up');
+                    messageFeedback[messageId] = null;
+                } else {
+                    btn.classList.add('active-up');
+                    buttons[1].classList.remove('active-down');
+                    messageFeedback[messageId] = 'up';
+                }
+            } else if (feedback === 'down' && btn.innerHTML.includes('Poor')) {
+                if (btn.classList.contains('active-down')) {
+                    btn.classList.remove('active-down');
+                    messageFeedback[messageId] = null;
+                } else {
+                    btn.classList.add('active-down');
+                    buttons[0].classList.remove('active-up');
+                    messageFeedback[messageId] = 'down';
+                }
+            }
+        });
+        
+        // Send feedback to backend
+        socket.emit('message_feedback', {
+            messageId: messageId,
+            message: messageText,
+            feedback: messageFeedback[messageId],
+            timestamp: new Date().toISOString()
+        });
+        
+        console.log('Feedback:', messageFeedback[messageId], 'for message:', messageId);
         }
 
         function clearChat() {

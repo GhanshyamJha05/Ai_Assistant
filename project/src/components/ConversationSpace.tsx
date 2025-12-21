@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, MoreVertical, Copy, Check, RefreshCw, Edit2, Sparkles, ChevronDown, Trash2, Square } from 'lucide-react';
+import { Send, Paperclip, MoreVertical, Copy, Check, RefreshCw, Edit2, Sparkles, ChevronDown, Trash2, Square, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -34,6 +34,7 @@ const ConversationSpace = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showSessions, setShowSessions] = useState(false);
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, 'up' | 'down' | null>>({});
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
@@ -125,6 +126,15 @@ const ConversationSpace = () => {
           }
           return updated;
         });
+      }
+    });
+
+    // Listen for feedback confirmation
+    newSocket.on('feedback_response', (data: { success: boolean; message?: string; error?: string }) => {
+      if (data.success && data.message) {
+        console.log('✅ Feedback recorded:', data.message);
+      } else if (data.error) {
+        console.error('❌ Feedback error:', data.error);
       }
     });
 
@@ -298,6 +308,29 @@ const ConversationSpace = () => {
     setTimeout(() => sendMessage(suggestion), 50);
   };
 
+  const handleFeedback = (messageId: string, messageText: string, feedback: 'up' | 'down') => {
+    // Toggle feedback if clicking the same button
+    const currentFeedback = messageFeedback[messageId];
+    const newFeedback = currentFeedback === feedback ? null : feedback;
+    
+    setMessageFeedback(prev => ({
+      ...prev,
+      [messageId]: newFeedback
+    }));
+
+    // Send feedback to backend for learning
+    if (socket && isConnected) {
+      socket.emit('message_feedback', {
+        messageId,
+        message: messageText,
+        feedback: newFeedback,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log(`Feedback ${newFeedback || 'removed'} for message ${messageId}`);
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || isProcessing) return;
 
@@ -391,10 +424,10 @@ const ConversationSpace = () => {
   };
 
   return (
-    <div className="min-h-screen py-8 animate-fade-in">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="flex flex-col h-screen bg-[#0d0d0d] animate-fade-in">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#1a1a1a]/50 backdrop-blur-sm">
         <div>
-          <h1 className="text-4xl font-bold mb-2 text-gradient">Chat Space</h1>
+          <h1 className="text-2xl font-bold text-gradient">Chat Space</h1>
           <p className="text-[#DDDDDD]">Powered by advanced AI models</p>
         </div>
         <div className="flex gap-3">
@@ -450,10 +483,10 @@ const ConversationSpace = () => {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto">
-        <div className="glass-strong rounded-2xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+      {/* Main Chat Container */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Chat Header */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#1a1a1a]/50 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center font-bold">
                 AI
@@ -483,7 +516,8 @@ const ConversationSpace = () => {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-custom">
+          <div className="flex-1 overflow-y-auto scrollbar-custom">
+            <div className="max-w-4xl mx-auto py-6 px-4 space-y-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center mb-6 text-4xl animate-pulse">
@@ -573,6 +607,24 @@ const ConversationSpace = () => {
                         {message.sender === 'ai' && (
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
+                              onClick={() => handleFeedback(message.id, message.text, 'up')}
+                              className={`p-1 hover:bg-white/10 rounded transition-colors ${
+                                messageFeedback[message.id] === 'up' ? 'bg-green-500/20' : ''
+                              }`}
+                              title="Good response"
+                            >
+                              <ThumbsUp size={12} className={messageFeedback[message.id] === 'up' ? 'text-green-400' : 'text-white/50'} />
+                            </button>
+                            <button
+                              onClick={() => handleFeedback(message.id, message.text, 'down')}
+                              className={`p-1 hover:bg-white/10 rounded transition-colors ${
+                                messageFeedback[message.id] === 'down' ? 'bg-red-500/20' : ''
+                              }`}
+                              title="Poor response"
+                            >
+                              <ThumbsDown size={12} className={messageFeedback[message.id] === 'down' ? 'text-red-400' : 'text-white/50'} />
+                            </button>
+                            <button
                               onClick={() => handleCopy(message.text, message.id)}
                               className="p-1 hover:bg-white/10 rounded transition-colors"
                               title="Copy response"
@@ -653,8 +705,8 @@ const ConversationSpace = () => {
           </div>
 
           {/* Input Area */}
-          <div className="p-3 border-t border-white/10 bg-white/5" ref={inputContainerRef}>
-            <div className="flex items-end gap-2">
+          <div className="border-t border-white/5 bg-[#1a1a1a]/95 backdrop-blur-sm">
+            <div className="max-w-4xl mx-auto p-4 flex items-end gap-2">
               <button 
                 className="w-9 h-9 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors flex-shrink-0" 
                 title="Attach file"

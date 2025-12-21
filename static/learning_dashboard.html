@@ -215,10 +215,10 @@
     </div>
     
     <script>
-        // Try Flask backend first (port 5000), fallback to FastAPI (port 8000)
+        // Flask backend on port 5000
         const API_ENDPOINTS = [
-            'http://127.0.0.1:5000/api/learning/stats',
-            'http://127.0.0.1:8000/api/learning/stats/all'
+            'http://127.0.0.1:5000/api/learning/stats/all',
+            'http://127.0.0.1:5000/api/learning/stats'
         ];
         let activeEndpoint = null;
         
@@ -255,6 +255,20 @@
                 const data = await response.json();
                 
                 loading.style.display = 'none';
+                
+                // Check if learning systems are available
+                if (!data.success || data.total_systems === 0) {
+                    error.style.display = 'block';
+                    error.innerHTML = `⚠️ ${data.message || 'Learning systems temporarily unavailable'}<br><br>
+                        <strong>Available Features:</strong><br>
+                        ${data.available_features ? Object.entries(data.available_features)
+                            .map(([k,v]) => `✅ ${k}: ${v ? 'Active' : 'Inactive'}`).join('<br>') : 
+                            'Basic memory and conversation tracking active'}`;
+                    overview.style.display = 'none';
+                    container.style.display = 'none';
+                    return;
+                }
+                
                 overview.style.display = 'block';
                 container.style.display = 'grid';
                 
@@ -270,7 +284,7 @@
             } catch (err) {
                 loading.style.display = 'none';
                 error.style.display = 'block';
-                error.textContent = `❌ Error loading data: ${err.message}. Make sure API server is running on port 8000.`;
+                error.textContent = `❌ Error loading data: ${err.message}. Make sure API server is running on port 5000.`;
             }
         }
         

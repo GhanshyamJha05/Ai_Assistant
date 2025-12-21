@@ -81,28 +81,28 @@ class LearningActivator:
         print("\n🚀 Initializing learning systems...")
         
         systems_config = [
-            ('active_learning', ActiveLearner),
-            ('behavior_clustering', BehaviorClusterer),
-            ('conversation_clustering', ConversationClusterer),
-            ('command_sequences', CommandMarkovChain),
-            ('command_predictor', CommandSuccessPredictor),
-            ('anomaly_detection', AnomalyDetector),
-            ('causal_inference', CausalInference),
-            ('context_generator', ContextAwareResponseGenerator),
-            ('adaptive_voice', AdaptiveVoiceRecognition),
-            ('smart_commands', SmartCommandPredictor),
-            ('workflow_recommender', WorkflowRecommender),
-            ('meta_learning', MAMLLearner),
-            ('ppo_agent', PPOAgent),
-            ('federated_server', FederatedServer),
-            ('knowledge_graph', PersonalKnowledgeGraph),
-            ('query_cache', QuerySimilarityCache),
+            ('active_learning', ActiveLearner, {}),
+            ('behavior_clustering', BehaviorClusterer, {}),
+            ('conversation_clustering', ConversationClusterer, {}),
+            ('command_sequences', CommandMarkovChain, {}),
+            ('command_predictor', CommandSuccessPredictor, {}),
+            ('anomaly_detection', AnomalyDetector, {}),
+            ('causal_inference', CausalInference, {}),
+            ('context_generator', ContextAwareResponseGenerator, {}),
+            ('adaptive_voice', AdaptiveVoiceRecognition, {}),
+            ('smart_commands', SmartCommandPredictor, {}),
+            ('workflow_recommender', WorkflowRecommender, {}),
+            ('meta_learning', MAMLLearner, {'input_dim': 128, 'output_dim': 64}),
+            ('ppo_agent', PPOAgent, {'state_dim': 128, 'action_dim': 32}),
+            ('federated_server', FederatedServer, {'input_dim': 128, 'output_dim': 64}),
+            ('knowledge_graph', PersonalKnowledgeGraph, {'db_path': str(self.data_dir / 'enhanced_learning.db')}),
+            ('query_cache', QuerySimilarityCache, {}),
         ]
         
-        for name, SystemClass in systems_config:
+        for name, SystemClass, kwargs in systems_config:
             try:
                 print(f"   Initializing {name}...", end=" ")
-                self.systems[name] = SystemClass()
+                self.systems[name] = SystemClass(**kwargs)
                 print("✅")
             except Exception as e:
                 print(f"❌ {e}")

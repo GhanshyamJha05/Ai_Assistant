@@ -94,7 +94,7 @@ try:
     learning_router = LearningDataRouter()
     LEARNING_ROUTER_AVAILABLE = True
     print("✅ Learning router initialized - AI will learn from all interactions")
-except ImportError as e:
+except (ImportError, Exception) as e:
     print(f"⚠️ Learning router not available: {e}")
     learning_router = None
     LEARNING_ROUTER_AVAILABLE = False

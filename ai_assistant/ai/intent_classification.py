@@ -204,6 +204,11 @@ class IntentClassifier:
         else:
             return self._classify_with_keywords(user_input)
     
+    def classify_intent(self, text: str, context: dict):
+        """Wrapper for compatibility - returns tuple of (intent, confidence, entities)"""
+        result = self.classify(text)
+        return result.intent_name, result.confidence, result.entities
+    
     def _classify_with_transformers(self, user_input: str) -> Intent:
         """Classify using sentence transformers"""
         # Encode user input

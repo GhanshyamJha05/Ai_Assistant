@@ -574,9 +574,31 @@ class AdaptiveLearningEngine:
         
         logger.info(f"Processed preference: chosen_score={chosen_score:.3f}, rejected_score={rejected_score:.3f}")
     
+    def collect_feedback(self,
+                        response_id: str,
+                        feedback_type: str,
+                        response_text: str,
+                        context: Dict[str, Any],
+                        prompt: str = ""):
+        """Collect feedback (wrapper for compatibility)"""
+        is_positive = feedback_type == "thumbs_up"
+        self.process_thumbs_feedback(prompt, response_text, is_positive, context)
+    
+    def collect_preference_pair(self,
+                                prompt: str,
+                                chosen_response: str,
+                                rejected_response: str):
+        """Collect preference pair (wrapper for compatibility)"""
+        self.process_preference_comparison(
+            prompt, chosen_response, rejected_response, chosen='a', context={}
+        )
+    
     def get_learning_stats(self) -> Dict[str, Any]:
         """Get learning system statistics"""
         return {
+            'total_feedback': len(self.feedback_collector.feedback_queue),
+            'preference_pairs': len(self.reward_model.preference_history),
+            'average_reward': np.mean(list(self.performance_history)) if self.performance_history else 0.0,
             'reward_model_accuracy': self.reward_model.get_preference_accuracy(),
             'total_feedback_items': len(self.feedback_collector.feedback_queue),
             'total_preferences': len(self.reward_model.preference_history),

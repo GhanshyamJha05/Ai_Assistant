@@ -272,7 +272,7 @@ try:
     )
     ENHANCED_LEARNING_AVAILABLE = True
     print("✅ Enhanced learning features enabled")
-except ImportError as e:
+except (ImportError, Exception) as e:
     print(f"⚠️ Enhanced learning features temporarily disabled: {str(e)}")
     print("Will be re-enabled after dependency resolution")
     ENHANCED_LEARNING_AVAILABLE = False

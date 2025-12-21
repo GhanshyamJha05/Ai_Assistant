@@ -153,6 +153,9 @@ class GraphNeuralNetwork:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
+        # Initialize node embeddings for all cases
+        self.node_embeddings = {}
+        
         if TORCH_AVAILABLE:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.model = GNNModel(
@@ -163,8 +166,8 @@ class GraphNeuralNetwork:
             ).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         else:
-            # Fallback: simple message passing
-            self.node_embeddings = {}
+            # Fallback: simple message passing (node_embeddings already initialized)
+            pass
         
         if NETWORKX_AVAILABLE:
             self.graph = nx.DiGraph()

@@ -2380,6 +2380,101 @@ def handle_stop_generation(data):
             'timestamp': datetime.now().isoformat()
         })
 
+@socketio.on('message_feedback')
+def handle_message_feedback(data):
+    """Handle user feedback (thumbs up/down) for AI responses"""
+    try:
+        message_id = data.get('messageId')
+        message_text = data.get('message', '')
+        feedback = data.get('feedback')  # 'up', 'down', or None
+        timestamp = data.get('timestamp')
+        
+        if not message_id:
+            emit('feedback_response', {
+                'success': False,
+                'error': 'No message ID provided'
+            })
+            return
+        
+        # Log feedback for learning
+        feedback_data = {
+            'message_id': message_id,
+            'message': message_text[:200],  # Store first 200 chars
+            'feedback': feedback,
+            'timestamp': timestamp or datetime.now().isoformat(),
+            'session_id': request.sid
+        }
+        
+        # Save to learning system if available
+        try:
+            feedback_file = Path('user_data/feedback_log.json')
+            feedback_file.parent.mkdir(exist_ok=True)
+            
+            # Load existing feedback
+            if feedback_file.exists():
+                with open(feedback_file, 'r', encoding='utf-8') as f:
+                    all_feedback = json.load(f)
+            else:
+                all_feedback = []
+            
+            # Add new feedback
+            all_feedback.append(feedback_data)
+            
+            # Keep only last 1000 feedback entries
+            if len(all_feedback) > 1000:
+                all_feedback = all_feedback[-1000:]
+            
+            # Save updated feedback
+            with open(feedback_file, 'w', encoding='utf-8') as f:
+                json.dump(all_feedback, f, indent=2, ensure_ascii=False)
+            
+            print(f"{'👍' if feedback == 'up' else '👎' if feedback == 'down' else '🔄'} Feedback logged: {message_id}")
+            
+        except Exception as save_error:
+            print(f"⚠️ Failed to save feedback: {save_error}")
+        
+        # Integrate with learning system if available
+        if hasattr(assistant, 'conversational_ai') and assistant.conversational_ai:
+            try:
+                # Positive feedback - reinforce this pattern
+                if feedback == 'up':
+                    assistant.conversational_ai.add_to_context({
+                        'type': 'positive_example',
+                        'message': message_text[:500],
+                        'timestamp': timestamp
+                    })
+                # Negative feedback - mark for improvement
+                elif feedback == 'down':
+                    assistant.conversational_ai.add_to_context({
+                        'type': 'negative_example',
+                        'message': message_text[:500],
+                        'timestamp': timestamp
+                    })
+            except Exception as learning_error:
+                print(f"⚠️ Learning integration error: {learning_error}")
+        
+        # Log to audit system
+        if audit_logger:
+            audit_logger.log_event(
+                'user_feedback',
+                f"Feedback: {feedback or 'removed'} for message {message_id[:20]}",
+                request.sid
+            )
+        
+        emit('feedback_response', {
+            'success': True,
+            'messageId': message_id,
+            'feedback': feedback,
+            'message': 'Feedback recorded. Thank you for helping me learn!'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error handling feedback: {str(e)}")
+        emit('feedback_response', {
+            'success': False,
+            'error': str(e)
+        })
+
 @socketio.on('command')
 def handle_command(data):
     """Handle real-time command with security validation"""
