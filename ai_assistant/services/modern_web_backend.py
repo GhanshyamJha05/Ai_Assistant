@@ -82,9 +82,9 @@ try:
         detect_taskbar_apps, can_see_taskbar
     )
     AUTOMATION_AVAILABLE = True
-    print("âœ… Automation tools loaded successfully")
+    print("Automation tools loaded successfully")
 except ImportError as e:
-    print(f"âš ï¸ Automation tools not available: {e}")
+    print(f"Automation tools not available: {e}")
     AUTOMATION_AVAILABLE = False
     # Fallback functions will be defined below
 
@@ -128,30 +128,30 @@ except ImportError:
 try:
     from ai_assistant.multilingual import MultilingualSupport, Language, LanguageContext
     MULTILINGUAL_AVAILABLE = True
-    print("âœ… Multilingual support loaded in web backend")
+    print("Multilingual support loaded in web backend")
 except ImportError as e:
     MULTILINGUAL_AVAILABLE = False
-    print("âš ï¸ Multilingual support not available in web backend - dependency issue with googletrans/httpx")
+    print("Multilingual support not available in web backend - dependency issue with googletrans/httpx")
 except Exception as e:
     MULTILINGUAL_AVAILABLE = False
-    print(f"âš ï¸ Multilingual support not available in web backend: {e}")
+    print(f"Multilingual support not available in web backend: {e}")
 
 # Import advanced chat system and LLM providers
 try:
     from ai_assistant.modules.advanced_chat_system import AdvancedChatSystem
     ADVANCED_CHAT_AVAILABLE = True
-    print("âœ… Advanced chat system loaded")
+    print("Advanced chat system loaded")
 except ImportError as e:
     ADVANCED_CHAT_AVAILABLE = False
-    print(f"âš ï¸ Advanced chat system not available: {e}")
+    print(f"Advanced chat system not available: {e}")
 
 try:
     from ai_assistant.modules.llm_provider import UnifiedChatInterface, LLMFactory
     LLM_PROVIDER_AVAILABLE = True
-    print("âœ… LLM providers loaded")
+    print("LLM providers loaded")
 except ImportError as e:
     LLM_PROVIDER_AVAILABLE = False
-    print(f"âš ï¸ LLM providers not available: {e}")
+    print(f"LLM providers not available: {e}")
 
 # System monitoring
 try:

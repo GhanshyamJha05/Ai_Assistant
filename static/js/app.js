@@ -95,6 +95,18 @@ class YourDaddyWebInterface {
             this.socket.on('response', (data) => {
                 this.addMessage(data.message, 'assistant');
             });
+
+            this.socket.on('command_response', (data) => {
+                if (!data) return;
+                if (data.success) {
+                    const reply = data.response || data.message;
+                    if (reply) {
+                        this.addMessage(reply, 'assistant');
+                    }
+                } else if (data.error) {
+                    this.addMessage(data.error, 'error');
+                }
+            });
             
             this.socket.on('voice_result', (data) => {
                 this.elements.voiceText.textContent = data.text;
@@ -224,8 +236,12 @@ class YourDaddyWebInterface {
         this.addMessage('Processing...', 'system');
         
         if (this.socket && this.socket.connected) {
-            // Send to backend via Socket.IO
-            this.socket.emit('command', { text: command });
+            // Send to backend via Socket.IO using the expected payload keys
+            this.socket.emit('command', {
+                command: command,
+                message: command,
+                text: command
+            });
         } else {
             // Try API call first, fallback to local processing
             try {
