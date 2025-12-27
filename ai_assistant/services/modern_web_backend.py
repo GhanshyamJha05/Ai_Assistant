@@ -3988,7 +3988,20 @@ if not AUTOMATION_AVAILABLE:
             subprocess.Popen(app_name, shell=True)
             return f"Opened {app_name}"
         except Exception as e:
-            return f"Could not open {app_name}: {e}"
+            # Fallback: Try Start menu automation with pyautogui
+            try:
+                import pyautogui
+                import time
+                pyautogui.hotkey('win', 'd')
+                time.sleep(0.5)
+                pyautogui.press('win')
+                time.sleep(0.5)
+                pyautogui.write(app_name, interval=0.05)
+                time.sleep(1)
+                pyautogui.press('enter')
+                return f"Tried to open '{app_name}' via Start menu."
+            except Exception as e2:
+                return f"Could not open {app_name} (subprocess error: {e}) (Start menu error: {e2})"
     def search_google(*args, **kwargs): return "Google search not available"
     def search_youtube(*args, **kwargs): return "YouTube search not available"
     def close_application(*args, **kwargs): return "App closing not available"
