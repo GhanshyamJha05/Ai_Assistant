@@ -8,7 +8,15 @@ import sys
 from pathlib import Path
 
 # Add modules to path
-sys.path.append(str(Path(__file__).parent / "modules"))
+
+# Add ai_assistant root to sys.path for proper imports
+ai_root = Path(__file__).parent.parent
+if str(ai_root) not in sys.path:
+    sys.path.insert(0, str(ai_root))
+
+modules_path = ai_root / "modules"
+if str(modules_path) not in sys.path:
+    sys.path.insert(0, str(modules_path))
 
 from multilingual import voice_listen_loop, MultilingualSupport, Language
 import threading
