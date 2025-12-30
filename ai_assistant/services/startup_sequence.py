@@ -271,7 +271,7 @@ class StartupSequence:
     def get_contextual_briefing(self):
         """
         Generate contextual briefing based on time, calendar, tasks, etc.
-        Similar to JARVIS providing updates to Tony Stark
+        Now enhanced with InsightsEngine for real data.
         """
         briefing = {
             "timestamp": datetime.now().isoformat(),
@@ -286,46 +286,68 @@ class StartupSequence:
             "message": now.strftime("%A, %B %d, %Y | %I:%M %p")
         })
         
-        # System uptime
-        if PSUTIL_AVAILABLE:
-            try:
-                boot_time = datetime.fromtimestamp(psutil.boot_time())
-                uptime = now - boot_time
-                hours = int(uptime.total_seconds() // 3600)
+        try:
+            # Get insights from engine
+            from ai_assistant.services.insights_engine import get_insights_engine
+            insights = get_insights_engine().get_daily_briefing()
+            
+            # 1. Weather
+            weather = insights.get('weather', {})
+            if weather:
+                temp = weather.get('temperature', 'N/A')
+                desc = weather.get('condition', 'Unknown')
+                loc = weather.get('location', '')
                 briefing["items"].append({
-                    "type": "uptime",
-                    "icon": "⏱️",
-                    "message": f"System uptime: {hours} hours"
+                    "type": "weather",
+                    "icon": "🌤️",
+                    "message": f"{temp}, {desc} in {loc}"
                 })
-            except Exception:
-                pass
-        
-        # Quick stats
-        if PSUTIL_AVAILABLE:
-            try:
-                cpu_percent = psutil.cpu_percent(interval=0.1)
-                mem_percent = psutil.virtual_memory().percent
+            
+            # 2. Calendar / Events
+            events = insights.get('calendar', [])
+            if events:
+                next_event = events[0]
+                event_time = datetime.fromisoformat(next_event['start']).strftime("%I:%M %p")
+                briefing["items"].append({
+                    "type": "calendar",
+                    "icon": "📅",
+                    "message": f"Next: {next_event['title']} at {event_time}"
+                })
+            else:
+                briefing["items"].append({
+                    "type": "calendar",
+                    "icon": "📅",
+                    "message": "No upcoming events scheduled"
+                })
                 
-                briefing["items"].append({
-                    "type": "performance",
-                    "icon": "📊",
-                    "message": f"CPU: {cpu_percent}% | Memory: {mem_percent}%"
-                })
-            except Exception:
-                pass
-        
-        # Application stats
-        if AUTOMATION_AVAILABLE:
-            try:
-                apps = discover_applications()
-                if apps:
+            # 3. Focus / Tasks
+            tasks = insights.get('tasks', [])
+            pending_high_priority = len([t for t in tasks if t.get('priority') == 'high'])
+            
+            briefing["items"].append({
+                "type": "tasks",
+                "icon": "✅",
+                "message": f"{len(tasks)} pending tasks ({pending_high_priority} high priority)"
+            })
+
+            # Add raw data for frontend to use if needed
+            briefing["raw_insights"] = insights
+            
+        except Exception as e:
+            print(f"Error getting insights: {e}")
+            # Fallback to simple uptime
+            if PSUTIL_AVAILABLE:
+                try:
+                    boot_time = datetime.fromtimestamp(psutil.boot_time())
+                    uptime = now - boot_time
+                    hours = int(uptime.total_seconds() // 3600)
                     briefing["items"].append({
-                        "type": "apps",
-                        "icon": "📱",
-                        "message": f"{len(apps)} applications available for control"
+                        "type": "uptime",
+                        "icon": "⏱️",
+                        "message": f"System uptime: {hours} hours"
                     })
-            except Exception:
-                pass
+                except Exception:
+                    pass
         
         return briefing
     

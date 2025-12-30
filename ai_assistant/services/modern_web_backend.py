@@ -210,7 +210,7 @@ limiter = Limiter(
 )
 
 # Secure CORS Configuration
-ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000').split(',')
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173').split(',')
 CORS(app, resources={
     r"/api/*": {
         "origins": ALLOWED_ORIGINS,
@@ -224,6 +224,24 @@ CORS(app, resources={
         "supports_credentials": True
     }
 })
+
+# ... lines omitted ...
+
+@app.route('/api/status', methods=['GET'])
+@limiter.limit("60 per minute")
+def api_status():
+    """Check API status"""
+    return jsonify({
+        "status": "online",
+        "timestamp": datetime.now().isoformat(),
+        "service": "YourDaddy Assistant Backend"
+    })
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """Health check alias"""
+    return api_status()
+
 
 # Initialize SocketIO with secure origins
 socketio = SocketIO(

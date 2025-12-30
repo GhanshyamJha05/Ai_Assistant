@@ -34,48 +34,152 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sound effects helper
+  const playSound = (type: 'boot' | 'scan' | 'complete') => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      if (type === 'boot') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.5);
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 1.5);
+      } else if (type === 'scan') {
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+      } else if (type === 'complete') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.2);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+      }
+    } catch (e) {
+      console.error("Audio playback error:", e);
+    }
+  };
+
+  // Text-to-Speech helper
+  const speakText = (text: string) => {
+    try {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Cancel current speaking
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.8;
+
+        // Try to find a good English voice
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(voice =>
+          voice.name.includes('Google US English') ||
+          voice.name.includes('Microsoft David') ||
+          (voice.lang === 'en-US' && !voice.name.includes('Zira'))
+        );
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (e) {
+      console.error("TTS error:", e);
+    }
+  };
+
   useEffect(() => {
     const runStartupSequence = async () => {
       try {
         // Phase 1: Boot animation (2 seconds)
+        playSound('boot');
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Phase 2: Fetch startup data
         setPhase('diagnostics');
         const response = await fetch('/api/startup/sequence');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch startup data');
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
           setStartupData(result.data);
           setLoading(false);
-          
+
           // Phase 3: Show diagnostics (3 seconds)
+          // Play subtle scan sounds
+          const scanInterval = setInterval(() => playSound('scan'), 400);
+          speakText("Initializing system diagnostics. Checking core protocols.");
+
           await new Promise(resolve => setTimeout(resolve, 3000));
-          
+          clearInterval(scanInterval);
+
           // Phase 4: Show briefing (3 seconds)
           setPhase('briefing');
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
+          if (result.data) {
+            // Construct intelligent briefing speech
+            let speech = `${result.data.greeting}, Sir. `;
+
+            // Add weather info if available
+            const weatherItem = result.data.briefing.items.find(i => i.type === 'weather');
+            if (weatherItem) {
+              speech += `It is currently ${weatherItem.message.split(',')[0]}. `;
+            }
+
+            // Add calendar info
+            const calendarItem = result.data.briefing.items.find(i => i.type === 'calendar');
+            if (calendarItem) {
+              speech += `Your schedule shows: ${calendarItem.message.replace('Next:', '')}. `;
+            }
+
+            // Add tasks info
+            const taskItem = result.data.briefing.items.find(i => i.type === 'tasks');
+            if (taskItem) {
+              speech += `You have ${taskItem.message}. `;
+            }
+
+            speech += `All systems are ${result.data.status === 'operational' ? 'fully operational' : 'online'}.`;
+
+            speakText(speech);
+          }
+          await new Promise(resolve => setTimeout(resolve, 8000)); // Increased time for longer speech
+
           // Phase 5: Complete
           setPhase('complete');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
+          playSound('complete');
+          speakText("System ready.");
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
           // Mark as seen and complete
           localStorage.setItem('yourdaddy-startup-seen', 'true');
           onComplete();
         } else {
+          // ... existing error handling ...
           throw new Error(result.error || 'Unknown error');
         }
       } catch (err) {
         console.error('Startup sequence error:', err);
         setError(err instanceof Error ? err.message : 'Startup failed');
         setLoading(false);
-        
+
         // Auto-skip on error after 2 seconds
         setTimeout(() => {
           localStorage.setItem('yourdaddy-startup-seen', 'true');
@@ -145,7 +249,7 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
               {/* Pulse rings */}
               <div className="absolute inset-0 rounded-full border-2 border-[#00D9FF] animate-ping opacity-75" />
               <div className="absolute inset-4 rounded-full border-2 border-[#00FFF5] animate-ping opacity-50" style={{ animationDelay: '0.5s' }} />
-              
+
               {/* Center logo */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-40 h-40 rounded-full bg-gradient-to-br from-[#00D9FF] via-[#6C5CE7] to-[#E17055] flex items-center justify-center animate-breathe shadow-2xl shadow-[#00D9FF]/50">
@@ -155,7 +259,7 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
                 </div>
               </div>
             </div>
-            
+
             <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00D9FF] to-[#00FFF5] mb-4 animate-pulse">
               YOURDADDY ASSISTANT
             </h1>
@@ -188,7 +292,7 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
                   {startupData.greeting}, Sir.
                 </span>
               </div>
-              
+
               <p className="text-xl text-[#DDDDDD] mb-2">
                 {formatTime(startupData.timestamp)}
               </p>
@@ -198,7 +302,7 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
             <div className="glass-strong p-8 rounded-3xl max-w-2xl mx-auto">
               <div className="space-y-4">
                 {startupData.briefing.items.map((item, index) => (
-                  <div 
+                  <div
                     key={index}
                     className="flex items-start gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
                     style={{ animationDelay: `${index * 0.1}s` }}
