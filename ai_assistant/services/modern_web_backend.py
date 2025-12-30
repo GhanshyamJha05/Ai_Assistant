@@ -2167,6 +2167,84 @@ def api_command():
         api_logger.error(f"Command API error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+# ============================================================================
+# JARVIS-Style Startup Sequence API Endpoints
+# ============================================================================
+
+@app.route('/api/startup/sequence', methods=['GET'])
+@limiter.limit("10 per minute")
+def api_startup_sequence():
+    """Get complete startup sequence data (JARVIS-style)"""
+    try:
+        from ai_assistant.services.startup_sequence import get_startup_sequence
+        
+        startup = get_startup_sequence()
+        data = startup.get_startup_sequence_data()
+        
+        return jsonify({
+            "success": True,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Startup sequence error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to generate startup sequence",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/startup/diagnostics', methods=['GET'])
+@limiter.limit("20 per minute")
+def api_startup_diagnostics():
+    """Get system diagnostics for startup sequence"""
+    try:
+        from ai_assistant.services.startup_sequence import get_startup_sequence
+        
+        startup = get_startup_sequence()
+        diagnostics = startup.get_system_diagnostics()
+        
+        return jsonify({
+            "success": True,
+            "diagnostics": diagnostics,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Startup diagnostics error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to get system diagnostics",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/startup/briefing', methods=['GET'])
+@limiter.limit("20 per minute")
+def api_startup_briefing():
+    """Get contextual briefing for startup sequence"""
+    try:
+        from ai_assistant.services.startup_sequence import get_startup_sequence
+        
+        startup = get_startup_sequence()
+        briefing = startup.get_contextual_briefing()
+        
+        return jsonify({
+            "success": True,
+            "briefing": briefing,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Startup briefing error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to get briefing",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+# ============================================================================
+# End of Startup Sequence API Endpoints
+# ============================================================================
+
+
 # Chat Streaming Session Management
 chat_sessions = {}
 chat_session_lock = threading.Lock()

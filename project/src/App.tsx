@@ -11,6 +11,7 @@ import SettingsPanel from './components/SettingsPanel';
 import ParticleBackground from './components/ParticleBackground';
 import Auth from './components/Auth';
 import LoadingSpinner from './components/LoadingSpinner';
+import StartupSequence from './components/StartupSequence';
 
 function App() {
   const [activeSection, setActiveSection] = useState('command');
@@ -23,16 +24,18 @@ function App() {
   const [username, setUsername] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [showStartup, setShowStartup] = useState(false);
+
 
   useEffect(() => {
     document.body.className = theme;
-    
+
     // Load saved theme and language from localStorage
     const savedTheme = localStorage.getItem('yourdaddy-theme');
     if (savedTheme) {
       setTheme(savedTheme);
     }
-    
+
     const savedLanguage = localStorage.getItem('yourdaddy-language');
     if (savedLanguage) {
       setLanguage(savedLanguage);
@@ -41,7 +44,7 @@ function App() {
     // Check for existing auth token
     const savedToken = localStorage.getItem('yourdaddy-token');
     const savedUsername = localStorage.getItem('yourdaddy-username');
-    
+
     if (savedToken && savedUsername) {
       // Validate token with backend
       fetch('/api/auth/verify', {
@@ -72,6 +75,15 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
+    // Check if user should see startup sequence
+    const hasSeenStartup = localStorage.getItem('yourdaddy-startup-seen');
+    if (!hasSeenStartup && isAuthenticated) {
+      setShowStartup(true);
+    }
+  }, [isAuthenticated]);
+
+
+  useEffect(() => {
     // Save theme and language to localStorage when they change
     localStorage.setItem('yourdaddy-theme', theme);
     localStorage.setItem('yourdaddy-language', language);
@@ -81,10 +93,10 @@ function App() {
     // Monitor online status
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -97,8 +109,8 @@ function App() {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout to 10s
-        
-        const response = await fetch('/api/status', { 
+
+        const response = await fetch('/api/status', {
           signal: controller.signal,
           headers: {
             'Accept': 'application/json',
@@ -107,9 +119,9 @@ function App() {
           },
           cache: 'no-cache'
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('Backend status:', data);
@@ -127,18 +139,18 @@ function App() {
           console.warn('Backend status check timed out');
         }
         setBackendStatus('disconnected');
-        
+
         // Implement exponential backoff
         setReconnectAttempts(prev => Math.min(prev + 1, 10));
       }
     };
-    
+
     checkBackendStatus();
-    
+
     // Calculate backoff delay: 30s, 60s, 120s, up to 300s (5 min)
     const backoffDelay = Math.min(30000 * Math.pow(2, reconnectAttempts), 300000);
     const interval = setInterval(checkBackendStatus, backoffDelay);
-    
+
     return () => clearInterval(interval);
   }, [authToken, reconnectAttempts]);
 
@@ -211,11 +223,17 @@ function App() {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 
+  // Show startup sequence for first-time users
+  if (showStartup) {
+    return <StartupSequence onComplete={() => setShowStartup(false)} />;
+  }
+
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-primary text-white overflow-hidden relative">
         <ParticleBackground />
-        
+
         {/* Offline/Backend Status Bar */}
         {(!isOnline || backendStatus === 'disconnected') && (
           <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-4 py-2 text-center text-sm">
@@ -223,7 +241,7 @@ function App() {
             {isOnline && backendStatus === 'disconnected' && "🔌 Backend server disconnected. Retrying..."}
           </div>
         )}
-        
+
         <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} username={username} onLogout={handleLogout} />
         <main className={`ml-20 transition-all duration-500 ease-out ${(!isOnline || backendStatus === 'disconnected') ? 'mt-10' : ''}`}>
           <div className="container-custom">
