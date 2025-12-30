@@ -21,11 +21,24 @@ interface SettingsPanelProps {
   setLanguage?: (language: string) => void;
 }
 
+interface VoiceOption {
+  id: string;
+  name: string;
+  gender: 'male' | 'female';
+  accent: string;
+  language: string;
+  description: string;
+  personality: string;
+}
+
 const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: SettingsPanelProps) => {
   const [settings, setSettings] = useState<SettingsCategory[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('en-US-AriaNeural');
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
 
   const initialSettings: SettingsCategory[] = [
     {
@@ -119,7 +132,12 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
+        // Merge saved settings with initialSettings to restore icons
+        const merged = initialSettings.map((category, index) => ({
+          ...category,
+          settings: parsed[index]?.settings || category.settings
+        }));
+        setSettings(merged);
         setLastSaved(localStorage.getItem('yourdaddy-settings-timestamp'));
       } catch (error) {
         console.error('Failed to load settings:', error);
@@ -170,8 +188,13 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
   const saveSettings = async () => {
     setSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem('yourdaddy-settings', JSON.stringify(settings));
+      // Save to localStorage (exclude icons to avoid serialization issues)
+      const settingsToSave = settings.map(category => ({
+        title: category.title,
+        color: category.color,
+        settings: category.settings
+      }));
+      localStorage.setItem('yourdaddy-settings', JSON.stringify(settingsToSave));
       localStorage.setItem('yourdaddy-settings-timestamp', new Date().toISOString());
 
       // Also try to save to backend
@@ -181,7 +204,7 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ settings }),
+          body: JSON.stringify({ settings: settingsToSave }),
         });
       } catch (error) {
         console.warn('Failed to save to backend, using local storage only:', error);
@@ -230,6 +253,60 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
       };
       reader.readAsText(file);
     }
+  };
+
+  // Fetch available voices
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch('/api/voice/list');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableVoices(data.voices || []);
+
+          const savedVoice = localStorage.getItem('selectedVoice');
+          if (savedVoice) {
+            setSelectedVoice(savedVoice);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch voices:', error);
+      }
+    };
+    fetchVoices();
+  }, []);
+
+  const previewVoice = async (voiceId: string) => {
+    if (previewingVoice) return;
+
+    setPreviewingVoice(voiceId);
+    try {
+      const response = await fetch('/api/voice/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_id: voiceId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.audio_data) {
+          const audio = new Audio(data.audio_data);
+          audio.play();
+          audio.onended = () => setPreviewingVoice(null);
+        }
+      } else {
+        setPreviewingVoice(null);
+      }
+    } catch (error) {
+      console.error('Failed to preview voice:', error);
+      setPreviewingVoice(null);
+    }
+  };
+
+  const handleVoiceChange = (voiceId: string) => {
+    setSelectedVoice(voiceId);
+    localStorage.setItem('selectedVoice', voiceId);
+    setHasChanges(true);
   };
 
   return (
@@ -422,6 +499,84 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
             </div>
           );
         })}
+      </div>
+
+      {/* Voice Selection Panel */}
+      <div className="glass-strong p-6 rounded-2xl mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center">
+            <Volume2 size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Assistant Voice</h2>
+            <p className="text-sm text-[#DDDDDD]">Choose your preferred AI voice</p>
+          </div>
+          <div className="ml-auto text-right">
+            <p className="text-sm text-[#DDDDDD]">Selected:</p>
+            <p className="text-lg font-semibold text-[#00CEC9]">
+              {availableVoices.find(v => v.id === selectedVoice)?.name || 'Loading...'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {['US', 'UK', 'Indian'].map(accent => {
+            const voicesInAccent = availableVoices.filter(v => v.accent === accent);
+            if (voicesInAccent.length === 0) return null;
+
+            return (
+              <div key={accent} className="space-y-3">
+                <h3 className="text-sm font-semibold text-[#00CEC9] uppercase tracking-wider">
+                  {accent} Accent
+                </h3>
+                {voicesInAccent.map(voice => (
+                  <div
+                    key={voice.id}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer hover-lift ${selectedVoice === voice.id
+                        ? 'border-[#00CEC9] bg-gradient-to-r from-[#00CEC9]/20 to-[#6C5CE7]/20'
+                        : 'border-white/10 hover:border-[#00CEC9]/50 bg-white/5'
+                      }`}
+                    onClick={() => handleVoiceChange(voice.id)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">{voice.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${voice.gender === 'male'
+                            ? 'bg-blue-500/20 text-blue-300'
+                            : 'bg-pink-500/20 text-pink-300'
+                          }`}>
+                          {voice.gender === 'male' ? '♂' : '♀'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          previewVoice(voice.id);
+                        }}
+                        disabled={previewingVoice === voice.id}
+                        className={`text-xs px-3 py-1 rounded-full transition-colors ${previewingVoice === voice.id
+                            ? 'bg-[#00CEC9] text-white'
+                            : 'bg-white/10 text-[#00CEC9] hover:bg-[#00CEC9]/20'
+                          }`}
+                        title="Preview voice"
+                      >
+                        {previewingVoice === voice.id ? '▶' : '▶'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#DDDDDD]/70">{voice.personality}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+
+        {availableVoices.length === 0 && (
+          <div className="text-center py-8 text-[#DDDDDD]">
+            <p>Loading voices...</p>
+            <p className="text-sm mt-2">Make sure the backend server is running</p>
+          </div>
+        )}
       </div>
 
       <div className="glass-strong p-6 rounded-2xl mb-8">

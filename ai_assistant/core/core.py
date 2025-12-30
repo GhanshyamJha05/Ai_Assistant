@@ -17,6 +17,21 @@ from typing import Optional
 # Import the intelligent app discovery system
 from .app_discovery import smart_open_application, discover_applications, refresh_app_database, list_installed_apps
 
+# Import the intent recognizer for better command understanding
+try:
+    from ai_assistant.ai.intent_recognizer import IntentRecognizer
+    INTENT_RECOGNIZER_AVAILABLE = True
+except ImportError:
+    INTENT_RECOGNIZER_AVAILABLE = False
+
+# Initialize intent recognizer globally
+_intent_recognizer = None
+def get_intent_recognizer():
+    global _intent_recognizer
+    if INTENT_RECOGNIZER_AVAILABLE and _intent_recognizer is None:
+        _intent_recognizer = IntentRecognizer()
+    return _intent_recognizer
+
 # --- Imports for Volume Control ---
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
@@ -86,8 +101,16 @@ def write_a_note(message: str) -> str:
         return f"Error controlling Notepad: {e}"
 
 def open_application(app_name: str) -> str:
-    """Opens any application on the computer using intelligent discovery."""
+    """Opens any application on the computer using intelligent discovery with intent recognition."""
     print(f"--- 'Hands' (open_application) activated. App: {app_name} ---")
+    
+    # Try to normalize the app name using intent recognizer
+    recognizer = get_intent_recognizer()
+    if recognizer:
+        # Normalize the app name to handle variations
+        normalized_app = recognizer.normalize_app_name(app_name)
+        print(f"[Intent Recognizer] Normalized '{app_name}' -> '{normalized_app}'")
+        app_name = normalized_app
     
     # Use the smart application discovery system
     return smart_open_application(app_name)
@@ -320,6 +343,7 @@ def make_phone_call(contact_name: str = "", phone_number: str = "") -> str:
 def process_hinglish_command(text: str) -> dict:
     """
     Processes Hinglish commands and maps them to appropriate functions.
+    Now uses intelligent intent recognition for better accuracy.
     
     :param text: Hinglish command text
     :return: Dictionary with command info and execution result
@@ -335,6 +359,21 @@ def process_hinglish_command(text: str) -> dict:
     }
     
     try:
+        # First, try using the intent recognizer
+        recognizer = get_intent_recognizer()
+        if recognizer:
+            parsed = recognizer.parse_command(text)
+            print(f"[Intent Recognizer] Parsed: {parsed}")
+            
+            if parsed['intent'] == 'open_app' and parsed['app_name']:
+                result['detected_command'] = 'open_app'
+                result['parameters']['app_name'] = parsed['app_name']
+                result['parameters']['confidence'] = parsed['confidence']
+                result['execution_result'] = open_application(parsed['app_name'])
+                return result
+        
+        # Fallback to original pattern matching
+        
         # Volume control patterns
         if any(word in text_lower for word in ['volume', 'awaaz', 'awaz', 'sound']):
             if any(word in text_lower for word in ['up', 'badha', 'badhao', 'zyada', 'jyada', 'increase']):
@@ -380,19 +419,24 @@ def process_hinglish_command(text: str) -> dict:
             else:
                 result['execution_result'] = make_phone_call()
         
-        # App opening patterns
-        elif any(word in text_lower for word in ['open', 'kholo', 'start', 'chalu', 'launch']):
-            # Extract app name - get the word(s) immediately before the action word
-            app_name = None
-            for word in ['kholo', 'open', 'chalu', 'start', 'launch']:
-                # Try to find word before action
-                pattern = r'(\w+(?:\s+\w+)?)\s+' + word
-                match = re.search(pattern, text_lower)
-                if match:
-                    app_name = match.group(1).strip()
-                    # Remove 'karo' if present
-                    app_name = re.sub(r'\s+karo$', '', app_name)
-                    break
+        # App opening patterns (fallback if intent recognizer didn't work)
+        elif any(word in text_lower for word in ['open', 'kholo', 'start', 'chalu', 'launch', 'on']):
+            # Use intent recognizer first
+            if recognizer:
+                app_name = recognizer.extract_app_name(text, intent='open_app')
+            else:
+                # Fallback: Extract app name - get the word(s) immediately before the action word
+                app_name = None
+                for word in ['kholo', 'open', 'chalu', 'start', 'launch', 'on']:
+                    # Try to find word before action
+                    pattern = r'(\w+(?:\s+\w+)?)\s+' + word
+                    match = re.search(pattern, text_lower)
+                    if match:
+                        app_name = match.group(1).strip()
+                        # Remove 'karo' if present
+                        app_name = re.sub(r'\s+karo$', '', app_name)
+                        app_name = re.sub(r'\s+kro$', '', app_name)
+                        break
             
             if app_name:
                 result['detected_command'] = 'open_app'
@@ -419,10 +463,10 @@ def process_hinglish_command(text: str) -> dict:
         
         # If no command detected
         if result['detected_command'] is None:
-            result['execution_result'] = "❌ Could not understand Hinglish command. Please try again."
+            result['execution_result'] = "❌ Could not understand command. Please try again."
         
     except Exception as e:
-        result['execution_result'] = f"❌ Error processing Hinglish command: {e}"
+        result['execution_result'] = f"❌ Error processing command: {e}"
     
     return result
 

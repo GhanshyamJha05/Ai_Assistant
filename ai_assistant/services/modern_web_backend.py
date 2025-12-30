@@ -225,22 +225,21 @@ CORS(app, resources={
     }
 })
 
-# ... lines omitted ...
-
-@app.route('/api/status', methods=['GET'])
-@limiter.limit("60 per minute")
-def api_status():
-    """Check API status"""
-    return jsonify({
-        "status": "online",
-        "timestamp": datetime.now().isoformat(),
-        "service": "YourDaddy Assistant Backend"
-    })
-
-@app.route('/api/health', methods=['GET'])
-def api_health():
-    """Health check alias"""
-    return api_status()
+# Voice Options for TTS
+AVAILABLE_VOICES = [
+    {"id": "en-US-AriaNeural", "name": "Aria", "gender": "female", "accent": "US", "language": "en-US", "description": "Warm and friendly", "personality": "Friendly and conversational"},
+    {"id": "en-US-JennyNeural", "name": "Jenny", "gender": "female", "accent": "US", "language": "en-US", "description": "Professional and clear", "personality": "Professional and articulate"},
+    {"id": "en-US-GuyNeural", "name": "Guy", "gender": "male", "accent": "US", "language": "en-US", "description": "Confident and professional", "personality": "Confident and authoritative"},
+    {"id": "en-US-DavisNeural", "name": "Davis", "gender": "male", "accent": "US", "language": "en-US", "description": "Warm and conversational", "personality": "Warm and approachable"},
+    {"id": "en-GB-SoniaNeural", "name": "Sonia", "gender": "female", "accent": "UK", "language": "en-GB", "description": "British elegance", "personality": "Elegant and refined"},
+    {"id": "en-GB-RyanNeural", "name": "Ryan", "gender": "male", "accent": "UK", "language": "en-GB", "description": "British sophistication", "personality": "Sophisticated and clear"},
+    {"id": "en-IN-NeerjaNeural", "name": "Neerja", "gender": "female", "accent": "Indian", "language": "en-IN", "description": "Indian warmth", "personality": "Warm and expressive"},
+    {"id": "en-IN-PrabhatNeural", "name": "Prabhat", "gender": "male", "accent": "Indian", "language": "en-IN", "description": "Indian clarity", "personality": "Clear and professional"},
+    {"id": "en-US-AnaNeural", "name": "Ana", "gender": "female", "accent": "US", "language": "en-US", "description": "Energetic and cheerful", "personality": "Cheerful and enthusiastic"},
+    {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "male", "accent": "US", "language": "en-US", "description": "Deep and reassuring", "personality": "Calm and reassuring"},
+    {"id": "en-GB-LibbyNeural", "name": "Libby", "gender": "female", "accent": "UK", "language": "en-GB", "description": "Young and friendly British", "personality": "Youthful and energetic"},
+    {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
+]
 
 # User Preferences Endpoints
 @app.route('/api/user/preferences', methods=['GET'])
@@ -3033,6 +3032,86 @@ def api_speak():
         logging.error(f"Error in api_speak: {str(e)}")
         return jsonify({"error": "Failed to process text-to-speech"}), 500
 
+@app.route('/api/voice/list', methods=['GET'])
+def api_list_voices():
+    """Get list of available voices"""
+    try:
+        return jsonify({
+            "success": True,
+            "voices": AVAILABLE_VOICES,
+            "default": "en-US-AriaNeural"
+        })
+    except Exception as e:
+        logging.error(f"Error fetching voice list: {str(e)}")
+        return jsonify({"error": "Failed to fetch voices"}), 500
+
+@app.route('/api/voice/preview', methods=['POST'])
+@limiter.limit("10 per minute")
+def api_preview_voice():
+    """Generate preview audio for a voice"""
+    try:
+        data = request.get_json()
+        voice_id = data.get('voice_id', 'en-US-AriaNeural')
+        sample_text = data.get('text', "Hello! This is a sample of my voice. I'm here to assist you with anything you need.")
+        
+        # Find voice info
+        voice_info = next((v for v in AVAILABLE_VOICES if v['id'] == voice_id), None)
+        if not voice_info:
+            return jsonify({"error": "Voice not found"}), 404
+        
+        # Generate audio using Edge-TTS
+        if VOICE_AVAILABLE:
+            try:
+                import edge_tts
+                import tempfile
+                
+                # Create temporary file
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+                output_path = temp_file.name
+                temp_file.close()
+                
+                # Generate audio
+                async def generate():
+                    communicate = edge_tts.Communicate(sample_text, voice_id)
+                    await communicate.save(output_path)
+                
+                # Run async function
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                loop.run_until_complete(generate())
+                
+                # Read and encode as base64
+                with open(output_path, 'rb') as f:
+                    audio_data = f.read()
+                
+                import base64
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                
+                # Clean up
+                os.unlink(output_path)
+                
+                return jsonify({
+                    "success": True,
+                    "voice_id": voice_id,
+                    "voice_name": voice_info['name'],
+                    "audio_data": f"data:audio/mp3;base64,{audio_base64}"
+                })
+                
+            except Exception as e:
+                logging.error(f"Edge-TTS preview failed: {str(e)}")
+                return jsonify({"error": f"Preview generation failed: {str(e)}"}), 500
+        else:
+            return jsonify({"error": "Voice synthesis not available"}), 503
+            
+    except Exception as e:
+        logging.error(f"Voice preview error: {str(e)}")
+        return jsonify({"error": "Failed to generate preview"}), 500
+
 @app.route('/api/voice/process', methods=['POST'])
 @jwt_required()
 @limiter.limit("20 per minute")
@@ -3342,7 +3421,50 @@ def handle_voice_audio(data):
     audio_data = data.get('audio_data', '')
     if audio_data:
         result = assistant.process_voice_audio(audio_data)
-        emit('voice_audio_response', result)
+        
+        # Emit transcript if recognized
+        if result.get('success') and result.get('transcript'):
+            emit('voice_transcript', {
+                'text': result['transcript'],
+                'confidence': 0.9
+            })
+            
+            # Also emit the response if available
+            if result.get('response'):
+                emit('voice_response', {
+                    'response': result['response']
+                })
+        else:
+            emit('voice_audio_response', result)
+
+@socketio.on('voice_command')
+def handle_voice_command(data):
+    """Process voice command from transcript text"""
+    try:
+        text = data.get('text', '')
+        
+        if not text:
+            emit('voice_response', {'response': 'No command received', 'error': True})
+            return
+        
+        # Process the command
+        response = assistant.process_command(text)
+        
+        # Emit the response
+        emit('voice_response', {
+            'response': response,
+            'success': True,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        print(f"✅ Voice command processed: {text[:50]}...")
+        
+    except Exception as e:
+        print(f"❌ Voice command error: {str(e)}")
+        emit('voice_response', {
+            'response': f'Sorry, I encountered an error: {str(e)}',
+            'error': True
+        })
 
 @socketio.on('request_tts')
 def handle_tts_request(data):
@@ -3493,27 +3615,7 @@ def handle_multilingual_command(data):
             'timestamp': datetime.now().isoformat()
         })
 
-@socketio.on('voice_audio_data')
-def handle_voice_audio_data(data):
-    """Handle voice audio data for multilingual recognition"""
-    audio_data = data.get('audio_data', '')
-    language = data.get('language', 'auto')
-    
-    if audio_data:
-        log_action('process_voice_audio', {'language': language})
-        if assistant.multilingual:
-            # Process audio with multilingual support
-            log_module_usage('multilingual', 'process_voice_audio')
-            result = assistant.process_voice_audio(audio_data)
-            # Add language detection to the result if available
-            if result.get('transcript'):
-                context = assistant.multilingual.detect_language(result['transcript'])
-                result['detected_language'] = context.detected_language.value
-                result['language_confidence'] = context.confidence
-        else:
-            result = assistant.process_voice_audio(audio_data)
-        
-        emit('voice_recognition_result', result)
+# Duplicate handler removed - see handle_voice_audio above
 
 # Error logging endpoint
 @app.route('/api/error/log', methods=['POST'])

@@ -12,6 +12,16 @@ interface CommandHistoryItem {
   confidence?: number;
 }
 
+interface VoiceOption {
+  id: string;
+  name: string;
+  gender: 'male' | 'female';
+  accent: string;
+  language: string;
+  description: string;
+  personality: string;
+}
+
 const VoiceInterface = () => {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [isListening, setIsListening] = useState(false);
@@ -32,6 +42,9 @@ const VoiceInterface = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('en-US');
   const [audioLevel, setAudioLevel] = useState(0);
   const [confidence, setConfidence] = useState(0);
+  const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('en-US-AriaNeural');
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -63,7 +76,7 @@ const VoiceInterface = () => {
       setVoiceState('processing');
       setConfidence(data.confidence || 0.8);
     });
-    
+
     socketInstance.on('voice_partial_transcript', (data) => {
       setInterimTranscript(data.text);
     });
@@ -72,7 +85,7 @@ const VoiceInterface = () => {
       setResponse(data.response);
       setIsProcessing(false);
       setVoiceState('speaking');
-      
+
       // Add to history
       const newItem: CommandHistoryItem = {
         id: Date.now().toString(),
@@ -82,7 +95,7 @@ const VoiceInterface = () => {
         confidence: confidence
       };
       setCommandHistory(prev => [newItem, ...prev.slice(0, 9)]);
-      
+
       // Return to idle after speaking
       setTimeout(() => {
         if (wakeWordEnabled) {
@@ -128,25 +141,86 @@ const VoiceInterface = () => {
     }
   };
 
+  // Fetch available voices on mount
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch('/api/voice/list');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableVoices(data.voices || []);
+
+          // Load saved voice preference
+          const savedVoice = localStorage.getItem('selectedVoice');
+          if (savedVoice) {
+            setSelectedVoice(savedVoice);
+          } else {
+            setSelectedVoice(data.default || 'en-US-AriaNeural');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch voices:', error);
+      }
+    };
+
+    fetchVoices();
+  }, []);
+
+  // Preview voice function
+  const previewVoice = async (voiceId: string) => {
+    if (previewingVoice) return; // Prevent multiple previews at once
+
+    setPreviewingVoice(voiceId);
+    try {
+      const response = await fetch('/api/voice/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_id: voiceId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.audio_data) {
+          // Play audio
+          const audio = new Audio(data.audio_data);
+          audio.play();
+          audio.onended = () => setPreviewingVoice(null);
+        }
+      } else {
+        console.error('Voice preview failed');
+        setPreviewingVoice(null);
+      }
+    } catch (error) {
+      console.error('Failed to preview voice:', error);
+      setPreviewingVoice(null);
+    }
+  };
+
+  // Handle voice selection
+  const handleVoiceChange = (voiceId: string) => {
+    setSelectedVoice(voiceId);
+    localStorage.setItem('selectedVoice', voiceId);
+  };
+
   // Real-time audio level monitoring
   useEffect(() => {
     let animationId: number;
-    
+
     if (analyserRef.current && isListening) {
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-      
+
       const updateWaveform = () => {
         if (!analyserRef.current || !isListening) {
           setWaveform(Array(20).fill(0.2));
           setAudioLevel(0);
           return;
         }
-        
+
         analyserRef.current.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         const normalizedLevel = average / 255;
         setAudioLevel(normalizedLevel);
-        
+
         // Update waveform based on frequency data
         const waveData = Array(20).fill(0).map((_, i) => {
           const start = Math.floor((i / 20) * dataArray.length);
@@ -157,16 +231,16 @@ const VoiceInterface = () => {
           return Math.max(0.3, Math.min(1.0, (avg / 255) * 1.2));
         });
         setWaveform(waveData);
-        
+
         animationId = requestAnimationFrame(updateWaveform);
       };
-      
+
       animationId = requestAnimationFrame(updateWaveform);
     } else {
       setWaveform(Array(20).fill(0.2));
       setAudioLevel(0);
     }
-    
+
     return () => {
       if (animationId) {
         cancelAnimationFrame(animationId);
@@ -203,14 +277,14 @@ const VoiceInterface = () => {
       setTranscript('Initializing voice recognition...');
       setResponse('');
       socket.emit('start_voice_listening');
-      
+
       try {
         // Also start browser-based recording as fallback
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
-        
+
         // Setup audio analysis
         audioContextRef.current = new AudioContext();
         const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -240,22 +314,22 @@ const VoiceInterface = () => {
         setVoiceState(wakeWordEnabled ? 'wake_listening' : 'command_listening');
         setTranscript('');
         setInterimTranscript('');
-        
+
         // Start Web Speech API for real-time transcription
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
           const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
           const recognition = new SpeechRecognition();
           recognitionRef.current = recognition;
-          
+
           recognition.continuous = true;
           recognition.interimResults = true;
           recognition.lang = selectedLanguage;
           recognition.maxAlternatives = 1;
-          
+
           recognition.onresult = (event: any) => {
             let interim = '';
             let final = '';
-            
+
             for (let i = event.resultIndex; i < event.results.length; i++) {
               const transcript = event.results[i][0].transcript;
               if (event.results[i].isFinal) {
@@ -264,20 +338,29 @@ const VoiceInterface = () => {
                 interim += transcript;
               }
             }
-            
+
             if (interim) {
               setInterimTranscript(interim);
             }
             if (final) {
-              setTranscript(prev => prev + final);
+              const newTranscript = final.trim();
+              setTranscript(prev => prev + newTranscript + ' ');
               setInterimTranscript('');
+
+              // Send final transcript to backend for processing
+              if (socket && newTranscript) {
+                console.log('📤 Sending voice command to backend:', newTranscript);
+                setIsProcessing(true);
+                setVoiceState('processing');
+                socket.emit('voice_command', { text: newTranscript });
+              }
             }
           };
-          
+
           recognition.onerror = (event: any) => {
             console.error('Speech recognition error:', event.error);
           };
-          
+
           recognition.onend = () => {
             if (isListening) {
               // Restart if still listening
@@ -288,7 +371,7 @@ const VoiceInterface = () => {
               }
             }
           };
-          
+
           try {
             recognition.start();
             console.log('✅ Live speech recognition started');
@@ -296,7 +379,7 @@ const VoiceInterface = () => {
             console.error('Failed to start speech recognition:', e);
           }
         }
-        
+
         console.log('✅ Audio analysis setup complete - waveform should be active now');
       } catch (error) {
         console.error('Failed to access microphone:', error);
@@ -346,15 +429,14 @@ const VoiceInterface = () => {
             </span>
           )}
         </button>
-        
+
         <button
           onClick={() => setShowSettings(!showSettings)}
           className="w-12 h-12 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#00CEC9] flex items-center justify-center shadow-lg hover:shadow-2xl hover:scale-110 transition-all duration-300"
           title="Voice Settings"
         >
-          <SettingsIcon size={20} className={`text-white transition-transform duration-300 ${
-            showSettings ? 'rotate-180' : 'rotate-0'
-          }`} />
+          <SettingsIcon size={20} className={`text-white transition-transform duration-300 ${showSettings ? 'rotate-180' : 'rotate-0'
+            }`} />
         </button>
       </div>
 
@@ -371,10 +453,10 @@ const VoiceInterface = () => {
               <div className={`absolute w-96 h-96 rounded-full border bg-gradient-to-r ${stateInfo.color} opacity-5 animate-pulse`}></div>
             </>
           )}
-          
+
           {/* Active listening indicator - bright ring when audio detected */}
           {isListening && audioLevel > 0.1 && (
-            <div 
+            <div
               className={`absolute rounded-full border-4 bg-gradient-to-r ${stateInfo.color} transition-all duration-100`}
               style={{
                 width: `${240 + audioLevel * 100}px`,
@@ -385,9 +467,8 @@ const VoiceInterface = () => {
           )}
 
           <div
-            className={`relative w-48 h-48 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 bg-gradient-to-br ${stateInfo.color} ${
-              voiceState !== 'idle' ? 'scale-110 shadow-2xl shadow-[#00CEC9]/50' : 'hover:scale-105'
-            } ${!isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`relative w-48 h-48 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 bg-gradient-to-br ${stateInfo.color} ${voiceState !== 'idle' ? 'scale-110 shadow-2xl shadow-[#00CEC9]/50' : 'hover:scale-105'
+              } ${!isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={toggleListening}
           >
             <div className="w-44 h-44 rounded-full bg-[#0A0E27] flex items-center justify-center flex-col gap-2">
@@ -397,9 +478,9 @@ const VoiceInterface = () => {
                 <MicOff size={64} className="text-gray-500" />
               ) : (
                 <StateIcon size={64} className={`${voiceState !== 'idle' ? 'animate-pulse' : ''}`} style={{
-                  color: voiceState === 'wake_listening' ? '#00CEC9' : 
-                         voiceState === 'command_listening' ? '#10b981' :
-                         voiceState === 'speaking' ? '#3b82f6' : '#6C5CE7'
+                  color: voiceState === 'wake_listening' ? '#00CEC9' :
+                    voiceState === 'command_listening' ? '#10b981' :
+                      voiceState === 'speaking' ? '#3b82f6' : '#6C5CE7'
                 }} />
               )}
               {confidence > 0 && voiceState === 'processing' && (
@@ -418,7 +499,7 @@ const VoiceInterface = () => {
                 <div
                   key={index}
                   className={`w-2 rounded-full transition-all duration-75 bg-gradient-to-t ${stateInfo.color}`}
-                  style={{ 
+                  style={{
                     height: `${height * 100}%`,
                     opacity: voiceState !== 'idle' ? 1 : 0.3
                   }}
@@ -433,7 +514,7 @@ const VoiceInterface = () => {
             )}
           </div>
         </div>
-        
+
         {/* State text */}
         <div className="text-center mt-8">
           <p className="text-xl text-white font-medium">{stateInfo.text}</p>
@@ -441,7 +522,7 @@ const VoiceInterface = () => {
             <div className="mt-2 flex items-center justify-center gap-2">
               <span className="text-sm text-[#DDDDDD]">Input Level:</span>
               <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
+                <div
                   className={`h-full bg-gradient-to-r ${stateInfo.color} transition-all duration-100`}
                   style={{ width: `${Math.max(5, audioLevel * 100)}%` }}
                 ></div>
@@ -467,7 +548,7 @@ const VoiceInterface = () => {
           </div>
         </div>
       )}
-      
+
       {/* Final transcript after processing */}
       {!isListening && transcript && (
         <div className="glass-strong p-6 rounded-2xl mb-4 max-w-2xl w-full">
@@ -511,7 +592,7 @@ const VoiceInterface = () => {
                 ✕
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               {commandHistory.length === 0 ? (
                 <p className="text-[#DDDDDD] text-center py-8">No commands yet. Start speaking!</p>
@@ -569,7 +650,7 @@ const VoiceInterface = () => {
                 ✕
               </button>
             </div>
-            
+
             <div className="p-6 space-y-5">
               {/* Wake Word Detection */}
               <div className="flex items-center justify-between">
@@ -577,15 +658,13 @@ const VoiceInterface = () => {
                   <span className="text-[#DDDDDD] block">Wake Word Detection</span>
                   <span className="text-xs text-[#DDDDDD]/70">Activate with "Hey Assistant"</span>
                 </div>
-                <div 
-                  className={`w-12 h-6 rounded-full cursor-pointer relative transition-colors ${
-                    wakeWordEnabled ? 'bg-gradient-to-r from-[#00CEC9] to-[#6C5CE7]' : 'bg-gray-600'
-                  }`}
+                <div
+                  className={`w-12 h-6 rounded-full cursor-pointer relative transition-colors ${wakeWordEnabled ? 'bg-gradient-to-r from-[#00CEC9] to-[#6C5CE7]' : 'bg-gray-600'
+                    }`}
                   onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
                 >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
-                    wakeWordEnabled ? 'right-1' : 'left-1'
-                  }`}></div>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${wakeWordEnabled ? 'right-1' : 'left-1'
+                    }`}></div>
                 </div>
               </div>
 
@@ -595,22 +674,20 @@ const VoiceInterface = () => {
                   <span className="text-[#DDDDDD] block">Voice Feedback</span>
                   <span className="text-xs text-[#DDDDDD]/70">Audio confirmation beeps</span>
                 </div>
-                <div 
-                  className={`w-12 h-6 rounded-full cursor-pointer relative transition-colors ${
-                    voiceFeedbackEnabled ? 'bg-gradient-to-r from-[#00CEC9] to-[#6C5CE7]' : 'bg-gray-600'
-                  }`}
+                <div
+                  className={`w-12 h-6 rounded-full cursor-pointer relative transition-colors ${voiceFeedbackEnabled ? 'bg-gradient-to-r from-[#00CEC9] to-[#6C5CE7]' : 'bg-gray-600'
+                    }`}
                   onClick={() => setVoiceFeedbackEnabled(!voiceFeedbackEnabled)}
                 >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
-                    voiceFeedbackEnabled ? 'right-1' : 'left-1'
-                  }`}></div>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${voiceFeedbackEnabled ? 'right-1' : 'left-1'
+                    }`}></div>
                 </div>
               </div>
 
               {/* Language Selector */}
               <div>
                 <label className="text-[#DDDDDD] block mb-2">Language</label>
-                <select 
+                <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}
                   className="w-full bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20 focus:border-[#00CEC9] focus:outline-none"
@@ -662,13 +739,69 @@ const VoiceInterface = () => {
                   <div className="mt-2">
                     <span className="text-xs text-[#DDDDDD]/70">Current input level</span>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden mt-1">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-[#00CEC9] to-[#6C5CE7] transition-all duration-100"
                         style={{ width: `${audioLevel * 100}%` }}
                       ></div>
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Voice Selection */}
+              <div className="border-t border-white/10 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[#DDDDDD] font-medium">Assistant Voice</span>
+                  <span className="text-xs text-[#00CEC9]">{availableVoices.find(v => v.id === selectedVoice)?.name || 'Default'}</span>
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                  {/* Group voices by accent */}
+                  {['US', 'UK', 'Indian'].map(accent => {
+                    const voicesInAccent = availableVoices.filter(v => v.accent === accent);
+                    if (voicesInAccent.length === 0) return null;
+
+                    return (
+                      <div key={accent} className="space-y-2">
+                        <div className="text-xs text-[#DDDDDD]/50 uppercase tracking-wider mt-2">{accent} Accent</div>
+                        {voicesInAccent.map(voice => (
+                          <div
+                            key={voice.id}
+                            className={`p-3 rounded-lg border transition-all cursor-pointer ${selectedVoice === voice.id
+                                ? 'bg-gradient-to-r from-[#00CEC9]/20 to-[#6C5CE7]/20 border-[#00CEC9]'
+                                : 'bg-white/5 border-white/10 hover:border-[#00CEC9]/50'
+                              }`}
+                            onClick={() => handleVoiceChange(voice.id)}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-medium">{voice.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${voice.gender === 'male' ? 'bg-blue-500/20 text-blue-300' : 'bg-pink-500/20 text-pink-300'
+                                  }`}>
+                                  {voice.gender === 'male' ? '♂' : '♀'}
+                                </span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  previewVoice(voice.id);
+                                }}
+                                disabled={previewingVoice === voice.id}
+                                className={`text-xs px-3 py-1 rounded-full transition-colors ${previewingVoice === voice.id
+                                    ? 'bg-[#00CEC9] text-white'
+                                    : 'bg-white/10 text-[#00CEC9] hover:bg-[#00CEC9]/20'
+                                  }`}
+                                title="Preview voice"
+                              >
+                                {previewingVoice === voice.id ? '▶ Playing...' : '▶ Preview'}
+                              </button>
+                            </div>
+                            <div className="text-xs text-[#DDDDDD]/70">{voice.personality}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Test Microphone Button */}
