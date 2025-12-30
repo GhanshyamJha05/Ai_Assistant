@@ -37,7 +37,7 @@
 
 ## 🌟 Overview
 
-**YourDaddy AI Assistant** is a comprehensive, voice-activated AI assistant that combines the power of **Google Gemini 2.0**, **OpenAI GPT**, advanced speech recognition, and intelligent automation to create a seamless personal assistant experience. Built with Python and modern web technologies, it offers multilingual support, multimodal capabilities (text, voice, vision), and extensive system integration.
+**YourDaddy AI Assistant** is a comprehensive, voice-activated AI assistant that combines the power of **Google Gemini 2.0**, **OpenAI GPT**, advanced speech recognition, and intelligent automation to create a seamless personal assistant experience. Built with Python and modern web technologies, it offers multilingual support, multimodal capabilities (text, voice, vision), and extensive system integration. It features a sophisticated dual-backend architecture to handle both real-time user interaction and complex, offline machine learning tasks.
 
 ### 🎯 What Makes This Special
 
@@ -201,42 +201,44 @@ python main.py --interface cli
 
 ## 🏗️ Architecture
 
+This project utilizes a sophisticated **dual-backend architecture** to separate user-facing operations from developer-focused analytics and ML model interaction.
+
+*   **User-Facing Application**: The primary application that users interact with. It consists of a modern React frontend and a Flask backend that handles real-time communication, automation, and core assistant logic.
+*   **Learning & Analytics API**: A separate FastAPI backend that exposes the 27+ advanced machine learning systems via a comprehensive REST API. This server is intended for developers and data scientists to monitor, debug, and analyze the AI's learning processes.
+
+Crucially, these two backends **operate independently**. The main Flask application does not call the FastAPI server. Instead, both backends act as two different "heads" for the same shared core of ML modules.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     User Interfaces                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ Web UI   │  │ Voice UI │  │ CLI      │  │ Desktop  │   │
-│  │ (React)  │  │ (Speech) │  │ (Python) │  │ GUI (Tk) │   │
-│  └─────┬────┘  └─────┬────┘  └─────┬────┘  └─────┬────┘   │
-└────────┼─────────────┼─────────────┼─────────────┼─────────┘
-         │             │             │             │
-         └─────────────┴─────────────┴─────────────┘
-                            │
-         ┌──────────────────┴──────────────────┐
-         │      Flask Backend (Port 8000)      │
-         │    WebSocket + REST API Server       │
-         └──────────────────┬──────────────────┘
-                            │
-         ┌──────────────────┴──────────────────┐
-         │         Core AI System              │
-         │  ┌────────────────────────────┐     │
-         │  │   Conversational AI        │     │
-         │  │   - Context Management     │     │
-         │  │   - Multi-turn Dialog      │     │
-         │  │   - Memory System          │     │
-         │  └────────────────────────────┘     │
-         └──────────────────┬──────────────────┘
-                            │
-      ┌──────────┬──────────┴───────┬──────────┐
-      │          │                  │          │
-┌─────▼────┐ ┌──▼─────┐ ┌─────────▼─────┐ ┌──▼─────┐
-│ AI/LLM   │ │ Voice  │ │  Automation   │ │ Integr │
-│          │ │        │ │               │ │ -ations│
-│ •Gemini  │ │ •ASR   │ │ •App Control  │ │ •Google│
-│ •OpenAI  │ │ •TTS   │ │ •File Ops     │ │ •Spotify│
-│ •Memory  │ │ •Wake  │ │ •System Cmds  │ │ •Email │
-│ •Learn   │ │ •VAD   │ │ •Scheduling   │ │ •Web   │
-└──────────┘ └────────┘ └───────────────┘ └────────┘
+                  ┌──────────────────┐      ┌────────────────────┐
+                  │      User        │      │     Developer /    │
+                  └──────────────────┘      │      Analyst       │
+                         │                  └────────────────────┘
+     /-------------------|---------------------------\
+     |                   |                           |
+┌────▼──────────┐ ┌──────▼──────────────┐ ┌──────────▼───────────┐
+│ React + Vite  │ │ Flask + SocketIO    │ │  FastAPI (Uvicorn)   │
+│  (Frontend)   │ │ (User-Facing Backend) │ │ (Learning & Analytics │
+│ (project/)    │ │(modern_web_backend.py)│ │         API)         │
+└──────┬────────┘ └──────────┬──────────┘ │ (learning_api.py)    │
+       │                      │            └──────────┬───────────┘
+       └───────────┬──────────┘                       │
+                   |                                  |
+           ┌───────▼──────────────────────────────────▼────────┐
+           │     Core AI / ML Systems (Shared Python Library)    │
+           │           (27+ Learning Modules in /ai_assistant/ai) │
+           └──────────────────────────┬──────────────────────────┘
+                                      │
+                 ┌────────────────────┴────────────────────┐
+                 │          Data Persistence Layer         │
+                 │(7+ SQLite Databases in /data directory) │
+                 └────────────────────┬────────────────────┘
+                                      │
+  ┌──────────┬──────────┬─────────────┴──────────┬──────────┬──────────┐
+  │          │          │                        │          │          │
+┌─▼──┐   ┌───▼──┐   ┌───▼──┐              ┌──────▼──┐  ┌─────▼──┐  ┌────▼───┐
+│Gemini│ │OpenAI│ │Spotify │              │ Windows │  │ Google │  │ Voice  │
+│ API  │ │ API  │ │  API   │              │   OS    │  │Services│  │Engines │
+└──────┘ └──────┘ └────────┘              └─────────┘  └────────┘  └────────┘
 ```
 
 ---
