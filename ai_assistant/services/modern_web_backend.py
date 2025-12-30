@@ -241,7 +241,30 @@ AVAILABLE_VOICES = [
     {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
 ]
 
-# User Preferences Endpoints
+# =============================================================================
+# STARTUP OPTIMIZATION - Feature Toggle Configuration
+# =============================================================================
+# These environment variables control which features are enabled at startup
+# to optimize loading time. Set to 'false' to disable optional features.
+
+ENABLE_VOICE = os.getenv('ENABLE_VOICE', 'true').lower() == 'true'
+ENABLE_MULTIMODAL = os.getenv('ENABLE_MULTIMODAL', 'true').lower() == 'true'
+ENABLE_CONVERSATIONAL_AI = os.getenv('ENABLE_CONVERSATIONAL_AI', 'true').lower() == 'true'
+ENABLE_SYSTEM_MONITORING = os.getenv('ENABLE_SYSTEM_MONITORING', 'true').lower() == 'true'
+LAZY_INIT = os.getenv('LAZY_INIT', 'true').lower() == 'true'  # Lazy load components on first use
+BACKGROUND_INIT = os.getenv('BACKGROUND_INIT', 'true').lower() == 'true'  # Initialize in background
+
+logger.info("🔧 Startup Configuration:")
+logger.info(f"  - Lazy Initialization: {LAZY_INIT}")
+logger.info(f"  - Background Initialization: {BACKGROUND_INIT}")
+logger.info(f"  - Voice Features: {ENABLE_VOICE}")
+logger.info(f"  - Multimodal AI: {ENABLE_MULTIMODAL}")
+logger.info(f"  - Conversational AI: {ENABLE_CONVERSATIONAL_AI}")
+logger.info(f"  - System Monitoring: {ENABLE_SYSTEM_MONITORING}")
+
+# =============================================================================
+
+
 @app.route('/api/user/preferences', methods=['GET'])
 @limiter.limit("20 per minute")
 def get_user_preferences():
