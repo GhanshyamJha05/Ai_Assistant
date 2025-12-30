@@ -75,11 +75,39 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    // Check if user should see startup sequence
-    const hasSeenStartup = localStorage.getItem('yourdaddy-startup-seen');
-    if (!hasSeenStartup && isAuthenticated) {
-      setShowStartup(true);
-    }
+    // Load user preferences and determine if startup should show
+    const loadPreferencesAndCheckStartup = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await fetch('/api/user/preferences');
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.preferences) {
+              const { startup } = result.preferences;
+
+              // Check localStorage flag first
+              const hasSeenStartup = localStorage.getItem('yourdaddy-startup-seen');
+
+              // Show startup if:
+              // 1. User has "Show on Login" enabled, OR
+              // 2. User hasn't seen it yet (first time)
+              if (startup.showOnEveryLogin || !hasSeenStartup) {
+                setShowStartup(true);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load preferences:', error);
+          // Fallback to original logic
+          const hasSeenStartup = localStorage.getItem('yourdaddy-startup-seen');
+          if (!hasSeenStartup) {
+            setShowStartup(true);
+          }
+        }
+      }
+    };
+
+    loadPreferencesAndCheckStartup();
   }, [isAuthenticated]);
 
 

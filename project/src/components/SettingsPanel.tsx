@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Shield, Palette, Zap, Globe, Users, Save, RefreshCw, Download, Upload } from 'lucide-react';
+import { Bell, Shield, Palette, Zap, Globe, Users, Save, RefreshCw, Download, Upload, Play, Volume2 } from 'lucide-react';
 
 interface Setting {
   name: string;
@@ -101,6 +101,16 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
         { name: 'Contextual Help', enabled: true, description: 'Show contextual tips and hints' },
       ],
     },
+    {
+      title: 'Startup Sequence',
+      icon: Play,
+      color: 'from-[#00D9FF] to-[#6C5CE7]',
+      settings: [
+        { name: 'Show on Login', enabled: false, description: 'Display JARVIS startup sequence on every login' },
+        { name: 'Enable Voice', enabled: true, description: 'Enable voice synthesis for briefing' },
+        { name: 'Fast Mode', enabled: false, description: 'Speed up animations (2x speed)' },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -122,16 +132,16 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
 
   useEffect(() => {
     // Sync Dark Mode setting with theme
-    setSettings(prev => prev.map(category => 
-      category.title === 'Appearance' 
+    setSettings(prev => prev.map(category =>
+      category.title === 'Appearance'
         ? {
-            ...category,
-            settings: category.settings.map(setting => 
-              setting.name === 'Dark Mode'
-                ? { ...setting, enabled: theme === 'dark' }
-                : setting
-            )
-          }
+          ...category,
+          settings: category.settings.map(setting =>
+            setting.name === 'Dark Mode'
+              ? { ...setting, enabled: theme === 'dark' }
+              : setting
+          )
+        }
         : category
     ));
   }, [theme]);
@@ -141,17 +151,17 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
       const newSettings = [...prev];
       const category = { ...newSettings[categoryIndex] };
       const setting = { ...category.settings[settingIndex] };
-      
+
       setting.enabled = !setting.enabled;
       category.settings = [...category.settings];
       category.settings[settingIndex] = setting;
       newSettings[categoryIndex] = category;
-      
+
       // Special handling for theme setting
       if (category.title === 'Appearance' && setting.name === 'Dark Mode') {
         setTheme(setting.enabled ? 'dark' : 'light');
       }
-      
+
       setHasChanges(true);
       return newSettings;
     });
@@ -163,7 +173,7 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
       // Save to localStorage
       localStorage.setItem('yourdaddy-settings', JSON.stringify(settings));
       localStorage.setItem('yourdaddy-settings-timestamp', new Date().toISOString());
-      
+
       // Also try to save to backend
       try {
         await fetch('/api/settings/save', {
@@ -176,7 +186,7 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
       } catch (error) {
         console.warn('Failed to save to backend, using local storage only:', error);
       }
-      
+
       setHasChanges(false);
       setLastSaved(new Date().toLocaleString());
     } catch (error) {
@@ -237,6 +247,17 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
             <span className="text-yellow-400 text-sm">● Unsaved changes</span>
           )}
           <button
+            onClick={() => {
+              localStorage.removeItem('yourdaddy-startup-seen');
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-[#00D9FF] rounded-lg hover:bg-[#00C0E0] transition-colors flex items-center gap-2"
+            title="Clear startup flag and reload to replay sequence"
+          >
+            <Play size={16} />
+            Replay Startup
+          </button>
+          <button
             onClick={saveSettings}
             disabled={!hasChanges || saving}
             className="px-4 py-2 bg-[#00B894] rounded-lg hover:bg-[#009A7A] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -277,15 +298,14 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
               </p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setLanguage('english')}
-              className={`p-4 rounded-xl border-2 transition-all hover-lift ${
-                language === 'english'
-                  ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
-                  : 'border-gray-600 hover:border-gray-500'
-              }`}
+              className={`p-4 rounded-xl border-2 transition-all hover-lift ${language === 'english'
+                ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
+                : 'border-gray-600 hover:border-gray-500'
+                }`}
             >
               <div className="text-center">
                 <div className="text-2xl mb-2">🇺🇸</div>
@@ -293,14 +313,13 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
                 <p className="text-sm text-[#DDDDDD]">Pure English interface</p>
               </div>
             </button>
-            
+
             <button
               onClick={() => setLanguage('hindi')}
-              className={`p-4 rounded-xl border-2 transition-all hover-lift ${
-                language === 'hindi'
-                  ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
-                  : 'border-gray-600 hover:border-gray-500'
-              }`}
+              className={`p-4 rounded-xl border-2 transition-all hover-lift ${language === 'hindi'
+                ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
+                : 'border-gray-600 hover:border-gray-500'
+                }`}
             >
               <div className="text-center">
                 <div className="text-2xl mb-2">🇮🇳</div>
@@ -308,14 +327,13 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
                 <p className="text-sm text-[#DDDDDD]">Pure Hindi interface</p>
               </div>
             </button>
-            
+
             <button
               onClick={() => setLanguage('hinglish')}
-              className={`p-4 rounded-xl border-2 transition-all hover-lift ${
-                language === 'hinglish'
-                  ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
-                  : 'border-gray-600 hover:border-gray-500'
-              }`}
+              className={`p-4 rounded-xl border-2 transition-all hover-lift ${language === 'hinglish'
+                ? 'border-[#6C5CE7] bg-[#6C5CE7]/20'
+                : 'border-gray-600 hover:border-gray-500'
+                }`}
             >
               <div className="text-center">
                 <div className="text-2xl mb-2">🇮🇳🇺🇸</div>
@@ -324,10 +342,10 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
               </div>
             </button>
           </div>
-          
+
           <div className="mt-4 p-3 bg-blue-500/20 rounded-lg">
             <p className="text-sm text-blue-300">
-              <strong>Current:</strong> {language === 'english' ? 'English' : language === 'hindi' ? 'Hindi' : 'Hinglish'} 
+              <strong>Current:</strong> {language === 'english' ? 'English' : language === 'hindi' ? 'Hindi' : 'Hinglish'}
               {language === 'hinglish' && ' - You can mix Hindi and English naturally!'}
             </p>
           </div>
@@ -386,17 +404,15 @@ const SettingsPanel = ({ theme, setTheme, language = 'hinglish', setLanguage }: 
                       </div>
                       <button
                         onClick={() => toggleSetting(categoryIndex, settingIndex)}
-                        className={`w-12 h-6 rounded-full cursor-pointer relative transition-all duration-300 flex-shrink-0 ml-3 ${
-                          setting.enabled
-                            ? 'bg-gradient-to-r ' + category.color
-                            : 'bg-white/20'
-                        }`}
+                        className={`w-12 h-6 rounded-full cursor-pointer relative transition-all duration-300 flex-shrink-0 ml-3 ${setting.enabled
+                          ? 'bg-gradient-to-r ' + category.color
+                          : 'bg-white/20'
+                          }`}
                         title={`Toggle ${setting.name}`}
                       >
                         <div
-                          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${
-                            setting.enabled ? 'right-1' : 'left-1'
-                          }`}
+                          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${setting.enabled ? 'right-1' : 'left-1'
+                            }`}
                         ></div>
                       </button>
                     </div>

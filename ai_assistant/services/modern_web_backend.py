@@ -242,6 +242,60 @@ def api_health():
     """Health check alias"""
     return api_status()
 
+# User Preferences Endpoints
+@app.route('/api/user/preferences', methods=['GET'])
+@limiter.limit("20 per minute")
+def get_user_preferences():
+    """Get user preferences"""
+    try:
+        from ai_assistant.services.user_preferences import get_preferences_manager
+        
+        # Get user from auth token or use 'default'
+        user_id = request.args.get('user_id', 'default')
+        
+        prefs_manager = get_preferences_manager()
+        preferences = prefs_manager.get_preferences(user_id)
+        
+        return jsonify({
+            "success": True,
+            "preferences": preferences
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/user/preferences', methods=['POST'])
+@limiter.limit("10 per minute")
+def save_user_preferences():
+    """Save user preferences"""
+    try:
+        from ai_assistant.services.user_preferences import get_preferences_manager
+        
+        data = request.get_json()
+        user_id = data.get('user_id', 'default')
+        preferences = data.get('preferences', {})
+        
+        prefs_manager = get_preferences_manager()
+        success = prefs_manager.save_preferences(user_id, preferences)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "Preferences saved successfully"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to save preferences"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 # Initialize SocketIO with secure origins
 socketio = SocketIO(
