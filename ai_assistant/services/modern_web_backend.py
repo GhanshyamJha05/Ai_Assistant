@@ -241,6 +241,44 @@ AVAILABLE_VOICES = [
     {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
 ]
 
+# Import voice API blueprint
+try:
+    from ai_assistant.services.voice_api import voice_bp, AVAILABLE_VOICES as VOICE_API_VOICES
+    VOICE_API_AVAILABLE = True
+    # Update AVAILABLE_VOICES if not already defined
+    if 'AVAILABLE_VOICES' not in globals() or not AVAILABLE_VOICES:
+        AVAILABLE_VOICES = VOICE_API_VOICES
+except ImportError as e:
+    logger.warning(f"Voice API blueprint not available: {e}")
+    VOICE_API_AVAILABLE = False
+
+# Import advanced voice processing modules
+try:
+    from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector, VADConfig
+    VAD_AVAILABLE = True
+    logger.info("✅ Voice Activity Detection module loaded")
+except ImportError as e:
+    VAD_AVAILABLE = False
+    logger.warning(f"⚠️ VAD module not available: {e}")
+
+try:
+    from ai_assistant.voice.noise_reduction import NoiseReductionSystem, NoiseReductionConfig
+    NOISE_REDUCTION_AVAILABLE = True
+    logger.info("✅ Noise Reduction module loaded")
+except ImportError as e:
+    NOISE_REDUCTION_AVAILABLE = False
+    logger.warning(f"⚠️ Noise Reduction module not available: {e}")
+
+try:
+    from ai_assistant.voice.async_recognizer import (
+        init_async_recognizer, recognize_async, get_recognition_stats
+    )
+    ASYNC_RECOGNIZER_AVAILABLE = True
+    logger.info("✅ Async Voice Recognizer module loaded")
+except ImportError as e:
+    ASYNC_RECOGNIZER_AVAILABLE = False
+    logger.warning(f"⚠️ Async Recognizer module not available: {e}")
+
 # =============================================================================
 # STARTUP OPTIMIZATION - Feature Toggle Configuration
 # =============================================================================
@@ -4588,6 +4626,37 @@ if not AUTOMATION_AVAILABLE:
     def get_stock_price(*args, **kwargs): return "N/A"
     def detect_taskbar_apps(*args, **kwargs): return []
     def can_see_taskbar(*args, **kwargs): return False
+
+# Initialize advanced voice processing systems
+vad_detector = None
+noise_reducer = None
+
+if VAD_AVAILABLE:
+    try:
+        vad_detector = VoiceActivityDetector()
+        logger.info("✅ Voice Activity Detector initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize VAD: {e}")
+
+if NOISE_REDUCTION_AVAILABLE:
+    try:
+        noise_reducer = NoiseReductionSystem()
+        logger.info("✅ Noise Reduction System initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize noise reduction: {e}")
+
+# Register voice API blueprint if available
+if VOICE_API_AVAILABLE:
+    try:
+        app.register_blueprint(voice_bp, url_prefix='/api/voice')
+        logger.info("✅ Voice API blueprint registered at /api/voice")
+        logger.info(f"   - GET /api/voice/list (12 voices available)")
+        logger.info(f"   - POST /api/voice/preview (voice preview generation)")
+        logger.info(f"   - GET /api/voice/cache/stats (cache monitoring)")
+    except Exception as e:
+        logger.error(f"Failed to register voice API blueprint: {e}")
+else:
+    logger.warning("⚠️ Voice API blueprint not available")
 
 if __name__ == '__main__':
     print("=" * 60)
