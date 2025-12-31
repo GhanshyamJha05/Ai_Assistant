@@ -264,6 +264,22 @@ logger.info(f"  - System Monitoring: {ENABLE_SYSTEM_MONITORING}")
 
 # =============================================================================
 
+# Available Voice Options for TTS
+AVAILABLE_VOICES = [
+    {"id": "en-US-AriaNeural", "name": "Aria", "gender": "female", "accent": "US", "language": "en-US", "description": "Warm and friendly", "personality": "Friendly and conversational"},
+    {"id": "en-US-JennyNeural", "name": "Jenny", "gender": "female", "accent": "US", "language": "en-US", "description": "Professional and clear", "personality": "Professional and articulate"},
+    {"id": "en-US-GuyNeural", "name": "Guy", "gender": "male", "accent": "US", "language": "en-US", "description": "Confident and professional", "personality": "Confident and authoritative"},
+    {"id": "en-US-DavisNeural", "name": "Davis", "gender": "male", "accent": "US", "language": "en-US", "description": "Warm and conversational", "personality": "Warm and approachable"},
+    {"id": "en-GB-SoniaNeural", "name": "Sonia", "gender": "female", "accent": "UK", "language": "en-GB", "description": "British elegance", "personality": "Elegant and refined"},
+    {"id": "en-GB-RyanNeural", "name": "Ryan", "gender": "male", "accent": "UK", "language": "en-GB", "description": "British sophistication", "personality": "Sophisticated and clear"},
+    {"id": "en-IN-NeerjaNeural", "name": "Neerja", "gender": "female", "accent": "Indian", "language": "en-IN", "description": "Indian warmth", "personality": "Warm and expressive"},
+    {"id": "en-IN-PrabhatNeural", "name": "Prabhat", "gender": "male", "accent": "Indian", "language": "en-IN", "description": "Indian clarity", "personality": "Clear and professional"},
+    {"id": "en-US-AnaNeural", "name": "Ana", "gender": "female", "accent": "US", "language": "en-US", "description": "Energetic and cheerful", "personality": "Cheerful and enthusiastic"},
+    {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "male", "accent": "US", "language": "en-US", "description": "Deep and reassuring", "personality": "Calm and reassuring"},
+    {"id": "en-GB-LibbyNeural", "name": "Libby", "gender": "female", "accent": "UK", "language": "en-GB", "description": "Young and friendly British", "personality": "Youthful and energetic"},
+    {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
+]
+
 
 @app.route('/api/user/preferences', methods=['GET'])
 @limiter.limit("20 per minute")
@@ -318,6 +334,46 @@ def save_user_preferences():
             "success": False,
             "error": str(e)
         }), 500
+
+# Initialization Status Endpoint
+@app.route('/api/status/initialization', methods=['GET'])
+@limiter.limit("30 per minute")
+def get_initialization_status():
+    """Get initialization status of all components"""
+    try:
+        if hasattr(assistant, 'get_init_status'):
+            status = assistant.get_init_status()
+            
+            # Calculate overall readiness
+            ready_count = sum(1 for v in status.values() if v == 'ready')
+            total_count = len(status)
+            overall_ready = (ready_count == total_count)
+            
+            return jsonify({
+                "success": True,
+                "overall_ready": overall_ready,
+                "ready_percentage": int((ready_count / total_count) * 100),
+                "components": status,
+                "config": {
+                    "lazy_init": LAZY_INIT,
+                    "background_init": BACKGROUND_INIT,
+                    "voice_enabled": ENABLE_VOICE,
+                    "multimodal_enabled": ENABLE_MULTIMODAL,
+                    "conversational_ai_enabled": ENABLE_CONVERSATIONAL_AI,
+                    "system_monitoring_enabled": ENABLE_SYSTEM_MONITORING
+                }
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Assistant does not support init status tracking"
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 # Initialize SocketIO with secure origins
 socketio = SocketIO(
@@ -388,36 +444,160 @@ class ModernAssistant:
     """Modern Assistant with real-time capabilities"""
     
     def __init__(self):
-        self.multimodal_ai = None
-        self.conversational_ai = None
-        self.multilingual = None
+        """Initialize assistant with optimized startup - components load on-demand or in background"""
+        # Core attributes - always initialized
         self.voice_listening = False
         self.system_stats_cache = {}
         self.cache_timestamp = 0
-        self.voice_recognizer = None
-        self.tts_engine = None
-        self.audio_stream = None
-        self.wake_word_detector = None
         self.current_language = "hinglish"
-        
-        # Initialize components
-        self.init_multimodal_ai()
-        self.init_conversational_ai()
-        self.init_multilingual()
-        self.init_smart_llm()  # Add smart network-aware LLM
-        self.init_memory()
-        self.init_voice_system()
         
         # Network speed tracking
         self.last_network_stats = None
         self.last_network_time = None
         self.network_speed_history = []
         
-        # Start background tasks
-        self.start_system_monitoring()
+        # Private attributes for lazy loading (None until first access)
+        self._multimodal_ai = None
+        self._conversational_ai = None
+        self._multilingual = None
+        self._llm_chat = None
+        self._voice_recognizer = None
+        self._tts_engine = None
+        self._audio_stream = None
+        self._wake_word_detector = None
+        
+        # Initialization status tracking
+        self._init_status = {
+            'multimodal_ai': 'not_started',
+            'conversational_ai': 'not_started',
+            'multilingual': 'not_started',
+            'llm_chat': 'not_started',
+            'voice_system': 'not_started',
+            'memory': 'not_started',
+            'system_monitoring': 'not_started'
+        }
+        self._init_lock = threading.Lock()
+        
+        # Fast startup: Only initialize memory (quick operation)
+        if AUTOMATION_AVAILABLE:
+            try:
+                setup_memory()
+                self._init_status['memory'] = 'ready'
+                print("✅ Memory system initialized")
+            except Exception as e:
+                print(f"⚠️ Memory initialization failed: {e}")
+                self._init_status['memory'] = 'failed'
+        
+        # Background or lazy initialization based on config
+        if BACKGROUND_INIT and not LAZY_INIT:
+            # Start background initialization thread
+            self._bg_init_thread = threading.Thread(target=self._background_init, daemon=True)
+            self._bg_init_thread.start()
+            print("⚡ Background initialization started - features will be ready shortly")
+        elif not LAZY_INIT:
+            # Eager initialization (old behavior, but respects feature flags)
+            self._eager_init()
+        else:
+            print("⚡ Lazy initialization enabled - features load on first use")
     
-    def init_multilingual(self):
-        """Initialize multilingual support"""
+    def _background_init(self):
+        """Initialize heavy components in background thread"""
+        print("🔄 Background initialization in progress...")
+        
+        if ENABLE_MULTILINGUAL:
+            self._init_multilingual_internal()
+        
+        if ENABLE_CONVERSATIONAL_AI:
+            self._init_conversational_ai_internal()
+        
+        if ENABLE_MULTIMODAL:
+            self._init_multimodal_ai_internal()
+        
+        # Always try to init LLM (lightweight)
+        self._init_smart_llm_internal()
+        
+        if ENABLE_VOICE:
+            self._init_voice_system_internal()
+        
+        if ENABLE_SYSTEM_MONITORING:
+            self.start_system_monitoring()
+        
+        print("✅ Background initialization complete")
+    
+    def _eager_init(self):
+        """Eager initialization (respects feature flags)"""
+        if ENABLE_MULTIMODAL:
+            self._init_multimodal_ai_internal()
+        
+        if ENABLE_CONVERSATIONAL_AI:
+            self._init_conversational_ai_internal()
+        
+        if ENABLE_MULTILINGUAL:
+            self._init_multilingual_internal()
+        
+        self._init_smart_llm_internal()
+        
+        if ENABLE_VOICE:
+            self._init_voice_system_internal()
+        
+        if ENABLE_SYSTEM_MONITORING:
+            self.start_system_monitoring()
+    
+    def get_init_status(self):
+        """Get initialization status of all components"""
+        return self._init_status.copy()
+    
+    # Lazy loading properties
+    @property
+    def multimodal_ai(self):
+        """Lazy-load multimodal AI on first access"""
+        if self._multimodal_ai is None and ENABLE_MULTIMODAL and LAZY_INIT:
+            self._init_multimodal_ai_internal()
+        return self._multimodal_ai
+    
+    @property
+    def conversational_ai(self):
+        """Lazy-load conversational AI on first access"""
+        if self._conversational_ai is None and ENABLE_CONVERSATIONAL_AI and LAZY_INIT:
+            self._init_conversational_ai_internal()
+        return self._conversational_ai
+    
+    @property
+    def multilingual(self):
+        """Lazy-load multilingual support on first access"""
+        if self._multilingual is None and ENABLE_MULTILINGUAL and LAZY_INIT:
+            self._init_multilingual_internal()
+        return self._multilingual
+    
+    @property
+    def llm_chat(self):
+        """Lazy-load LLM chat on first access"""
+        if self._llm_chat is None and LAZY_INIT:
+            self._init_smart_llm_internal()
+        return self._llm_chat
+    
+    @property
+    def voice_recognizer(self):
+        """Lazy-load voice recognizer on first access"""
+        if self._voice_recognizer is None and ENABLE_VOICE and LAZY_INIT:
+            self._init_voice_system_internal()
+        return self._voice_recognizer
+    
+    @property
+    def tts_engine(self):
+        """Lazy-load TTS engine on first access"""
+        if self._tts_engine is None and ENABLE_VOICE and LAZY_INIT:
+            self._init_voice_system_internal()
+        return self._tts_engine
+
+    
+    def _init_multilingual_internal(self):
+        """Initialize multilingual support (internal)"""
+        with self._init_lock:
+            if self._init_status['multilingual'] in ['ready', 'initializing']:
+                return
+            self._init_status['multilingual'] = 'initializing'
+        
         if MULTILINGUAL_AVAILABLE:
             try:
                 # Load configuration
@@ -429,23 +609,31 @@ class ModernAssistant:
                 else:
                     lang_config = {}
                 
-                self.multilingual = MultilingualSupport(lang_config)
+                self._multilingual = MultilingualSupport(lang_config)
                 
                 # Set default language preference
                 primary_lang = lang_config.get('primary', 'hinglish')
-                self.multilingual.set_language_preference("web_user", Language(primary_lang))
+                self._multilingual.set_language_preference("web_user", Language(primary_lang))
                 self.current_language = primary_lang
                 
-                print("âœ… Multilingual support initialized in web backend")
+                self._init_status['multilingual'] = 'ready'
+                print("✅ Multilingual support initialized in web backend")
             except Exception as e:
-                print(f"âŒ Multilingual initialization failed: {e}")
-                self.multilingual = None
+                print(f"❌ Multilingual initialization failed: {e}")
+                self._multilingual = None
+                self._init_status['multilingual'] = 'failed'
         else:
-            print("âš ï¸ Multilingual support not available")
-            self.multilingual = None
+            print("⚠️ Multilingual support not available")
+            self._multilingual = None
+            self._init_status['multilingual'] = 'disabled'
     
-    def init_smart_llm(self):
-        """Initialize smart network-aware LLM system"""
+    def _init_smart_llm_internal(self):
+        """Initialize smart network-aware LLM system (internal)"""
+        with self._init_lock:
+            if self._init_status['llm_chat'] in ['ready', 'initializing']:
+                return
+            self._init_status['llm_chat'] = 'initializing'
+        
         try:
             from ai_assistant.modules.network_aware_llm import get_optimal_llm_config
             from ai_assistant.modules.llm_provider import UnifiedChatInterface
@@ -455,11 +643,11 @@ class ModernAssistant:
             provider = config["provider"]
             model = config["model"]
             
-            print(f"ðŸ§  Initializing LLM: {provider} ({model})")
-            print(f"ðŸ“¡ Network status: {'Online' if config['network_status'] else 'Offline'}")
+            print(f"🧠 Initializing LLM: {provider} ({model})")
+            print(f"📡 Network status: {'Online' if config['network_status'] else 'Offline'}")
             
             # Initialize the chat interface with smart config
-            self.llm_chat = UnifiedChatInterface(
+            self._llm_chat = UnifiedChatInterface(
                 provider=provider,
                 model=model,
                 use_fallback=False  # Disable automatic fallback
@@ -468,39 +656,50 @@ class ModernAssistant:
             # Store config for reference
             self.current_llm_config = config
             
-            # Test the connection
-            test_response = self.llm_chat.chat("Hello", stream=False)
-            if "Error" not in test_response:
-                print(f"âœ… Smart LLM initialized successfully with {provider}")
-                print(f"✅ Using online {provider} API ({model})")
-            else:
-                print(f"âš ï¸ LLM test failed: {test_response}")
+            # REMOVED: Blocking test connection - trust the config
+            self._init_status['llm_chat'] = 'ready'
+            print(f"✅ Smart LLM initialized with {provider} ({model})")
                 
         except Exception as e:
-            print(f"âŒ Smart LLM initialization failed: {e}")
-            self.llm_chat = None
+            print(f"❌ Smart LLM initialization failed: {e}")
+            self._llm_chat = None
             self.current_llm_config = None
+            self._init_status['llm_chat'] = 'failed'
     
-    def init_multimodal_ai(self):
-        """Initialize multimodal AI"""
+    def _init_multimodal_ai_internal(self):
+        """Initialize multimodal AI (internal)"""
+        with self._init_lock:
+            if self._init_status['multimodal_ai'] in ['ready', 'initializing']:
+                return
+            self._init_status['multimodal_ai'] = 'initializing'
+        
         if MULTIMODAL_AVAILABLE:
             try:
                 api_key = os.environ.get("GEMINI_API_KEY")
                 if api_key:
-                    self.multimodal_ai = MultiModalAI(api_key)
-                    print("âœ… Multimodal AI initialized")
+                    self._multimodal_ai = MultiModalAI(api_key)
+                    self._init_status['multimodal_ai'] = 'ready'
+                    print("✅ Multimodal AI initialized")
                 else:
-                    print("âš ï¸ GEMINI_API_KEY not set for multimodal AI")
-                    self.multimodal_ai = None
+                    print("⚠️ GEMINI_API_KEY not set for multimodal AI")
+                    self._multimodal_ai = None
+                    self._init_status['multimodal_ai'] = 'disabled'
             except Exception as e:
-                print(f"âŒ Multimodal AI initialization failed: {e}")
-                self.multimodal_ai = None
+                print(f"❌ Multimodal AI initialization failed: {e}")
+                self._multimodal_ai = None
+                self._init_status['multimodal_ai'] = 'failed'
         else:
-            print("âš ï¸ Multimodal AI not available")
-            self.multimodal_ai = None
+            print("⚠️ Multimodal AI not available")
+            self._multimodal_ai = None
+            self._init_status['multimodal_ai'] = 'disabled'
     
-    def init_conversational_ai(self):
-        """Initialize conversational AI"""
+    def _init_conversational_ai_internal(self):
+        """Initialize conversational AI (internal)"""
+        with self._init_lock:
+            if self._init_status['conversational_ai'] in ['ready', 'initializing']:
+                return
+            self._init_status['conversational_ai'] = 'initializing'
+        
         if CONVERSATIONAL_AI_AVAILABLE:
             try:
                 # Create automation callback function
@@ -545,14 +744,17 @@ class ModernAssistant:
                         return f"Error: {str(e)}"
                     return None
                 
-                self.conversational_ai = AdvancedConversationalAI(automation_callback=automation_callback)
-                print("âœ… Conversational AI initialized with automation support")
+                self._conversational_ai = AdvancedConversationalAI(automation_callback=automation_callback)
+                self._init_status['conversational_ai'] = 'ready'
+                print("✅ Conversational AI initialized with automation support")
             except Exception as e:
-                print(f"âŒ Conversational AI initialization failed: {e}")
-                self.conversational_ai = None
+                print(f"❌ Conversational AI initialization failed: {e}")
+                self._conversational_ai = None
+                self._init_status['conversational_ai'] = 'failed'
         else:
-            print("âš ï¸ Conversational AI not available")
-            self.conversational_ai = None
+            print("⚠️ Conversational AI not available")
+            self._conversational_ai = None
+            self._init_status['conversational_ai'] = 'disabled'
     
     def init_memory(self):
         """Initialize memory system"""
@@ -560,34 +762,40 @@ class ModernAssistant:
             try:
                 setup_memory()
                 print("âœ… Memory system initialized")
+                print("✅ Memory system initialized")
             except Exception as e:
-                print(f"âŒ Memory initialization failed: {e}")
+                print(f"❌ Memory initialization failed: {e}")
         else:
-            print("âš ï¸ Memory system not available")
+            print("⚠️ Memory system not available")
     
-    def init_voice_system(self):
-        """Initialize voice recognition and TTS systems"""
+    def _init_voice_system_internal(self):
+        """Initialize voice recognition and TTS systems (internal)"""
+        with self._init_lock:
+            if self._init_status['voice_system'] in ['ready', 'initializing']:
+                return
+            self._init_status['voice_system'] = 'initializing'
+        
         if VOICE_AVAILABLE:
             try:
                 # Initialize speech recognition (safeguarded)
                 try:
-                    self.voice_recognizer = sr.Recognizer()
-                    self.voice_recognizer.energy_threshold = 4000
-                    self.voice_recognizer.pause_threshold = 0.8
-                    print("âœ… Speech recognition initialized")
+                    self._voice_recognizer = sr.Recognizer()
+                    self._voice_recognizer.energy_threshold = 4000
+                    self._voice_recognizer.pause_threshold = 0.8
+                    print("✅ Speech recognition initialized")
                 except Exception as e:
-                    print(f"âš ï¸ Speech recognition initialization failed: {e}")
-                    self.voice_recognizer = None
+                    print(f"⚠️ Speech recognition initialization failed: {e}")
+                    self._voice_recognizer = None
                 
                 # Initialize text-to-speech (safeguarded)
                 try:
-                    self.tts_engine = pyttsx3.init()
-                    self.tts_engine.setProperty('rate', 150)
-                    self.tts_engine.setProperty('volume', 0.8)
-                    print("âœ… Text-to-speech initialized")
+                    self._tts_engine = pyttsx3.init()
+                    self._tts_engine.setProperty('rate', 150)
+                    self._tts_engine.setProperty('volume', 0.8)
+                    print("✅ Text-to-speech initialized")
                 except Exception as e:
-                    print(f"âš ï¸ Text-to-speech initialization failed: {e}")
-                    self.tts_engine = None
+                    print(f"⚠️ Text-to-speech initialization failed: {e}")
+                    self._tts_engine = None
                 
                 # Try to initialize wake word detection (most likely to cause segfault)
                 try:
@@ -595,31 +803,40 @@ class ModernAssistant:
                     if access_key:
                         # This is often the culprit for segfaults - extra protection
                         import pvporcupine
-                        self.wake_word_detector = pvporcupine.create(
+                        self._wake_word_detector = pvporcupine.create(
                             access_key=access_key,
                             keywords=["hey daddy"]
                         )
-                        print("âœ… Wake word detection initialized")
+                        print("✅ Wake word detection initialized")
                     else:
-                        print("âš ï¸ PORCUPINE_ACCESS_KEY not set for wake word detection")
-                        self.wake_word_detector = None
+                        print("⚠️ PORCUPINE_ACCESS_KEY not set for wake word detection")
+                        self._wake_word_detector = None
                 except ImportError:
-                    print("âš ï¸ Porcupine not available")
-                    self.wake_word_detector = None
+                    print("⚠️ Porcupine not available")
+                    self._wake_word_detector = None
                 except Exception as e:
-                    print(f"âš ï¸ Wake word detection initialization failed: {e}")
-                    self.wake_word_detector = None
+                    print(f"⚠️ Wake word detection initialization failed: {e}")
+                    self._wake_word_detector = None
                 
-                print("âœ… Voice system initialized (partial or complete)")
+                self._init_status['voice_system'] = 'ready'
+                print("✅ Voice system initialized (partial or complete)")
             except Exception as e:
-                print(f"âŒ Voice system initialization failed: {e}")
+                print(f"❌ Voice system initialization failed: {e}")
+                self._init_status['voice_system'] = 'failed'
                 # Don't re-raise - allow server to continue without voice
         else:
-            print("âš ï¸ Voice features not available - missing dependencies")
+            print("⚠️ Voice features not available - missing dependencies")
+            self._init_status['voice_system'] = 'disabled'
     
     def start_system_monitoring(self):
         """Start background system monitoring"""
+        if not ENABLE_SYSTEM_MONITORING:
+            self._init_status['system_monitoring'] = 'disabled'
+            return
+        
         try:
+            self._init_status['system_monitoring'] = 'initializing'
+            
             def monitor_loop():
                 while True:
                     try:
@@ -632,9 +849,11 @@ class ModernAssistant:
             
             monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
             monitor_thread.start()
-            print("âœ… System monitoring started")
+            self._init_status['system_monitoring'] = 'ready'
+            print("✅ System monitoring started")
         except Exception as e:
-            print(f"âš ï¸ System monitoring could not start: {e}")
+            print(f"⚠️ System monitoring could not start: {e}")
+            self._init_status['system_monitoring'] = 'failed'
     
     def get_real_time_system_stats(self):
         """Get real-time system statistics"""
@@ -1447,6 +1666,17 @@ except Exception as e:
         def get_real_time_system_stats(self):
             return {"timestamp": datetime.now().isoformat(), "cpu_usage": 0, "memory_usage": 0, "disk_usage": 0, "network_mbps": 0, "active_tasks": 0, "temperature": "N/A"}
         
+        def get_init_status(self):
+            return {
+                'multimodal_ai': 'failed',
+                'conversational_ai': 'failed',
+                'multilingual': 'failed',
+                'llm_chat': 'failed',
+                'voice_system': 'failed',
+                'memory': 'failed',
+                'system_monitoring': 'failed'
+            }
+        
         def analyze_screen(self, prompt): return "Screen analysis unavailable"
         def answer_visual_question(self, question): return "Visual Q&A unavailable"
         def start_voice_listening(self): return {"error": "Voice features unavailable"}
@@ -1671,7 +1901,7 @@ def api_login():
         }), 200
         
     except Exception as e:
-        return jsonify({"error": "Login failed"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/auth/verify', methods=['GET'])
 @jwt_required()
@@ -3057,7 +3287,7 @@ def api_speak():
 
 @app.route('/api/voice/list', methods=['GET'])
 def api_list_voices():
-    """Get list of available voices"""
+    """Get list of available AI voices"""
     try:
         return jsonify({
             "success": True,
@@ -4259,7 +4489,27 @@ if not AUTOMATION_AVAILABLE:
     def write_a_note(*args, **kwargs): return "Note taking not available"
     def open_application(app_name, *args, **kwargs): 
         try:
-            import subprocess
+            # Try to use Intent Recognizer for app name normalization
+            try:
+                import sys
+                import os
+                # Add ai_assistant to path if not already there
+                ai_assistant_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                if ai_assistant_dir not in sys.path:
+                    sys.path.insert(0, ai_assistant_dir)
+                
+                from ai_assistant.ai.intent_recognizer import IntentRecognizer
+                recognizer = IntentRecognizer()
+                
+                # Normalize the app name to handle variations like "whats app" -> "whatsapp"
+                normalized_app = recognizer.normalize_app_name(app_name)
+                print(f"[Intent Recognizer] Normalized '{app_name}' -> '{normalized_app}'")
+                app_name = normalized_app
+            except Exception as intent_error:
+                # If intent recognizer fails, continue with original app name
+                print(f"[Intent Recognizer] Not available: {intent_error}")
+            
+            # Try subprocess first
             subprocess.Popen(app_name, shell=True)
             return f"Opened {app_name}"
         except Exception as e:
@@ -4276,7 +4526,7 @@ if not AUTOMATION_AVAILABLE:
                 pyautogui.press('enter')
                 return f"Tried to open '{app_name}' via Start menu."
             except Exception as e2:
-                return f"Could not open {app_name} (subprocess error: {e}) (Start menu error: {e2})"
+                return f"Could not find '{app_name}' on your system. Try saying the full application name or check if it's installed."
     def search_google(*args, **kwargs): return "Google search not available"
     def search_youtube(*args, **kwargs): return "YouTube search not available"
     def close_application(*args, **kwargs): return "App closing not available"

@@ -115,7 +115,7 @@
         },
         {
           "name": "Auto Optimization",
-          "enabled": false,
+          "enabled": true,
           "description": "Automatically optimize system resources"
         }
       ]

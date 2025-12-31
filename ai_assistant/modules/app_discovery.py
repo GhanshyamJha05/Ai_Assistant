@@ -609,6 +609,18 @@ def smart_open_application(app_name: str) -> str:
     if len(app_name) > 200:
         return "❌ Application name is too long"
     
+    # 🔥🔥🔥 CRITICAL FIX: Normalize app name using Intent Recognizer
+    # This is THE REAL fix - normalize BEFORE searching in the database
+    original_app_name = app_name
+    try:
+        from ai_assistant.ai.intent_recognizer import IntentRecognizer
+        recognizer = IntentRecognizer()
+        app_name = recognizer.normalize_app_name(app_name)
+        if app_name != original_app_name:
+            print(f"[Intent Recognizer] Normalized '{original_app_name}' -> '{app_name}'")
+    except Exception as e:
+        print(f"[Intent Recognizer] Not available in smart_open_application: {e}")
+    
     # First, try to find in discovered apps
     app_path = app_discovery.find_app(app_name)
     

@@ -659,6 +659,19 @@ class AdvancedConversationalAI:
         if not app_name:
             return "Which application would you like me to open?"
         
+        # 🔥 CRITICAL FIX: Use Intent Recognizer to normalize app name
+        # This handles variations like "whats app" -> "whatsapp"
+        original_app_name = app_name
+        try:
+            from ai_assistant.ai.intent_recognizer import IntentRecognizer
+            recognizer = IntentRecognizer()
+            app_name = recognizer.normalize_app_name(app_name)
+            if app_name != original_app_name:
+                print(f"[Intent Recognizer] Normalized '{original_app_name}' -> '{app_name}'")
+        except Exception as e:
+            print(f"[Intent Recognizer] Not available: {e}")
+        
+        
         # Extensive application mappings
         app_mappings = {
             # Browsers
