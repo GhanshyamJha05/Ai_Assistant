@@ -292,14 +292,14 @@ except ImportError as e:
     ASYNC_RECOGNIZER_AVAILABLE = False
     logger.warning(f"⚠️ Async Recognizer module not available: {e}")
 
-# Import simple voice handler
+# Import voice WebSocket handlers
 try:
-    from ai_assistant.voice.simple_voice_handler import register_voice_handlers
-    VOICE_HANDLER_AVAILABLE = True
-    logger.info("✅ Simple voice handler loaded")
+    from ai_assistant.services.voice_websocket_handlers import register_voice_handlers
+    VOICE_WEBSOCKET_AVAILABLE = True
+    logger.info("✅ Voice WebSocket handlers module loaded")
 except ImportError as e:
-    VOICE_HANDLER_AVAILABLE = False
-    logger.warning(f"⚠️ Voice handler not available: {e}")
+    VOICE_WEBSOCKET_AVAILABLE = False
+    logger.warning(f"⚠️ Voice WebSocket handlers not available: {e}")
 
 # =============================================================================
 # STARTUP OPTIMIZATION - Feature Toggle Configuration
@@ -4749,17 +4749,15 @@ if VOICE_API_AVAILABLE:
 else:
     logger.warning("⚠️ Voice API blueprint not available")
 
-# Register simple voice handler
-if VOICE_HANDLER_AVAILABLE:
+# Register voice WebSocket handlers
+if VOICE_WEBSOCKET_AVAILABLE:
     try:
         register_voice_handlers(socketio, assistant)
-        logger.info("✅ Voice handler registered - Ready for voice commands!")
+        logger.info("✅ Voice WebSocket handlers registered")
     except Exception as e:
-        logger.error(f"❌ Voice handler registration failed: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Failed to register voice WebSocket handlers: {e}")
 else:
-    logger.warning("⚠️ Voice handler not available - voice features disabled")
+    logger.warning("⚠️ Voice WebSocket handlers not available")
 
 if __name__ == '__main__':
     print("=" * 60)
