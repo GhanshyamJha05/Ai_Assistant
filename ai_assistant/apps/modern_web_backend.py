@@ -64,6 +64,16 @@ except ImportError as e:
     AUTOMATION_AVAILABLE = False
     print(f"⚠️ Automation tools not available: {e}")
 
+# Import app command detector and universal app controller
+try:
+    from apps.app_command_detector import detect_app_command, AppAction
+    from core.universal_app_controller import get_universal_controller
+    APP_CONTROL_AVAILABLE = True
+    print("✅ App command control loaded")
+except ImportError as e:
+    APP_CONTROL_AVAILABLE = False
+    print(f"⚠️ App control not available: {e}")
+
 # Import multilingual support if available
 try:
     from modules.multilingual import MultilingualSupport, Language, LanguageContext
@@ -731,6 +741,28 @@ class ModernAssistant:
             if request_id and self.stop_flags.get(request_id) and self.stop_flags[request_id].is_set():
                 return "Generation stopped by user"
             
+            # ===== CHECK FOR APP COMMANDS FIRST =====
+            # This takes priority over conversational AI to ensure fast, direct app control
+            app_cmd = self.detect_app_command(command_text)
+            if app_cmd:
+                print(f"[APP COMMAND DETECTED] {app_cmd}")
+                
+                # Execute the app command
+                response = self.execute_app_command(app_cmd, language="english")
+                
+                # Format response for user's language if multilingual available
+                if self.multilingual:
+                    try:
+                        language_context = self.multilingual.detect_language(command_text)
+                        response = self.format_app_response(response, language_context.detected_language.value)
+                    except:
+                        pass  # Keep English response if translation fails
+                
+                log_reply(response)
+                return response
+            
+            # ===== CONTINUE WITH NORMAL MULTILINGUAL PROCESSING ====
+            
             # Detect language
             language_context = self.multilingual.detect_language(command_text)
             log_module_usage('multilingual', 'detect_language')
@@ -783,6 +815,113 @@ class ModernAssistant:
             error_details = traceback.format_exc()
             print(f"Multilingual processing error details:\n{error_details}")
             return f"❌ Multilingual processing error: {str(e)}"
+    
+    def detect_app_command(self, command_text):
+        """
+        Detect if command is app-related.
+        
+        Returns AppCommand object if detected, None otherwise.
+        """
+        if not APP_CONTROL_AVAILABLE:
+            return None
+        
+        try:
+            return detect_app_command(command_text)
+        except Exception as e:
+            print(f"App command detection error: {e}")
+            return None
+    
+    def execute_app_command(self, app_cmd, language="english"):
+        """
+        Execute app command using Universal App Controller.
+        
+        Args:
+            app_cmd: AppCommand object from detector
+            language: User's language for response formatting
+            
+        Returns:
+            Formatted response message
+        """
+        if not APP_CONTROL_AVAILABLE:
+            return "App control system not available"
+        
+        try:
+            controller = get_universal_controller()
+            
+            if app_cmd.action == AppAction.OPEN:
+                # Open the application
+                result = controller.open_app(app_cmd.app_name)
+                
+                if result['success']:
+                    response = f"✅ Opened {app_cmd.app_name}"
+                    emit_dashboard_log(f"Opened: {app_cmd.app_name}", "app_open")
+                else:
+                    # App not found, suggest web version
+                    response = f"❌ Could not find {app_cmd.app_name} on your system."
+                    
+                    # Check for web alternatives
+                    web_alternatives = {
+                        'whatsapp': 'https://web.whatsapp.com',
+                        'spotify': 'https://open.spotify.com',
+                        'discord': 'https://discord.com/app',
+                        'youtube music': 'https://music.youtube.com'
+                    }
+                    
+                    app_lower = app_cmd.app_name.lower()
+                    if app_lower in web_alternatives:
+                        response += f"\n\n💡 Tip: You can use the web version at {web_alternatives[app_lower]}"
+                    else:
+                        response += f"\n\n💡 Tip: Make sure {app_cmd.app_name} is installed, or try saying the full application name."
+                
+                return response
+                
+            elif app_cmd.action == AppAction.CLOSE:
+                # Close the application
+                result = controller.close_app(app_cmd.app_name)
+                
+                if result['success']:
+                    response = f"✅ Closed {app_cmd.app_name}"
+                    emit_dashboard_log(f"Closed: {app_cmd.app_name}", "app_close")
+                else:
+                    response = f"❌ Could not close {app_cmd.app_name}. It might not be running."
+                
+                return response
+            
+            else:
+                return f"Action '{app_cmd.action.value}' not yet supported"
+                
+        except Exception as e:
+            print(f"App command execution error: {e}")
+            import traceback
+            traceback.print_exc()
+            return f"❌ Error controlling {app_cmd.app_name}: {str(e)}"
+    
+    def format_app_response(self, response, language):
+        """
+        Format app command response for user's language.
+        
+        Args:
+            response: Response message in English
+            language: Target language ('english', 'hindi', 'hinglish')
+            
+        Returns:
+            Translated response if needed
+        """
+        if language == "english" or not self.multilingual:
+            return response
+        
+        try:
+            # Translate to user's language
+            if language == "hindi":
+                return self.multilingual.translate_text(response, Language.HINDI)
+            elif language == "hinglish":
+                # For Hinglish, keep English with some Hindi flavor
+                return response
+        except Exception as e:
+            print(f"Translation error: {e}")
+        
+        return response
+    
     
     def execute_hinglish_command(self, hinglish_result):
         """Execute commands detected from Hinglish input"""

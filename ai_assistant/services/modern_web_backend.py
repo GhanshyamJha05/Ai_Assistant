@@ -225,6 +225,19 @@ CORS(app, resources={
     }
 })
 
+# Initialize SocketIO for WebSocket support
+socketio = SocketIO(
+    app,
+    cors_allowed_origins=ALLOWED_ORIGINS,
+    async_mode='threading',
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25
+)
+
+logger.info("✅ SocketIO initialized with CORS origins: %s", ALLOWED_ORIGINS)
+
 # Voice Options for TTS
 AVAILABLE_VOICES = [
     {"id": "en-US-AriaNeural", "name": "Aria", "gender": "female", "accent": "US", "language": "en-US", "description": "Warm and friendly", "personality": "Friendly and conversational"},
@@ -278,6 +291,15 @@ try:
 except ImportError as e:
     ASYNC_RECOGNIZER_AVAILABLE = False
     logger.warning(f"⚠️ Async Recognizer module not available: {e}")
+
+# Import simple voice handler
+try:
+    from ai_assistant.voice.simple_voice_handler import register_voice_handlers
+    VOICE_HANDLER_AVAILABLE = True
+    logger.info("✅ Simple voice handler loaded")
+except ImportError as e:
+    VOICE_HANDLER_AVAILABLE = False
+    logger.warning(f"⚠️ Voice handler not available: {e}")
 
 # =============================================================================
 # STARTUP OPTIMIZATION - Feature Toggle Configuration
@@ -2462,6 +2484,40 @@ def api_chat():
         if not message and not image_data:
             return jsonify({"error": "No message or image provided"}), 400
         
+        # === NEW: Multi-step Task Chain Orchestration ===
+        try:
+            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
+            
+            if should_use_orchestrator(message):
+                logger.info(f"🔗 Multi-step command detected: {message}")
+                orch_result = process_with_orchestrator(message, context)
+                
+                if orch_result['success']:
+                    return jsonify({
+                        "message": message,
+                        "response": orch_result['response'],
+                        "orchestrated": True,
+                        "steps_completed": orch_result['steps_completed'],
+                        "total_steps": orch_result['total_steps'],
+                        "features_used": ["multi_step_orchestration"],
+                        "user": current_user,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                elif not orch_result.get('fallback'):
+                    # Hard error, don't fallback
+                    return jsonify({
+                        "error": orch_result.get('error', 'Multi-step execution failed'),
+                        "orchestrated": True,
+                        "timestamp": datetime.now().isoformat()
+                    }), 500
+                else:
+                    logger.warning("Orchestrator unavailable/failed, using fallback")
+                    # Continue to normal processing below
+        except Exception as orch_error:
+            logger.warning(f"Orchestrator error, falling back: {orch_error}")
+            # Continue to normal processing
+        # === END: Multi-step Orchestration ===
+        
         # Apply learning-enhanced response generation
         try:
             from ai_assistant.integrations.learning_integration import get_learning_assistant
@@ -2506,6 +2562,41 @@ def api_command():
         
         if not command:
             return jsonify({"error": "No command provided"}), 400
+        
+        # === NEW: Multi-step Task Chain Orchestration ===
+        try:
+            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
+            
+            if should_use_orchestrator(command):
+                logger.info(f"🔗 Multi-step command detected: {command}")
+                orch_result = process_with_orchestrator(command, {})
+                
+                if orch_result['success']:
+                    return jsonify({
+                        "success": True,
+                        "command": command,
+                        "response": orch_result['response'],
+                        "orchestrated": True,
+                        "steps_completed": orch_result['steps_completed'],
+                        "total_steps": orch_result['total_steps'],
+                        "timestamp": datetime.now().isoformat()
+                    })
+                elif not orch_result.get('fallback'):
+                    # Hard error, don't fallback
+                    return jsonify({
+                        "success": False,
+                        "error": orch_result.get('error', 'Multi-step execution failed'),
+                        "orchestrated": True,
+                        "command": command,
+                        "timestamp": datetime.now().isoformat()
+                    }), 500
+                else:
+                    logger.warning("Orchestrator unavailable/failed, using fallback")
+                    # Continue to normal processing below
+        except Exception as orch_error:
+            logger.warning(f"Orchestrator error, falling back: {orch_error}")
+            # Continue to normal processing
+        # === END: Multi-step Orchestration ===
         
         # Process command with proper error handling
         try:
@@ -4657,6 +4748,18 @@ if VOICE_API_AVAILABLE:
         logger.error(f"Failed to register voice API blueprint: {e}")
 else:
     logger.warning("⚠️ Voice API blueprint not available")
+
+# Register simple voice handler
+if VOICE_HANDLER_AVAILABLE:
+    try:
+        register_voice_handlers(socketio, assistant)
+        logger.info("✅ Voice handler registered - Ready for voice commands!")
+    except Exception as e:
+        logger.error(f"❌ Voice handler registration failed: {e}")
+        import traceback
+        traceback.print_exc()
+else:
+    logger.warning("⚠️ Voice handler not available - voice features disabled")
 
 if __name__ == '__main__':
     print("=" * 60)
