@@ -29,11 +29,17 @@ const Sidebar = ({ activeSection, setActiveSection, username, onLogout }: Sideba
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-20 glass-strong z-50 flex flex-col items-center py-8">
-      <div className="mb-12 relative">
+      <div className="mb-12 relative group cursor-help">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] flex items-center justify-center animate-breathe">
           <span className="text-2xl font-bold">YD</span>
         </div>
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#00B894] rounded-full animate-pulse"></div>
+
+        {/* Slogan Tooltip */}
+        <div className="absolute left-20 top-2 bg-black/90 text-[#00D9FF] px-4 py-3 rounded-lg text-sm opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap border border-[#00D9FF]/30 backdrop-blur-md z-50 shadow-xl">
+          <p className="font-bold italic">"Command the chaos."</p>
+          <p className="text-xs text-white/70 mt-1">Speak. Done. Next.</p>
+        </div>
       </div>
 
       <nav className="flex-1 flex flex-col gap-4">
@@ -50,11 +56,10 @@ const Sidebar = ({ activeSection, setActiveSection, username, onLogout }: Sideba
                   setActiveSection(item.id);
                 }
               }}
-              className={`relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 group ${
-                isActive
+              className={`relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 group ${isActive
                   ? 'bg-gradient-to-br from-[#00CEC9] to-[#6C5CE7] shadow-lg shadow-[#00CEC9]/50'
                   : 'hover:bg-white/10'
-              }`}
+                }`}
               title={item.label}
             >
               <Icon size={24} className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />

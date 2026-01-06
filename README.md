@@ -8,6 +8,9 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
 
+
+**"Command the chaos. Speak. Done. Next."**
+
 **A sophisticated AI-powered personal assistant featuring voice recognition, smart automation, multilingual support, and real-time AI responses powered by Google Gemini and OpenAI.**
 
 [Features](#-key-features) • [Quick Start](#-quick-start-2-minutes) • [Installation](#-installation) • [Configuration](#-configuration) • [Documentation](#-documentation)

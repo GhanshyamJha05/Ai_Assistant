@@ -266,6 +266,9 @@ const StartupSequence = ({ onComplete }: StartupSequenceProps) => {
             <p className="text-xl text-[#DDDDDD] animate-pulse">
               Initializing systems...
             </p>
+            <p className="text-lg text-[#00D9FF] font-medium italic animate-pulse mt-4 opacity-80">
+              "Command the chaos. Speak. Done. Next."
+            </p>
           </div>
         )}
 
