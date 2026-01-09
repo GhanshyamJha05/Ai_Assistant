@@ -1749,22 +1749,16 @@ except Exception as e:
 # Serve React Build (Bolt UI)
 @app.route('/')
 def index():
-    """Serve React app build"""
-    try:
-        print("Serving React app from project/dist")
-        return send_from_directory('project/dist', 'index.html')
-    except Exception as e:
-        print(f"React app serving error: {e}")
-        return f"<h1>React App Error</h1><p>Error: {e}</p><p>Please ensure the React app is built in project/dist/</p>"
+    """Serve the unified dashboard as main interface"""
+    from flask import send_from_directory
+    import os
+    templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
+    return send_from_directory(templates_dir, 'unified_dashboard.html')
 
-@app.route('/assets/<path:filename>')
-def serve_react_assets(filename):
-    """Serve React build assets"""
-    try:
-        return send_from_directory('project/dist/assets', filename)
-    except Exception as e:
-        print(f"Asset serving error: {e}")
-        return "Asset not found", 404
+# ============================================================
+# LEGACY ROUTES (keep for old template compatibility)
+# ============================================================
+
 
 @app.route('/<path:path>')
 def serve_static_or_react(path):
@@ -4759,15 +4753,28 @@ if VOICE_WEBSOCKET_AVAILABLE:
 else:
     logger.warning("⚠️ Voice WebSocket handlers not available")
 
+# ============================================================
+# UNIFIED DASHBOARD ROUTES
+# ============================================================
+
+@app.route('/unified')
+@app.route('/unified-dashboard')
+def serve_unified_dashboard():
+    """Serve the unified dashboard interface"""
+    from flask import send_from_directory
+    templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
+    return send_from_directory(templates_dir, 'unified_dashboard.html')
+
+
 if __name__ == '__main__':
     print("=" * 60)
-    print("ðŸš€ YourDaddy Assistant - Modern Web Backend")
+    print("🚀 YourDaddy Assistant - Modern Web Backend")
     print("=" * 60)
-    print("ðŸŒ Server starting on: http://localhost:5000")
-    print("ðŸ“± React frontend will be served automatically")
-    print("âš¡ Real-time features enabled via WebSockets")
-    print("ðŸ”§ API endpoints available at /api/*")
-    print("ðŸ›‘ Press Ctrl+C to stop the server")
+    print("🌐 Server starting on: http://localhost:5000")
+    print("🎨 Unified Dashboard (Monochrome Steel UI)")
+    print("⚡ Real-time features enabled via WebSockets")
+    print("🔧 API endpoints available at /api/*")
+    print("🛑 Press Ctrl+C to stop the server")
     print("=" * 60)
     
     try:
