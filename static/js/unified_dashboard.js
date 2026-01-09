@@ -3,9 +3,12 @@ class UnifiedDashboard {
     constructor() {
         this.socket = null;
         this.isVoiceActive = false;
-        this.recognition = null;
-
+        // Initialize dashboard
         this.init();
+
+        // Add initial system log
+        this.addSystemLog('info', 'Dashboard initialized successfully');
+        this.addSystemLog('info', 'Connecting to backend services...');
     }
 
     init() {
@@ -196,9 +199,10 @@ class UnifiedDashboard {
     }
 
     // Add System Log
-    addSystemLog(log) {
+    addSystemLog(typeOrLog, message) {
         const logsContainer = document.getElementById('system-logs');
         const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
 
         const time = new Date().toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -207,15 +211,28 @@ class UnifiedDashboard {
             hour12: false
         });
 
-        const logClass = `log-${log.type || 'info'}`;
-        logEntry.className = `log-entry ${logClass}`;
-        logEntry.innerHTML = `<span class="log-time">[${time}]</span> [${(log.type || 'INFO').toUpperCase()}] ${log.message}`;
+        let type, msg;
+        if (typeof typeOrLog === 'object') {
+            type = typeOrLog.type || 'info';
+            msg = typeOrLog.message;
+        } else {
+            type = typeOrLog;
+            msg = message;
+        }
 
-        logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+        const logClass = `log-${type}`;
+        logEntry.innerHTML = `
+            <span class="log-time">[${time}]</span>
+            <span class="log-type ${logClass}">${type.toUpperCase()}</span>
+            <span class="log-message">${msg}</span>
+        `;
 
-        // Limit to 20 entries
-        while (logsContainer.children.length > 20) {
-            logsContainer.removeChild(logsContainer.lastChild);
+        logsContainer.appendChild(logEntry);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+
+        // Limit to 50 entries
+        while (logsContainer.children.length > 50) {
+            logsContainer.removeChild(logsContainer.firstChild);
         }
     }
 

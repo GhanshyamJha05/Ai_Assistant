@@ -15,35 +15,35 @@ const TaskStatus = () => {
     return controls.stop;
   }, [progress]);
 
-  const circumference = 2 * Math.PI * 60;
+  const circumference = 2 * Math.PI * 27;
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-8 flex flex-col items-center"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-3 flex flex-col items-center"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
     >
-      <h3 className="text-sm font-medium text-white mb-6">Task Status</h3>
+      <h3 className="text-xs font-medium text-white mb-2">Task Status</h3>
 
       <div className="relative">
-        <svg className="w-[140px] h-[140px] -rotate-90" viewBox="0 0 140 140">
+        <svg className="w-[63px] h-[63px] -rotate-90" viewBox="0 0 63 63">
           <circle
-            cx="70"
-            cy="70"
-            r="60"
+            cx="31.5"
+            cy="31.5"
+            r="27"
             fill="none"
             stroke="#1F2228"
-            strokeWidth="8"
+            strokeWidth="6"
           />
 
           <motion.circle
-            cx="70"
-            cy="70"
-            r="60"
+            cx="31.5"
+            cy="31.5"
+            r="27"
             fill="none"
             stroke="#3B82F6"
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={useTransform(
@@ -52,21 +52,21 @@ const TaskStatus = () => {
               [circumference, 0]
             )}
             style={{
-              filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))',
+              filter: 'drop-shadow(0 0 6px rgba(59, 130, 246, 0.4))',
             }}
           />
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.div className="text-4xl font-bold text-white">
-            {progressPercent}
-            <span className="text-2xl text-[#9CA3AF]">%</span>
-          </motion.div>
+          <div className="text-xl font-bold text-white">
+            <motion.span>{progressPercent}</motion.span>
+            <span className="text-sm text-[#9CA3AF]">%</span>
+          </div>
         </div>
       </div>
 
       <motion.div
-        className="mt-6 px-4 py-2 bg-[#3B82F6]/10 rounded-full"
+        className="mt-2 px-2 py-1 bg-[#3B82F6]/10 rounded-full"
         animate={{
           opacity: [1, 0.6, 1],
         }}
@@ -76,11 +76,11 @@ const TaskStatus = () => {
           ease: 'easeInOut',
         }}
       >
-        <span className="text-sm font-medium text-[#3B82F6]">ACTIVE</span>
+        <span className="text-[10px] font-medium text-[#3B82F6]">ACTIVE</span>
       </motion.div>
 
-      <p className="mt-4 text-sm text-[#9CA3AF] text-center max-w-xs">
-        Processing natural language queries and executing tasks
+      <p className="mt-1.5 text-[10px] text-[#9CA3AF] text-center max-w-[180px]">
+        Processing tasks
       </p>
     </motion.div>
   );

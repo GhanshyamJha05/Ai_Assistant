@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Assistant - Command Center</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             /* Monochrome Steel Palette */
             --bg-main: #0A0E12;
             --bg-card: #16181D;
             --bg-input: #1F2228;
-            
+
             --text-primary: #FFFFFF;
             --text-secondary: #9CA3AF;
             --text-muted: #6B7280;
-            
+
             --accent-primary: #3B82F6;
             --accent-hover: #60A5FA;
-            
+
             --success: #10B981;
             --warning: #F59E0B;
             --error: #EF4444;
-            
+
             --border-color: #1F2228;
         }
 
@@ -161,8 +164,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         /* Learning Stats */
@@ -321,8 +331,15 @@
         }
 
         @keyframes voicePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.08);
+            }
         }
 
         .voice-button i {
@@ -400,12 +417,10 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            background: conic-gradient(
-                var(--accent-primary) 0deg,
-                var(--accent-primary) calc(3.6deg * 78),
-                var(--bg-input) calc(3.6deg * 78),
-                var(--bg-input) 360deg
-            );
+            background: conic-gradient(var(--accent-primary) 0deg,
+                    var(--accent-primary) calc(3.6deg * 78),
+                    var(--bg-input) calc(3.6deg * 78),
+                    var(--bg-input) 360deg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -550,11 +565,9 @@
             height: 60%;
             background: var(--accent-primary);
             opacity: 0.8;
-            clip-path: polygon(
-                0% 100%, 10% 70%, 20% 80%, 30% 60%, 40% 75%, 
-                50% 50%, 60% 65%, 70% 45%, 80% 60%, 90% 40%, 100% 55%, 
-                100% 100%
-            );
+            clip-path: polygon(0% 100%, 10% 70%, 20% 80%, 30% 60%, 40% 75%,
+                    50% 50%, 60% 65%, 70% 45%, 80% 60%, 90% 40%, 100% 55%,
+                    100% 100%);
         }
 
         /* System Logs */
@@ -583,10 +596,25 @@
             margin: 0 6px;
         }
 
-        .log-info { background: var(--accent-primary); color: white; }
-        .log-success { background: var(--success); color: white; }
-        .log-warning { background: var(--warning); color: white; }
-        .log-error { background: var(--error); color: white; }
+        .log-info {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .log-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .log-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .log-error {
+            background: var(--error);
+            color: white;
+        }
 
         .log-message {
             color: var(--text-secondary);
@@ -612,6 +640,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard-container">
         <!-- LEFT COLUMN -->
@@ -672,7 +701,7 @@
                             </div>
                             <div class="stat-content">
                                 <div class="stat-label">Database</div>
-                                <div class="stat-value" id="db-stats">1.2TB</div>
+                                <div class="stat-value" id="db-stats">--</div>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -681,7 +710,7 @@
                             </div>
                             <div class="stat-content">
                                 <div class="stat-label">Systems</div>
-                                <div class="stat-value" id="active-systems">27/27</div>
+                                <div class="stat-value" id="active-systems">--</div>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -690,7 +719,7 @@
                             </div>
                             <div class="stat-content">
                                 <div class="stat-label">Conversations</div>
-                                <div class="stat-value" id="conversations">54.3K</div>
+                                <div class="stat-value" id="conversations">--</div>
                             </div>
                         </div>
                     </div>
@@ -737,7 +766,8 @@
                     <i class="fas fa-microphone"></i>
                 </button>
                 <div class="command-input-wrapper">
-                    <input type="text" id="command-input" placeholder="Type a command or ask anything..." onkeypress="handleEnter(event)">
+                    <input type="text" id="command-input" placeholder="Type a command or ask anything..."
+                        onkeypress="handleEnter(event)">
                     <button class="send-btn" onclick="sendCommand()">
                         <i class="fas fa-paper-plane"></i> Send
                     </button>
@@ -749,7 +779,7 @@
                 <div class="card-title" style="margin-bottom: 16px;">Task Status</div>
                 <div class="progress-ring">
                     <div class="progress-circle">
-                        <div class="progress-value" id="task-progress">78%</div>
+                        <div class="progress-value" id="task-progress">0%</div>
                     </div>
                 </div>
                 <div class="task-status-label">ACTIVE</div>
@@ -764,27 +794,13 @@
                 <div class="history-panel">
                     <div class="history-title">Chat History</div>
                     <div id="chat-history">
-                        <div class="message user">
-                            <div class="message-time">10:42 AM</div>
-                            <div>Analyze recent trends</div>
-                        </div>
-                        <div class="message">
-                            <div class="message-time">10:42 AM</div>
-                            <div>AI: Here's the analysis...</div>
-                        </div>
+                        <!-- Dynamic chat messages loaded here -->
                     </div>
                 </div>
                 <div class="history-panel">
                     <div class="history-title">Voice History</div>
                     <div id="voice-history">
-                        <div class="voice-entry">
-                            <span class="voice-time">10:41</span>
-                            "Set meeting for 3 PM"
-                        </div>
-                        <div class="voice-entry">
-                            <span class="voice-time">10:38</span>
-                            "Activate system"
-                        </div>
+                        <!-- Dynamic voice history loaded here -->
                     </div>
                 </div>
             </div>
@@ -798,17 +814,17 @@
                     <div class="stats-grid">
                         <div class="system-stat-card">
                             <div class="system-stat-label">CPU Usage</div>
-                            <div class="system-stat-value" id="cpu-usage">32%</div>
+                            <div class="system-stat-value" id="cpu-usage">--%</div>
                             <div class="mini-graph"></div>
                         </div>
                         <div class="system-stat-card">
                             <div class="system-stat-label">Memory</div>
-                            <div class="system-stat-value" id="memory-usage">65%</div>
+                            <div class="system-stat-value" id="memory-usage">--%</div>
                             <div class="mini-graph"></div>
                         </div>
                         <div class="system-stat-card">
                             <div class="system-stat-label">Network</div>
-                            <div class="system-stat-value" id="network-usage">12MB/s</div>
+                            <div class="system-stat-value" id="network-usage">--</div>
                             <div class="mini-graph"></div>
                         </div>
                     </div>
@@ -822,26 +838,7 @@
                 </div>
                 <div class="card-body" style="flex: 1; padding: 16px; overflow: hidden;">
                     <div class="logs-container" id="system-logs">
-                        <div class="log-entry">
-                            <span class="log-time">[10:45:18]</span>
-                            <span class="log-type log-info">INFO</span>
-                            <span class="log-message">System boot sequence complete</span>
-                        </div>
-                        <div class="log-entry">
-                            <span class="log-time">[10:45:15]</span>
-                            <span class="log-type log-success">SUCCESS</span>
-                            <span class="log-message">Model update completed</span>
-                        </div>
-                        <div class="log-entry">
-                            <span class="log-time">[10:45:10]</span>
-                            <span class="log-type log-warning">WARNING</span>
-                            <span class="log-message">High latency detected on server</span>
-                        </div>
-                        <div class="log-entry">
-                            <span class="log-time">[10:45:05]</span>
-                            <span class="log-type log-error">ERROR</span>
-                            <span class="log-message">Connection timeout to external API</span>
-                        </div>
+                        <!-- Dynamic system logs loaded here -->
                     </div>
                 </div>
             </div>
@@ -851,4 +848,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="/static/js/unified_dashboard.js"></script>
 </body>
+
 </html>

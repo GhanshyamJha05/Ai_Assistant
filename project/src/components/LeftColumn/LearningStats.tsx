@@ -1,8 +1,9 @@
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Database, Activity, MessageSquare } from 'lucide-react';
 import { useEffect } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 
-const StatCard = ({ icon: Icon, label, value, delay }: { icon: any; label: string; value: string; delay: number }) => {
+const StatCard = ({ icon: Icon, label, value, targetValue, delay }: { icon: any; label: string; value: string; targetValue: number; delay: number }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => {
     if (label === 'Database Stats') return `${latest.toFixed(1)}TB`;
@@ -11,7 +12,6 @@ const StatCard = ({ icon: Icon, label, value, delay }: { icon: any; label: strin
   });
 
   useEffect(() => {
-    const targetValue = label === 'Database Stats' ? 1.2 : label === 'Active Systems' ? 27 : 54300;
     const controls = animate(count, targetValue, {
       duration: 2,
       delay: delay,
@@ -19,7 +19,7 @@ const StatCard = ({ icon: Icon, label, value, delay }: { icon: any; label: strin
     });
 
     return controls.stop;
-  }, [count, label, delay]);
+  }, [count, targetValue, delay]);
 
   return (
     <motion.div
@@ -34,17 +34,26 @@ const StatCard = ({ icon: Icon, label, value, delay }: { icon: any; label: strin
       </div>
       <div className="flex-1">
         <p className="text-xs text-[#9CA3AF] mb-1">{label}</p>
-        <motion.p className="text-lg font-semibold text-white">{rounded}</motion.p>
+        <p className="text-lg font-semibold text-white">
+          <motion.span>{rounded}</motion.span>
+        </p>
       </div>
     </motion.div>
   );
 };
 
 const LearningStats = () => {
+  const { learningStats } = useDashboard();
+
+  // Parse values to get numeric targets
+  const dbValue = parseFloat(learningStats.database.replace('TB', '')) || 1.2;
+  const systemsValue = parseInt(learningStats.systems.split('/')[0]) || 27;
+  const convsValue = parseFloat(learningStats.conversations.replace('K', '')) * 1000 || 54300;
+
   const stats = [
-    { icon: Database, label: 'Database Stats', value: '1.2TB' },
-    { icon: Activity, label: 'Active Systems', value: '27/27' },
-    { icon: MessageSquare, label: 'Conversations', value: '54.3K' },
+    { icon: Database, label: 'Database Stats', value: learningStats.database, targetValue: dbValue },
+    { icon: Activity, label: 'Active Systems', value: learningStats.systems, targetValue: systemsValue },
+    { icon: MessageSquare, label: 'Conversations', value: learningStats.conversations, targetValue: convsValue },
   ];
 
   return (

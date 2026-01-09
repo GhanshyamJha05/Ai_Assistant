@@ -1746,14 +1746,15 @@ except Exception as e:
     
     assistant = MinimalAssistant()
 
-# Serve React Build (Bolt UI)
 @app.route('/')
 def index():
-    """Serve the unified dashboard as main interface"""
-    from flask import send_from_directory
-    import os
-    templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
-    return send_from_directory(templates_dir, 'unified_dashboard.html')
+    """Serve Bolt.ai React app build"""
+    try:
+        print("Serving Bolt.ai React app from project/dist")
+        return send_from_directory('project/dist', 'index.html')
+    except Exception as e:
+        print(f"React app serving error: {e}")
+        return f"<h1>React App Error</h1><p>Error: {e}</p><p>Please ensure the React app is built in project/dist/</p>"
 
 # ============================================================
 # LEGACY ROUTES (keep for old template compatibility)
@@ -4771,7 +4772,7 @@ if __name__ == '__main__':
     print("🚀 YourDaddy Assistant - Modern Web Backend")
     print("=" * 60)
     print("🌐 Server starting on: http://localhost:5000")
-    print("🎨 Unified Dashboard (Monochrome Steel UI)")
+    print("⚛️  Bolt.ai React UI (Monochrome Steel Design)")
     print("⚡ Real-time features enabled via WebSockets")
     print("🔧 API endpoints available at /api/*")
     print("🛑 Press Ctrl+C to stop the server")
