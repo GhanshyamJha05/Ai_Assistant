@@ -1,38 +1,23 @@
-# Memory Management Module
 """
-Re-export from canonical location to avoid code duplication.
-The actual implementation is in ai_assistant.modules.memory
+Backward Compatibility Alias for memory.py
+
+This file was deprecated in favor of ai_assistant.modules.memory.
+It provides import aliases for backward compatibility.
+
+DEPRECATED: Import from ai_assistant.modules.memory instead.
+This file will be removed in a future version.
 """
 
-# Re-export everything from the canonical module
-from ai_assistant.modules.memory import (
-    ConnectionPool,
-    get_db_connection,
-    get_db_transaction,
-    setup_memory,
-    save_to_memory,
-    get_memory,
-    search_memory,
-    get_conversation_summary,
-    save_knowledge,
-    get_knowledge,
-    determine_importance,
-    categorize_content,
-    generate_summary,
+import warnings
+
+# Emit deprecation warning
+warnings.warn(
+    "ai_assistant.ai.memory is deprecated. "
+    "Import from ai_assistant.modules.memory instead. "
+    "This compatibility alias will be removed in a future version.",
+    DeprecationWarning,
+    stacklevel=2
 )
 
-__all__ = [
-    'ConnectionPool',
-    'get_db_connection',
-    'get_db_transaction',
-    'setup_memory',
-    'save_to_memory',
-    'get_memory',
-    'search_memory',
-    'get_conversation_summary',
-    'save_knowledge',
-    'get_knowledge',
-    'determine_importance',
-    'categorize_content',
-    'generate_summary',
-]
+# Import and re-export all public objects from the new location
+from ai_assistant.modules.memory import *

@@ -51,14 +51,14 @@ function App() {
             </motion.div>
 
             <motion.div
-              className="xl:col-span-6 space-y-4 flex flex-col"
+              className="xl:col-span-6 flex flex-col gap-4"
               variants={columnVariants}
             >
               <StatusBar />
-              <div className="flex-1 flex flex-col justify-center">
+              <div className="flex-1 flex items-center justify-center">
                 <VoiceButton />
-                <CommandInput />
               </div>
+              <CommandInput />
               <TaskStatus />
             </motion.div>
 

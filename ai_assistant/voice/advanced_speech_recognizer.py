@@ -41,6 +41,14 @@ except ImportError:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
+# Import privacy consent manager
+try:
+    from ai_assistant.core.privacy_consent import get_consent_manager, ConsentType
+    CONSENT_MANAGER_AVAILABLE = True
+except ImportError:
+    CONSENT_MANAGER_AVAILABLE = False
+    logger.warning("Privacy consent manager not available. External APIs will be used without consent checks!")
+
 
 class RecognitionModel(Enum):
     """Available recognition models"""
@@ -63,7 +71,9 @@ class AdvancedSpeechRecognizer:
         google_cloud_key: Optional[str] = None,
         prefer_online: bool = True,
         noise_reduction: bool = True,
-        cache_dir: str = "data/recognition_cache"
+        cache_dir: str = "data/recognition_cache",
+        user_id: str = "default_user",
+        require_consent: bool = True
     ):
         """
         Initialize the advanced speech recognizer
@@ -74,6 +84,8 @@ class AdvancedSpeechRecognizer:
             prefer_online: Try online models first
             noise_reduction: Apply noise reduction to audio
             cache_dir: Directory for caching recognition results
+            user_id: User identifier for consent management
+            require_consent: Whether to check consent before using external APIs
         """
         self.whisper_api_key = whisper_api_key
         self.google_cloud_key = google_cloud_key
@@ -81,6 +93,17 @@ class AdvancedSpeechRecognizer:
         self.noise_reduction = noise_reduction
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.user_id = user_id
+        self.require_consent = require_consent and CONSENT_MANAGER_AVAILABLE
+        
+        # Initialize consent manager
+        if self.require_consent:
+            self.consent_manager = get_consent_manager()
+            logger.info("✅ Privacy consent manager enabled for speech recognition")
+        else:
+            self.consent_manager = None
+            if require_consent:
+                logger.warning("⚠️ Consent requested but not available!")
         
         # Initialize recognizers
         self.sr_recognizer = None
@@ -178,30 +201,73 @@ class AdvancedSpeechRecognizer:
         Recognize speech using OpenAI Whisper API
         Best accuracy, handles diverse accents and background noise
         
+        PRIVACY: Sends audio to OpenAI servers. Requires user consent.
+        
         Args:
             audio_file: Path to audio file
-            language: Language code
+            language: Language code (en, hi, or auto for Hinglish)
             prompt: Optional context prompt to improve recognition
         
         Returns:
             Tuple of (recognized_text, confidence_score)
         """
+        # Check consent
+        if self.require_consent and not self.consent_manager.has_consent(self.user_id, ConsentType.EXTERNAL_STT):
+            logger.warning(f"🚫 Whisper API blocked - user {self.user_id} has not consented to external STT")
+            return None, 0.0
+        
         if not WHISPER_API_AVAILABLE or not self.whisper_api_key:
             return None, 0.0
         
         try:
+            # Map language codes for Whisper
+            whisper_lang = None  # None = auto-detect
+            context_prompt = prompt
+            
+            if language in ["en", "en-US", "en-IN", "en-GB"]:
+                whisper_lang = "en"
+                if not context_prompt:
+                    context_prompt = "English speech with possible Indian accent."
+            elif language in ["hi", "hi-IN"]:
+                whisper_lang = "hi"
+                if not context_prompt:
+                    context_prompt = "Hindi speech, may contain some English words."
+            elif language in ["auto", "hinglish"]:
+                # Auto-detect for Hinglish (code-switching)
+                whisper_lang = None
+                if not context_prompt:
+                    context_prompt = "Mixed Hindi and English speech (Hinglish). Contains both languages."
+            else:
+                whisper_lang = None  # Let Whisper auto-detect
+            
+            logger.info(f"🎤 Whisper API: language={whisper_lang or 'auto-detect'}, prompt='{context_prompt}'")
+            
             with open(audio_file, 'rb') as f:
-                transcript = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=f,
-                    language=language,
-                    prompt=prompt
-                )
+                # Prepare Whisper API call parameters
+                api_params = {
+                    'model': 'whisper-1',
+                    'file': f,
+                }
+                
+                # Add language if specified (omit for auto-detection)
+                if whisper_lang:
+                    api_params['language'] = whisper_lang
+                
+                # Add context prompt if provided
+                if context_prompt:
+                    api_params['prompt'] = context_prompt
+                
+                transcript = openai.Audio.transcribe(**api_params)
             
             text = transcript.get('text', '').strip()
-            logger.info(f"✅ Whisper recognized: {text}")
+            detected_lang = transcript.get('language', whisper_lang or 'unknown')
             
-            return text, 0.95  # Whisper provides high confidence
+            logger.info(f"✅ Whisper recognized [{detected_lang}]: {text}")
+            
+            # Higher confidence for Whisper due to its robustness
+            confidence = 0.95 if text else 0.0
+            
+            return text, confidence
             
         except Exception as e:
             logger.error(f"❌ Whisper API failed: {e}")
@@ -216,6 +282,8 @@ class AdvancedSpeechRecognizer:
         Recognize speech using Google Cloud Speech-to-Text
         Very good accuracy, less latency than Whisper
         
+        PRIVACY: Sends audio to Google servers. Requires user consent.
+        
         Args:
             audio_file: Path to audio file
             language: Language code
@@ -223,6 +291,11 @@ class AdvancedSpeechRecognizer:
         Returns:
             Tuple of (recognized_text, confidence_score)
         """
+        # Check consent
+        if self.require_consent and not self.consent_manager.has_consent(self.user_id, ConsentType.EXTERNAL_STT):
+            logger.warning(f"🚫 Google Cloud Speech blocked - user {self.user_id} has not consented to external STT")
+            return None, 0.0
+        
         try:
             from google.cloud import speech_v1
             
@@ -351,42 +424,76 @@ class AdvancedSpeechRecognizer:
         
         Args:
             audio_input: Audio file path or audio source
-            language: Language code
+            language: Language code (en, hi, en-IN, hi-IN, auto, hinglish)
             context: Optional context prompt for better accuracy
         
         Returns:
             Tuple of (recognized_text, confidence, model_used)
         """
+        # Normalize language code for better compatibility
+        normalized_lang = language.lower()
+        
+        # Map common variations
+        if normalized_lang in ["hinglish", "auto"]:
+            whisper_lang = "auto"
+            google_lang = "hi-IN"  # Fallback to Hindi for Google
+            vosk_lang = "hi"
+        elif normalized_lang in ["hi", "hi-in", "hindi"]:
+            whisper_lang = "hi"
+            google_lang = "hi-IN"
+            vosk_lang = "hi"
+        elif normalized_lang in ["en", "en-us", "en-in", "en-gb", "english"]:
+            whisper_lang = "en"
+            google_lang = "en-IN" if "in" in normalized_lang else "en-US"
+            vosk_lang = "en"
+        else:
+            whisper_lang = "auto"
+            google_lang = language
+            vosk_lang = "en"
+        
+        logger.info(f"🌐 Language mapping: input='{language}' -> whisper='{whisper_lang}', google='{google_lang}'")
+        
         models_to_try = []
         
         if self.prefer_online:
             if self.whisper_api_key:
-                models_to_try.append(("whisper_api", audio_input))
+                models_to_try.append(("whisper_api", audio_input, whisper_lang))
             if self.google_cloud_key:
-                models_to_try.append(("google_cloud", audio_input))
-            models_to_try.append(("speech_recognition", audio_input))
+                models_to_try.append(("google_cloud", audio_input, google_lang))
+            models_to_try.append(("speech_recognition", audio_input, google_lang))
         
-        models_to_try.append(("vosk", audio_input))
+        models_to_try.append(("vosk", audio_input, vosk_lang))
         
-        for model_name, audio in models_to_try:
+        for model_info in models_to_try:
+            model_name = model_info[0]
+            audio = model_info[1]
+            lang_code = model_info[2] if len(model_info) > 2 else language
+            
             try:
                 if model_name == "whisper_api":
                     import asyncio
-                    loop = asyncio.get_event_loop()
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
                     text, conf = loop.run_until_complete(
-                        self.recognize_whisper_api(audio, language, context)
+                        self.recognize_whisper_api(audio, lang_code, context)
                     )
                 elif model_name == "google_cloud":
-                    text, conf = self.recognize_google_cloud_speech(audio, language)
+                    text, conf = self.recognize_google_cloud_speech(audio, lang_code)
                 elif model_name == "speech_recognition" and self.sr_recognizer:
-                    text, conf = self.recognize_speech_recognition(audio, language)
+                    text, conf = self.recognize_speech_recognition(audio, lang_code)
                 elif model_name == "vosk":
-                    text, conf = self.recognize_vosk(audio, language)
+                    # Extract base language code for Vosk (en or hi)
+                    vosk_base_lang = "hi" if "hi" in lang_code.lower() else "en"
+                    text, conf = self.recognize_vosk(audio, vosk_base_lang)
                 else:
                     continue
                 
                 if text and conf > 0.5:
-                    logger.info(f"✅ Recognition successful with {model_name}: {text}")
+                    logger.info(f"✅ Recognition successful with {model_name}: {text} (conf: {conf:.2f})")
                     self.recognition_history.append({"text": text, "model": model_name, "confidence": conf})
                     return text, conf, model_name
                     

@@ -310,3 +310,164 @@ def prewarm_voice_cache():
     
     logging.info(f"✅ Cache pre-warming complete: {success_count}/{len(AVAILABLE_VOICES)} voices cached")
 
+
+# ============================================================================
+# PROFESSIONAL VOICE SERVICE INTEGRATION
+# ============================================================================
+
+# Import voice service manager
+voice_manager = None
+
+try:
+    from ai_assistant.services.voice_service_manager import get_voice_service_manager
+    VOICE_SERVICE_AVAILABLE = True
+    logging.info("✅ Voice Service Manager available")
+except ImportError as e:
+    VOICE_SERVICE_AVAILABLE = False
+    logging.warning(f"Voice Service Manager not available: {e}")
+
+
+def init_professional_voice_services(socketio=None):
+    """Initialize professional voice system (call from backend startup)"""
+    global voice_manager
+    
+    if not VOICE_SERVICE_AVAILABLE:
+        return False
+    
+    try:
+        logging.info("🎤 Initializing Professional Voice System...")
+        
+        voice_manager = get_voice_service_manager(
+            enable_wake_word=True,
+            enable_neural_tts=True,
+            enable_vad=True,
+            enable_speaker_recognition=True
+        )
+        
+        # Set up WebSocket callbacks if provided
+        if socketio:
+            def on_wake_word(word, confidence):
+                socketio.emit('wake_word_detected', {
+                    'wake_word': word,
+                    'confidence': confidence,
+                    'timestamp': time.time()
+                })
+            
+            def on_speaker(speaker):
+                socketio.emit('speaker_identified', {
+                    'speaker': speaker,
+                    'timestamp': time.time()
+                })
+            
+            voice_manager.on_wake_word_detected = on_wake_word
+            voice_manager.on_speaker_identified = on_speaker
+        
+        # Start services
+        voice_manager.start()
+        
+        logging.info("✅ Professional Voice System activated!")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Failed to initialize professional voice: {e}")
+        return False
+
+
+# Professional Voice API Endpoints
+
+@voice_bp.route('/professional/status', methods=['GET'])
+def get_professional_voice_status():
+    """Get status of professional voice services"""
+    if not voice_manager:
+        return jsonify({
+            'available': False,
+            'error': 'Professional voice services not initialized'
+        }), 503
+    
+    try:
+        status = voice_manager.get_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@voice_bp.route('/professional/wake-word/start', methods=['POST'])
+def start_professional_wake_word():
+    """Start professional wake word detection"""
+    if not voice_manager:
+        return jsonify({'error': 'Voice services not available'}), 503
+    
+    try:
+        voice_manager.start()
+        return jsonify({
+            'success': True,
+            'message': 'Wake word detection started'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@voice_bp.route('/professional/wake-word/stop', methods=['POST'])
+def stop_professional_wake_word():
+    """Stop professional wake word detection"""
+    if not voice_manager:
+        return jsonify({'error': 'Voice services not available'}), 503
+    
+    try:
+        voice_manager.stop()
+        return jsonify({
+            'success': True,
+            'message': 'Wake word detection stopped'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@voice_bp.route('/professional/tts/speak', methods=['POST'])
+def professional_tts_speak():
+    """Synthesize speech using neural TTS engine"""
+    if not voice_manager:
+        return jsonify({'error': 'TTS not available'}), 503
+    
+    data = request.json
+    text = data.get('text', '')
+    language = data.get('language', 'en')
+    gender = data.get('gender', 'female')
+    
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+    
+    try:
+        from flask import send_file
+        audio_file = voice_manager.speak_text(text, language, gender)
+        
+        if audio_file and os.path.exists(audio_file):
+            return send_file(
+                audio_file,
+                mimetype='audio/wav',
+                as_attachment=False,
+                download_name='speech.wav'
+            )
+        else:
+            return jsonify({'error': 'TTS synthesis failed'}), 500
+            
+    except Exception as e:
+        logging.error(f"Professional TTS error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@voice_bp.route('/professional/tts/voices', methods=['GET'])
+def get_professional_voices():
+    """Get list of available neural TTS voices"""
+    if not voice_manager:
+        return jsonify({'error': 'TTS not available'}), 503
+    
+    try:
+        voices = voice_manager.get_available_voices()
+        return jsonify(voices), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Export initialization function
+__all__ = ['voice_bp', 'init_professional_voice_services', 'prewarm_voice_cache']

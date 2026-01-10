@@ -12,26 +12,54 @@ Features PIN-based authentication for secure access.
 import sys
 import os
 import argparse
+import signal
+import logging
+import traceback
 from pathlib import Path
+
+# Setup basic logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # Add the project directories to the Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info("\n🛑 Shutdown signal received. Cleaning up...")
+    sys.exit(0)
+
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+if hasattr(signal, 'SIGTERM'):
+    signal.signal(signal.SIGTERM, signal_handler)
+
+
+
+
 def main():
     """Main entry point for the AI Assistant."""
-    # Initialize config files from examples if needed
     try:
-        from setup_config import setup_config_files
-        setup_config_files()
-    except Exception as e:
-        print(f"⚠️  Warning: Could not auto-initialize config files: {e}")
-    
-    # Show welcome banner
-    print("\n" + "=" * 60)
-    print("YourDaddy AI Assistant")
-    print("=" * 60)
+        # Initialize config files from examples if needed
+        try:
+            from setup_config import setup_config_files
+            setup_config_files()
+        except Exception as e:
+            logger.warning(f"Could not auto-initialize config files: {e}")
+        
+        # Show welcome banner
+        print("\n" + "=" * 60)
+        print("YourDaddy AI Assistant")
+        print("=" * 60)
+
     
     parser = argparse.ArgumentParser(description="AI Assistant - Your intelligent companion")
     parser.add_argument("--interface", choices=["cli", "web", "desktop"], default="web",
@@ -86,7 +114,7 @@ def main():
             print(f"Starting web interface on port {args.port}...")
             # Start the web backend
             try:
-                from ai_assistant.apps.modern_web_backend import app, socketio
+                from ai_assistant.services.modern_web_backend import app, socketio
                 print("🌐 Starting YourDaddy Assistant Web Backend...")
                 socketio.run(app, host='0.0.0.0', port=args.port, debug=args.verbose)
             except ImportError as e:
@@ -133,12 +161,19 @@ def main():
                     sys.exit(1)
             
     except ImportError as e:
+        logger.error(f"Import error: {e}")
         print(f"❌ Error importing required modules: {e}")
         print("Please ensure all dependencies are installed:")
         print("  pip install -r requirements.txt")
         sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("\n🛑 Application stopped by user")
+        sys.exit(0)
     except Exception as e:
-        print(f"❌ Error starting AI Assistant: {e}")
+        logger.error(f"Fatal error: {e}")
+        logger.debug(traceback.format_exc())
+        print(f"❌ Fatal error: {e}")
+        print("\nFor detailed error information, check the logs.")
         sys.exit(1)
 
 if __name__ == "__main__":

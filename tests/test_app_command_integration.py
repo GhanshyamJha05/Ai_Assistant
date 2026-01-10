@@ -74,7 +74,7 @@ def test_app_commands():
     try:
         # We can't fully test this without running the server
         # but we can check if the methods exist
-        from ai_assistant.apps.modern_web_backend import ModernAssistant
+        from ai_assistant.services.modern_web_backend import ModernAssistant
         
         # Check if methods exist
         if hasattr(ModernAssistant, 'detect_app_command'):

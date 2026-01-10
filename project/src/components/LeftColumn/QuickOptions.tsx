@@ -1,41 +1,72 @@
 import { motion } from 'framer-motion';
-import { Smartphone, BarChart3, Settings, MoreHorizontal } from 'lucide-react';
+import { Grid3x3, BarChart3, Settings, MoreHorizontal } from 'lucide-react';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 const QuickOptions = () => {
+  const { sendCommand } = useDashboard();
+
   const options = [
-    { icon: Smartphone, label: 'Apps' },
-    { icon: BarChart3, label: 'Stats' },
-    { icon: Settings, label: 'Settings' },
-    { icon: MoreHorizontal, label: 'More' },
+    {
+      icon: Grid3x3,
+      label: 'Apps',
+      onClick: () => {
+        sendCommand('Show available apps');
+      }
+    },
+    {
+      icon: BarChart3,
+      label: 'Stats',
+      onClick: () => {
+        sendCommand('Show system statistics');
+      }
+    },
+    {
+      icon: Settings,
+      label: 'Settings',
+      onClick: () => {
+        sendCommand('Open settings');
+      }
+    },
+    {
+      icon: MoreHorizontal,
+      label: 'More',
+      onClick: () => {
+        sendCommand('Show more options');
+      }
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {options.map((option, index) => (
-        <motion.button
-          key={option.label}
-          className="relative bg-[#16181D] border border-[#1F2228] rounded-lg p-6 flex flex-col items-center justify-center gap-3 group overflow-hidden transition-all duration-200 hover:scale-[1.02]"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05 }}
-        >
-          <motion.div
-            className="absolute inset-0 border-2 border-[#3B82F6] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-            initial={false}
-          />
-          <motion.div
-            className="absolute inset-0 bg-[#3B82F6] opacity-0 group-hover:opacity-5 rounded-lg transition-opacity duration-200"
-            initial={false}
-          />
-          <option.icon className="w-6 h-6 text-[#9CA3AF] group-hover:text-[#3B82F6] transition-colors duration-200" strokeWidth={1.5} />
-          <span className="text-xs font-medium text-[#9CA3AF] group-hover:text-white transition-colors duration-200">
-            {option.label}
-          </span>
-        </motion.button>
-      ))}
-    </div>
+    <motion.div
+      className="space-y-3"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+    >
+      <h3 className="text-sm font-medium text-white px-1">Quick Options</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {options.map((option, index) => (
+          <motion.button
+            key={option.label}
+            onClick={option.onClick}
+            className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:border-[#3B82F6] hover:shadow-[0_0_12px_rgba(59,130,246,0.3)] transition-all duration-200 cursor-pointer group"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 * index }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <option.icon
+              className="w-6 h-6 text-[#3B82F6] group-hover:scale-110 transition-transform"
+              strokeWidth={1.5}
+            />
+            <span className="text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium">
+              {option.label}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
   );
 };
 

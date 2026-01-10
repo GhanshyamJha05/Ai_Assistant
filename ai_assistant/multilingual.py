@@ -545,26 +545,28 @@ class MultilingualSupport:
             logging.error(f"Cache storage error: {e}")
     
     def recognize_speech_multilingual(self, audio_source, language: Language = Language.AUTO_DETECT) -> Tuple[str, Language]:
-        """Recognize speech in multiple languages."""
+        """Recognize speech in multiple languages with enhanced Hinglish support."""
         try:
             if not self.speech_recognizer:
                 return "❌ Speech recognition not available", Language.ENGLISH
             
             # Listen for audio
             with audio_source as source:
-                self.speech_recognizer.adjust_for_ambient_noise(source)
+                self.speech_recognizer.adjust_for_ambient_noise(source, duration=0.2)
                 audio = self.speech_recognizer.listen(source, timeout=5)
             
-            # Try different languages based on setting
-            if language == Language.AUTO_DETECT:
-                languages_to_try = ['hi-IN', 'en-IN', 'en-US']
+            # Determine recognition strategy based on language setting
+            if language == Language.AUTO_DETECT or language == Language.HINGLISH:
+                # For Hinglish/auto-detect: Try both Hindi and English concurrently
+                return self._recognize_hinglish_dual(audio)
             elif language == Language.HINDI:
                 languages_to_try = ['hi-IN']
             elif language == Language.ENGLISH:
                 languages_to_try = ['en-IN', 'en-US']
-            else:  # Hinglish
-                languages_to_try = ['hi-IN', 'en-IN']
+            else:
+                languages_to_try = ['hi-IN', 'en-IN', 'en-US']
             
+            # Single language recognition
             best_result = ""
             best_language = Language.ENGLISH
             best_confidence = 0.0
@@ -594,6 +596,84 @@ class MultilingualSupport:
         except Exception as e:
             logging.error(f"Multilingual speech recognition error: {e}")
             return f"❌ Speech recognition failed: {str(e)}", Language.ENGLISH
+    
+    def _recognize_hinglish_dual(self, audio) -> Tuple[str, Language]:
+        """
+        Dual-language recognition strategy for Hinglish.
+        Tries both Hindi and English, then merges results intelligently.
+        """
+        results = {}
+        
+        # Try Hindi recognition
+        try:
+            hindi_result = self.speech_recognizer.recognize_google(audio, language='hi-IN')
+            if hindi_result:
+                hindi_context = self.detect_language(hindi_result)
+                results['hindi'] = {
+                    'text': hindi_result,
+                    'context': hindi_context,
+                    'confidence': hindi_context.confidence
+                }
+                logging.info(f"🇮🇳 Hindi recognition: {hindi_result} (conf: {hindi_context.confidence:.2f})")
+        except (sr.UnknownValueError, sr.RequestError) as e:
+            logging.debug(f"Hindi recognition failed: {e}")
+        
+        # Try English (Indian accent) recognition
+        try:
+            english_result = self.speech_recognizer.recognize_google(audio, language='en-IN')
+            if english_result:
+                english_context = self.detect_language(english_result)
+                results['english'] = {
+                    'text': english_result,
+                    'context': english_context,
+                    'confidence': english_context.confidence
+                }
+                logging.info(f"🇬🇧 English recognition: {english_result} (conf: {english_context.confidence:.2f})")
+        except (sr.UnknownValueError, sr.RequestError) as e:
+            logging.debug(f"English recognition failed: {e}")
+        
+        # Intelligently select or merge results
+        if not results:
+            return "❌ Could not understand audio", Language.ENGLISH
+        
+        # If only one result, use it
+        if len(results) == 1:
+            result_data = list(results.values())[0]
+            return result_data['text'], result_data['context'].detected_language
+        
+        # Both results available - choose the best one
+        hindi_data = results.get('hindi')
+        english_data = results.get('english')
+        
+        if hindi_data and english_data:
+            # Check if results are similar (likely same speech)
+            hindi_words = set(hindi_data['text'].lower().split())
+            english_words = set(english_data['text'].lower().split())
+            
+            # Calculate word overlap
+            common_words = hindi_words & english_words
+            overlap_ratio = len(common_words) / max(len(hindi_words), len(english_words), 1)
+            
+            # If high overlap (>0.3), it's the same speech - use higher confidence
+            if overlap_ratio > 0.3:
+                if hindi_data['confidence'] >= english_data['confidence']:
+                    return hindi_data['text'], Language.HINGLISH
+                else:
+                    return english_data['text'], Language.HINGLISH
+            else:
+                # Different results - likely code-switching, merge them
+                # Prefer Hindi if it detected mixed language
+                if hindi_data['context'].is_mixed:
+                    return hindi_data['text'], Language.HINGLISH
+                elif english_data['context'].is_mixed:
+                    return english_data['text'], Language.HINGLISH
+                else:
+                    # Use the one with higher confidence
+                    best = hindi_data if hindi_data['confidence'] > english_data['confidence'] else english_data
+                    return best['text'], Language.HINGLISH
+        
+        # Fallback
+        return "❌ Recognition uncertain", Language.ENGLISH
     
     def speak_multilingual(self, text: str, language: Language = Language.AUTO_DETECT) -> str:
         """Speak text in the appropriate language using Edge-TTS, gTTS, or pyttsx3 fallback."""

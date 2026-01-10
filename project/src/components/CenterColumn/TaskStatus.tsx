@@ -66,7 +66,7 @@ const TaskStatus = () => {
       </div>
 
       <motion.div
-        className="mt-2 px-2 py-1 bg-[#3B82F6]/10 rounded-full"
+        className="mt-3 px-3 py-1 bg-[#3B82F6]/10 rounded-full"
         animate={{
           opacity: [1, 0.6, 1],
         }}
@@ -76,10 +76,10 @@ const TaskStatus = () => {
           ease: 'easeInOut',
         }}
       >
-        <span className="text-[10px] font-medium text-[#3B82F6]">ACTIVE</span>
+        <span className="text-xs font-medium text-[#3B82F6]">ACTIVE</span>
       </motion.div>
 
-      <p className="mt-1.5 text-[10px] text-[#9CA3AF] text-center max-w-[180px]">
+      <p className="mt-2 text-xs text-[#9CA3AF] text-center max-w-[200px]">
         Processing tasks
       </p>
     </motion.div>

@@ -58,29 +58,57 @@
         "priority": 1,
         "model": "whisper-1",
         "requires_api_key": true,
-        "timeout": 30
+        "timeout": 30,
+        "supports_multilingual": true,
+        "supports_hinglish": true,
+        "language_hints": {
+          "en": "English speech with possible Indian accent.",
+          "hi": "Hindi speech, may contain some English words.",
+          "auto": "Mixed Hindi and English speech (Hinglish). Contains both languages."
+        }
       },
       "google_speech": {
         "enabled": true,
         "priority": 2,
-        "timeout": 10
+        "timeout": 10,
+        "dual_language_recognition": true,
+        "supported_languages": [
+          "en-US",
+          "en-IN",
+          "hi-IN"
+        ],
+        "hinglish_strategy": "dual_recognition"
       },
       "vosk": {
         "enabled": true,
         "priority": 3,
         "offline": true,
         "model_path": "model/vosk-model-en-us-0.22",
-        "model_hi_path": "model/vosk-model-small-hi-0.22"
+        "model_hi_path": "model/vosk-model-small-hi-0.22",
+        "supported_languages": [
+          "en",
+          "hi"
+        ]
       },
       "web_speech_api": {
         "enabled": true,
         "priority": 4,
-        "browser_only": true
+        "browser_only": true,
+        "supported_languages": [
+          "en-US",
+          "en-IN",
+          "hi-IN"
+        ]
       }
     },
     "default_engine": "whisper_api",
     "fallback_enabled": true,
-    "language": "en-US",
+    "language": "auto",
+    "language_alternatives": [
+      "hi-IN",
+      "en-IN",
+      "en-US"
+    ],
     "continuous": true,
     "interim_results": true,
     "max_alternatives": 3,

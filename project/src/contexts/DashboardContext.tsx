@@ -42,8 +42,14 @@ interface DashboardContextType {
     systemLogs: SystemLog[];
     taskProgress: number;
     isVoiceActive: boolean;
+    interimTranscript: string;
     sendCommand: (command: string) => void;
     toggleVoice: () => void;
+    setVoiceLanguage?: (lang: string) => void;
+    alwaysActive: boolean;
+    toggleAlwaysActive: () => void;
+    wakeWordDetected: boolean;
+    speak: (text: string, lang?: string) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -77,7 +83,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
     const [taskProgress, setTaskProgress] = useState(0);
     const [isVoiceActive, setIsVoiceActive] = useState(false);
+    const [interimTranscript, setInterimTranscript] = useState('');
     const [recognition, setRecognition] = useState<any>(null);
+    const [voiceLanguage, setVoiceLanguageState] = useState('hi-IN');
+    const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
+    const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
+    const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
+    const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
+    const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -125,32 +138,206 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             const recog = new SpeechRecognition();
-            recog.continuous = false;
-            recog.interimResults = false;
-            recog.lang = 'en-US';
+            recog.continuous = true;  // Keep listening continuously
+            recog.interimResults = true; // Enable interim results for real-time transcription
+
+            // Handle language selection - browser doesn't support "auto" as language code
+            if (voiceLanguage === 'auto') {
+                // Use browser's default language or Hindi as fallback
+                recog.lang = navigator.language || 'hi-IN';
+                console.log(`🌐 Auto-detect: Using ${recog.lang}`);
+            } else {
+                recog.lang = voiceLanguage;
+            }
+            recog.maxAlternatives = 3;  // Get multiple alternatives for better accuracy
 
             recog.onstart = () => {
-                setIsVoiceActive(true);
+                console.log('🎤 Voice recognition started');
+                // Only set active if user didn't manually stop
+                if (!userStoppedVoice) {
+                    setIsVoiceActive(true);
+                    setInterimTranscript('');
+                    setIsRecognitionStarted(true);
+                } else {
+                    console.log('⚠️ Recognition started but user stopped - stopping immediately');
+                    setIsRecognitionStarted(false);
+                    recog.stop();
+                }
             };
 
             recog.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                addVoiceCommand(transcript);
-                sendCommand(transcript);
+                let interim = '';
+                let final = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        final += transcript;
+                    } else {
+                        interim += transcript;
+                    }
+                }
+
+                // Update interim transcript in real-time
+                if (interim) {
+                    setInterimTranscript(interim);
+                }
+
+                // Process final result
+                if (final) {
+                    setInterimTranscript('');
+
+                    // Check for wake word if in always-active mode
+                    if (alwaysActive && !isProcessingCommand) {
+                        const wakeWords = ['hey assistant', 'ok assistant', 'hey daddy', 'ok daddy', 'assistant'];
+                        const detectedWake = wakeWords.find(wake => final.toLowerCase().includes(wake));
+
+                        if (detectedWake) {
+                            console.log('🎯 Wake word detected:', detectedWake);
+                            setWakeWordDetected(true);
+                            setIsProcessingCommand(true);
+
+                            // Play greeting
+                            const greetings = [
+                                'Yes, I\'m listening',
+                                'How can I help you?',
+                                'I\'m ready',
+                                'What can I do for you?'
+                            ];
+                            const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+                            speak(greeting, voiceLanguage);
+
+                            // Reset after 10 seconds if no command given
+                            setTimeout(() => {
+                                if (isProcessingCommand) {
+                                    setIsProcessingCommand(false);
+                                    setWakeWordDetected(false);
+                                }
+                            }, 10000);
+                            return;
+                        }
+                    }
+
+                    // Process command if wake word was detected or not in always-active mode
+                    if (!alwaysActive || isProcessingCommand) {
+                        addVoiceCommand(final);
+                        sendCommand(final);
+
+                        // Reset processing state after command
+                        setTimeout(() => {
+                            setIsProcessingCommand(false);
+                            setWakeWordDetected(false);
+                        }, 1000);
+                    }
+                }
             };
 
             recog.onerror = (event: any) => {
                 console.error('Speech recognition error:', event.error);
-                setIsVoiceActive(false);
+
+                // Temporary errors - auto-restart
+                if (event.error === 'no-speech') {
+                    console.log('⚠️ No speech detected, continuing to listen...');
+                    // Don't stop, just continue listening
+                    return;
+                }
+
+                if (event.error === 'audio-capture') {
+                    console.log('⚠️ Audio capture issue, trying to restart...');
+                    // Try to restart after brief delay
+                    setTimeout(() => {
+                        if (isVoiceActive && recognition && !userStoppedVoice) {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.error('Failed to restart after audio-capture error');
+                            }
+                        }
+                    }, 200);
+                    return;
+                }
+
+                // Critical errors - stop listening
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    console.error('🚫 Microphone access denied');
+                    alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                    setIsVoiceActive(false);
+                    setInterimTranscript('');
+                    setUserStoppedVoice(true);
+                    return;
+                }
+
+                // Network errors - try to continue
+                if (event.error === 'network') {
+                    console.error('🌐 Network error, will retry on next cycle');
+                    // Let the onend handler restart it
+                    return;
+                }
+
+                // Language not supported
+                if (event.error === 'language-not-supported') {
+                    console.error('❌ Language not supported:', voiceLanguage);
+                    alert(`Language "${voiceLanguage}" is not supported. Switching to Hindi.`);
+                    setVoiceLanguageState('hi-IN');
+                    return;
+                }
+
+                // Other errors - log but try to continue
+                console.error('Other recognition error:', event.error);
             };
 
             recog.onend = () => {
-                setIsVoiceActive(false);
+                console.log('🔴 Recognition ended, current state:', isVoiceActive, 'userStopped:', userStoppedVoice);
+                setIsRecognitionStarted(false);
+
+                // Auto-restart if user wants to keep listening AND hasn't manually stopped
+                if (isVoiceActive && !userStoppedVoice) {
+                    try {
+                        console.log('🔄 Auto-restarting voice recognition...');
+                        // Small delay to prevent rapid restart issues
+                        setTimeout(() => {
+                            try {
+                                // Double-check user hasn't stopped in the meantime
+                                if (!userStoppedVoice && recog) {
+                                    recog.start();
+                                    console.log('✅ Voice recognition restarted');
+                                } else {
+                                    console.log('⚠️ User stopped during restart delay');
+                                }
+                            } catch (error: any) {
+                                console.error('❌ Error in auto-restart:', error);
+                                // Only retry if it's not an "already started" error
+                                if (error.message && !error.message.includes('already started')) {
+                                    // Try one more time after a longer delay
+                                    setTimeout(() => {
+                                        try {
+                                            if (recog && !userStoppedVoice) {
+                                                recog.start();
+                                            }
+                                        } catch (e) {
+                                            console.error('Failed to restart, stopping:', e);
+                                            setIsVoiceActive(false);
+                                            setInterimTranscript('');
+                                        }
+                                    }, 500);
+                                }
+                            }
+                        }, 100);
+                    } catch (error) {
+                        console.error('Error in restart handler:', error);
+                        setIsVoiceActive(false);
+                        setInterimTranscript('');
+                    }
+                } else {
+                    console.log('🛑 Listening stopped by user or not active');
+                    setInterimTranscript('');
+                }
             };
 
             setRecognition(recog);
+            console.log('✅ Voice recognition initialized (not started)');
         }
-    }, []);
+    }, [voiceLanguage, userStoppedVoice]); // Re-initialize when language changes or user stop flag changes
 
     // Load Learning Stats
     useEffect(() => {
@@ -271,12 +458,42 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    addChatMessage(data.response || data.message, 'ai');
+                    const response = data.response || data.message;
+                    addChatMessage(response, 'ai');
+
+                    // Speak the response if always-active mode
+                    if (alwaysActive) {
+                        speak(response, voiceLanguage);
+                    }
                 })
                 .catch((error) => {
                     console.error('API call error:', error);
-                    addChatMessage('Error processing command. Please try again.', 'ai');
+                    const errorMsg = 'Error processing command. Please try again.';
+                    addChatMessage(errorMsg, 'ai');
+                    if (alwaysActive) {
+                        speak(errorMsg, voiceLanguage);
+                    }
                 });
+        }
+    };
+
+    const setVoiceLanguage = (lang: string) => {
+        setVoiceLanguageState(lang);
+        // If recognition is active, restart it with new language
+        if (recognition && isVoiceActive) {
+            recognition.stop();
+            setTimeout(() => {
+                if (recognition) {
+                    recognition.lang = lang;
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Error restarting recognition:', error);
+                    }
+                }
+            }, 100);
+        } else if (recognition) {
+            recognition.lang = lang;
         }
     };
 
@@ -287,13 +504,93 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
 
         if (isVoiceActive) {
+            console.log('🛑 Stopping voice recognition (user clicked stop)');
+            // Set flag to prevent onstart from reactivating
+            setUserStoppedVoice(true);
+            // IMPORTANT: Set to false BEFORE calling stop() so onend handler knows not to restart
+            setIsVoiceActive(false);
+            setIsRecognitionStarted(false);
+            setInterimTranscript('');
             recognition.stop();
         } else {
+            console.log('▶️ Starting voice recognition (user clicked start)');
+            // Clear the stop flag
+            setUserStoppedVoice(false);
             try {
-                recognition.start();
-            } catch (error) {
+                if (!isRecognitionStarted) {
+                    recognition.start();
+                    // State will be set by onstart handler
+                } else {
+                    console.warn('Recognition already started, not calling start() again');
+                    setIsVoiceActive(true); // Sync state
+                }
+            } catch (error: any) {
                 console.error('Error starting voice recognition:', error);
+                if (error.message && error.message.includes('already started')) {
+                    console.log('Recognition already running, setting state to active');
+                    setIsVoiceActive(true);
+                }
             }
+        }
+    };
+
+    // Text-to-Speech function
+    const speak = (text: string, lang: string = 'en-US') => {
+        try {
+            const synth = window.speechSynthesis;
+
+            // Cancel any ongoing speech
+            synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            // Map language codes
+            if (lang === 'hi-IN' || lang === 'hindi') {
+                utterance.lang = 'hi-IN';
+            } else if (lang === 'auto') {
+                utterance.lang = navigator.language || 'en-US';
+            } else {
+                utterance.lang = lang;
+            }
+
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 0.8;
+
+            console.log('🔊 Speaking:', text, 'in', utterance.lang);
+            synth.speak(utterance);
+        } catch (error) {
+            console.error('TTS error:', error);
+        }
+    };
+
+    // Toggle always-active mode
+    const toggleAlwaysActive = () => {
+        const newState = !alwaysActive;
+        setAlwaysActive(newState);
+
+        console.log('🔄 Always-active mode:', newState ? 'ON' : 'OFF');
+
+        if (newState) {
+            // Start listening when always-active enabled
+            setUserStoppedVoice(false);
+            if (!isVoiceActive && recognition) {
+                try {
+                    recognition.start();
+                    speak('Always active mode enabled. Waiting for wake word.', voiceLanguage);
+                } catch (error) {
+                    console.error('Error starting always-active:', error);
+                }
+            }
+        } else {
+            // Stop listening when always-active disabled
+            if (isVoiceActive && recognition) {
+                setUserStoppedVoice(true);
+                recognition.stop();
+                speak('Always active mode disabled.', voiceLanguage);
+            }
+            setWakeWordDetected(false);
+            setIsProcessingCommand(false);
         }
     };
 
@@ -306,8 +603,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         systemLogs,
         taskProgress,
         isVoiceActive,
+        interimTranscript,
         sendCommand,
         toggleVoice,
+        setVoiceLanguage,
+        alwaysActive,
+        toggleAlwaysActive,
+        wakeWordDetected,
+        speak,
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

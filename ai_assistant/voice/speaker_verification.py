@@ -27,6 +27,14 @@ from pathlib import Path
 import logging
 import json
 
+# Import biometric encryption
+try:
+    from ai_assistant.core.biometric_encryption import get_biometric_encryptor, BiometricEncryptionError
+    ENCRYPTION_AVAILABLE = True
+except ImportError:
+    ENCRYPTION_AVAILABLE = False
+    logging.warning("Biometric encryption not available. Biometric data will be stored unencrypted!")
+
 try:
     import librosa
     import scipy.spatial.distance as distance
@@ -109,6 +117,20 @@ class SpeakerVerificationSystem:
         if not SPEAKER_VERIFICATION_AVAILABLE:
             raise ImportError("Speaker verification requires librosa, scipy, and sklearn")
         
+        # Initialize biometric encryption
+        self.encryption_enabled = self.config.encryption_enabled and ENCRYPTION_AVAILABLE
+        if self.encryption_enabled:
+            try:
+                self.encryptor = get_biometric_encryptor()
+                self.logger.info("✅ Biometric encryption enabled (GDPR compliant)")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize encryption: {e}")
+                self.encryption_enabled = False
+        else:
+            self.encryptor = None
+            if self.config.encryption_enabled:
+                self.logger.warning("⚠️ Biometric encryption requested but not available!")
+        
         # Initialize components
         self.speaker_profiles: Dict[str, SpeakerProfile] = {}
         self.feature_scaler = StandardScaler()
@@ -124,7 +146,8 @@ class SpeakerVerificationSystem:
         # Anti-spoofing detector
         self.anti_spoofing_enabled = self.config.anti_spoofing
         
-        self.logger.info(f"Speaker verification system initialized with {len(self.speaker_profiles)} profiles")
+        encryption_status = "with encryption" if self.encryption_enabled else "WITHOUT encryption (WARNING)"
+        self.logger.info(f"Speaker verification system initialized {encryption_status} with {len(self.speaker_profiles)} profiles")
     
     def enroll_speaker(self, speaker_id: str, audio_samples: List[np.ndarray], 
                       sample_rate: int = 16000) -> Tuple[bool, str]:
@@ -500,7 +523,7 @@ class SpeakerVerificationSystem:
         return np.clip(normalized, 0.0, 1.0)
     
     def _save_speaker_profile(self, profile: SpeakerProfile):
-        """Save speaker profile to disk"""
+        """Save speaker profile to disk with encryption"""
         try:
             # Prepare profile data for saving
             profile_data = {
@@ -512,27 +535,45 @@ class SpeakerVerificationSystem:
                 'anti_spoofing_profile': profile.anti_spoofing_profile
             }
             
-            # Save profile metadata
+            # Save profile metadata (not encrypted - contains no biometric data)
             profile_file = self.model_path / f"{profile.speaker_id}_profile.json"
             with open(profile_file, 'w') as f:
                 json.dump(profile_data, f, indent=2)
             
-            # Save GMM model
-            model_file = self.model_path / f"{profile.speaker_id}_model.pkl"
-            with open(model_file, 'wb') as f:
-                pickle.dump(profile.speaker_model, f)
-            
-            # Save feature vectors
-            features_file = self.model_path / f"{profile.speaker_id}_features.npy"
-            np.save(features_file, np.vstack(profile.feature_vectors))
-            
-            self.logger.debug(f"Speaker profile saved for {profile.speaker_id}")
+            if self.encryption_enabled:
+                # ENCRYPTED STORAGE - GDPR Compliant
+                # Encrypt GMM model
+                encrypted_model = self.encryptor.encrypt_biometric(profile.speaker_model)
+                model_file = self.model_path / f"{profile.speaker_id}_model.enc"
+                with open(model_file, 'wb') as f:
+                    f.write(encrypted_model)
+                
+                # Encrypt feature vectors
+                features_array = np.vstack(profile.feature_vectors)
+                encrypted_features = self.encryptor.encrypt_biometric(features_array)
+                features_file = self.model_path / f"{profile.speaker_id}_features.enc"
+                with open(features_file, 'wb') as f:
+                    f.write(encrypted_features)
+                
+                self.logger.debug(f"🔒 Speaker profile saved (encrypted) for {profile.speaker_id}")
+            else:
+                # UNENCRYPTED LEGACY STORAGE - NOT RECOMMENDED
+                self.logger.warning(f"⚠️ Saving biometric data UNENCRYPTED for {profile.speaker_id}")
+                
+                # Save GMM model (plaintext)
+                model_file = self.model_path / f"{profile.speaker_id}_model.pkl"
+                with open(model_file, 'wb') as f:
+                    pickle.dump(profile.speaker_model, f)
+                
+                # Save feature vectors (plaintext)
+                features_file = self.model_path / f"{profile.speaker_id}_features.npy"
+                np.save(features_file, np.vstack(profile.feature_vectors))
             
         except Exception as e:
             self.logger.error(f"Error saving profile for {profile.speaker_id}: {e}")
     
     def _load_speaker_profiles(self):
-        """Load existing speaker profiles from disk"""
+        """Load existing speaker profiles from disk (encrypted or legacy)"""
         try:
             if not self.model_path.exists():
                 return
@@ -545,17 +586,56 @@ class SpeakerVerificationSystem:
                     with open(profile_file, 'r') as f:
                         profile_data = json.load(f)
                     
-                    # Load GMM model
-                    model_file = self.model_path / f"{speaker_id}_model.pkl"
-                    with open(model_file, 'rb') as f:
-                        speaker_model = pickle.load(f)
+                    # Check for encrypted files first
+                    model_file_enc = self.model_path / f"{speaker_id}_model.enc"
+                    features_file_enc = self.model_path / f"{speaker_id}_features.enc"
                     
-                    # Load feature vectors
-                    features_file = self.model_path / f"{speaker_id}_features.npy"
-                    features_array = np.load(features_file)
+                    if model_file_enc.exists() and features_file_enc.exists():
+                        # Load encrypted biometric data
+                        if not self.encryption_enabled:
+                            self.logger.error(f"Encrypted profile found but encryption not enabled for {speaker_id}")
+                            continue
+                        
+                        try:
+                            # Decrypt GMM model
+                            with open(model_file_enc, 'rb') as f:
+                                encrypted_model = f.read()
+                            speaker_model = self.encryptor.decrypt_biometric(encrypted_model)
+                            
+                            # Decrypt feature vectors
+                            with open(features_file_enc, 'rb') as f:
+                                encrypted_features = f.read()
+                           features_array = self.encryptor.decrypt_biometric(encrypted_features)
+                            
+                            self.logger.debug(f"🔓 Loaded encrypted profile for {speaker_id}")
+                            
+                        except BiometricEncryptionError as e:
+                            self.logger.error(f"Failed to decrypt profile for {speaker_id}: {e}")
+                            continue
+                    else:
+                        # Try legacy unencrypted files
+                        model_file = self.model_path / f"{speaker_id}_model.pkl"
+                        features_file = self.model_path / f"{speaker_id}_features.npy"
+                        
+                        if model_file.exists() and features_file.exists():
+                            self.logger.warning(f"⚠️ Loading UNENCRYPTED legacy profile for {speaker_id}")
+                            
+                            # Load GMM model (plaintext)
+                            with open(model_file, 'rb') as f:
+                                speaker_model = pickle.load(f)
+                            
+                            # Load feature vectors (plaintext)
+                            features_array = np.load(features_file)
+                            
+                            # Optionally migrate to encrypted format
+                            if self.encryption_enabled:
+                                self.logger.info(f"Migrating {speaker_id} to encrypted storage...")
+                                # Will be saved as encrypted on next profile update
+                        else:
+                            self.logger.error(f"No model files found for {speaker_id}")
+                            continue
                     
-                    # Reconstruct feature vectors list (approximate)
-                    # This is a simplified reconstruction
+                    # Reconstruct feature vectors list
                     feature_vectors = [features_array]
                     
                     # Create profile
@@ -575,13 +655,14 @@ class SpeakerVerificationSystem:
                 except Exception as e:
                     self.logger.warning(f"Failed to load profile for {speaker_id}: {e}")
             
-            self.logger.info(f"Loaded {len(self.speaker_profiles)} speaker profiles")
+            encryption_status = "(encrypted)" if self.encryption_enabled else "(UNENCRYPTED)"
+            self.logger.info(f"Loaded {len(self.speaker_profiles)} speaker profiles {encryption_status}")
             
         except Exception as e:
             self.logger.error(f"Error loading speaker profiles: {e}")
     
     def delete_speaker(self, speaker_id: str) -> bool:
-        """Delete speaker profile and associated files"""
+        """Delete speaker profile and associated files (encrypted and legacy)"""
         try:
             if speaker_id not in self.speaker_profiles:
                 return False
@@ -589,11 +670,13 @@ class SpeakerVerificationSystem:
             # Remove from memory
             del self.speaker_profiles[speaker_id]
             
-            # Remove files
+            # Remove all possible files (encrypted and legacy)
             files_to_remove = [
                 f"{speaker_id}_profile.json",
-                f"{speaker_id}_model.pkl", 
-                f"{speaker_id}_features.npy"
+                f"{speaker_id}_model.pkl",      # Legacy unencrypted
+                f"{speaker_id}_model.enc",      # Encrypted
+                f"{speaker_id}_features.npy",   # Legacy unencrypted
+                f"{speaker_id}_features.enc"    # Encrypted
             ]
             
             for filename in files_to_remove:
@@ -601,7 +684,7 @@ class SpeakerVerificationSystem:
                 if file_path.exists():
                     file_path.unlink()
             
-            self.logger.info(f"Speaker {speaker_id} deleted successfully")
+            self.logger.info(f"🗑️ Speaker {speaker_id} deleted successfully (all files removed)")
             return True
             
         except Exception as e:
