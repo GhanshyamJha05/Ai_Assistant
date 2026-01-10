@@ -90,6 +90,12 @@ transformers==4.44.2
 sentence-transformers==3.0.1
 numpy==1.26.4
 
+# Vector Search & RAG
+faiss-cpu>=1.7.4
+chromadb>=0.4.22
+langchain>=0.1.0
+langchain-community>=0.0.10
+
 # =========================================
 # COMPUTER VISION & IMAGE PROCESSING
 # =========================================
@@ -170,6 +176,12 @@ pydantic_core==2.41.5
 # =========================================
 aiofiles==25.1.0
 anyio==4.11.0
+
+# =========================================
+# MODEL CONTEXT PROTOCOL (MCP)
+# =========================================
+mcp>=1.1.0
+pydantic>=2.0.0
 
 # =========================================
 # UTILITIES

@@ -1,0 +1,724 @@
+Exception in thread Thread-1:
+Traceback (most recent call last):
+  File "F:\bn\assitant\ai_assistant\modules\app_discovery.py", line 261, in _background_refresh
+    print("\U0001f504 Background app refresh started...")
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f504' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\Python39\lib\threading.py", line 980, in _bootstrap_inner
+    self.run()
+  File "C:\Program Files\Python39\lib\threading.py", line 917, in run
+    self._target(*self._args, **self._kwargs)
+  File "F:\bn\assitant\ai_assistant\modules\app_discovery.py", line 272, in _background_refresh
+    print(f"\u26a0\ufe0f Background refresh failed: {e}")
+  File "C:\Program Files\Python39\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+WARNING: Encryption not available - sensitive data will not be encrypted
+WARNING: Google Calendar dependencies not found. Calendar features will be disabled.
+WARNING: Gmail dependencies not found. Email features will be disabled.
+Warning: yt_dlp not available. YouTube download features disabled.
+📅 New session started: 2026-01-10/225302
+2026-01-10 22:53:02 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: advanced_speech_recognizer
+2026-01-10 22:53:02 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: secrets_manager
+2026-01-10 22:53:03 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: encryption
+2026-01-10 22:53:03 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: advanced_voice
+2026-01-10 22:53:03 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: neural_voice_engine
+2026-01-10 22:53:03 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: wake_word_detector
+2026-01-10 22:53:05 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: multilingual
+2026-01-10 22:53:05 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: voice_commands
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: file_operations
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: system_commands
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: api_requests
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: user_interactions
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: music_control
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: email_operations
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: calendar_operations
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: web_scraping
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: multimodal_ai
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:02 - Module: automation
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+2026-01-10 22:53:06 | INFO     | 🚀 NEW SESSION STARTED - 225302
+📅 New session started: 2026-01-10/225306
+2026-01-10 22:53:06 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: session_startup
+2026-01-10 22:53:06 | INFO     | 🎯 NEW ASSISTANT SESSION INITIALIZED
+2026-01-10 22:53:06 | INFO     | Session ID: 225306
+2026-01-10 22:53:06 | INFO     | Start Time: 2026-01-10 22:53:06
+2026-01-10 22:53:06 | INFO     | Platform: win32
+2026-01-10 22:53:06 | INFO     | Python Version: 3.9.13
+2026-01-10 22:53:06 | INFO     | Working Directory: F:\bn\assitant
+2026-01-10 22:53:06 | INFO     | SYS_CMD | {"timestamp": "2026-01-10T22:53:06.183637", "session_id": "225302", "category": "system_command", "command": "session_initialization", "command_type": "system_startup", "success": true, "has_output": false, "output_length": 0}
+
+🚀 YourDaddy Assistant - New Session Started
+📅 Session ID: 225306
+🕒 Time: 2026-01-10 22:53:06
+📁 Logs will be saved in: logs/*/[module_name]_225306.log
+📊 Activity tracking: logs/activities/session_summary_225306.json
+
+2026-01-10 22:53:08 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: web_backend
+2026-01-10 22:53:08 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: api_requests
+2026-01-10 22:53:08 | INFO     | ================================================================================
+2026-01-10 22:53:08 | INFO     | YourDaddy Assistant - Web Backend Starting
+2026-01-10 22:53:08 | INFO     | ================================================================================
+🔄 Background app refresh started...
+🔍 Scanning Windows registered applications...
+  📋 Scanning Windows Registry (Apps & Features)...
+  📂 Scanning Start Menu (All Apps)...
+2026-01-10 22:53:08 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: secrets_manager
+2026-01-10 22:53:08 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: encryption
+2026-01-10 22:53:08 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: encrypted_database
+C:\Users\hp\AppData\Roaming\Python\Python39\site-packages\google\api_core\_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.13). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+Server initialized for threading.
+WARNING: Google Calendar dependencies not found. Calendar features will be disabled.
+WARNING: Gmail dependencies not found. Email features will be disabled.
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+Warning: schedule library not available. Scheduled automation disabled.
+✅ Enhanced learning features enabled
+✅ YourDaddy Automation Tools v4.2.0 - Performance Optimization Loaded
+📁 Modules: Core, Memory, System, Calendar, Email, Music, FileOps, WebScraping, DocumentOCR, MultiModal, ConversationalAI, SmartAutomation, EnhancedLearning, AdvancedIntegration, ModernInterfaces, PerformanceOptimization
+🔧 Available Functions: 103
+Automation tools loaded successfully
+⚠️ Learning router not available: No module named 'auto_learning_router'
+⚠️ Smart memory retrieval not available: No module named 'smart_memory_retrieval'
+Multilingual support loaded in web backend
+Advanced chat system loaded
+LLM providers loaded
+2026-01-10 22:53:22 | INFO     | ✅ SocketIO initialized with CORS origins: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5173', 'http://127.0.0.1:5000', 'http://127.0.0.1:3000']
+WARNING:root:VAD not available
+2026-01-10 22:53:23 | WARNING  | ⚠️ VAD module not available: No module named 'webrtcvad'
+WARNING:root:Advanced noise reduction features require librosa and noisereduce
+2026-01-10 22:53:23 | INFO     | ✅ Noise Reduction module loaded
+2026-01-10 22:53:23 | INFO     | ✅ Async Voice Recognizer module loaded
+2026-01-10 22:53:23 | WARNING  | ⚠️ Voice WebSocket handlers not available: No module named 'ai_assistant.services.voice_websocket_handlers'
+2026-01-10 22:53:23 | INFO     | 🔧 Startup Configuration:
+2026-01-10 22:53:23 | INFO     |   - Lazy Initialization: True
+2026-01-10 22:53:23 | INFO     |   - Background Initialization: True
+2026-01-10 22:53:23 | INFO     |   - Voice Features: True
+2026-01-10 22:53:23 | INFO     |   - Multimodal AI: True
+2026-01-10 22:53:23 | INFO     |   - Conversational AI: True
+2026-01-10 22:53:23 | INFO     |   - System Monitoring: True
+Server initialized for threading.
+INFO:engineio.server:Server initialized for threading.
+2026-01-10 22:53:23 | INFO     | ✅ Voice API blueprint registered at /api/voice
+2026-01-10 22:53:23 | WARNING  | ⚠️ PocketSphinx not available. Install: pip install pocketsphinx
+2026-01-10 22:53:23 | INFO     | ✅ Edge-TTS available (Microsoft Neural Voices)
+2026-01-10 22:53:23 | WARNING  | ⚠️ Coqui TTS not available. Install: pip install TTS
+2026-01-10 22:53:24 | INFO     | ✅ pyttsx3 available as fallback
+2026-01-10 22:53:24 | INFO     | ✅ Privacy consent manager enabled for speech recognition
+2026-01-10 22:53:24 | INFO     | ✅ Speech Recognition library initialized
+lang en does not exist
+2026-01-10 22:53:25 | WARNING  | ⚠️ Vosk English model not found
+Exception ignored in: <function Model.__del__ at 0x000001630BFAFDC0>
+Traceback (most recent call last):
+  File "C:\Users\hp\AppData\Roaming\Python\Python39\site-packages\vosk\__init__.py", line 60, in __del__
+    _c.vosk_model_free(self._handle)
+AttributeError: 'Model' object has no attribute '_handle'
+LOG (VoskAPI:ReadDataFiles():model.cc:213) Decoding params beam=13 max-active=7000 lattice-beam=4
+LOG (VoskAPI:ReadDataFiles():model.cc:216) Silence phones 1:2:3:4:5:6:7:8:9:10
+LOG (VoskAPI:RemoveOrphanNodes():nnet-nnet.cc:948) Removed 0 orphan nodes.
+LOG (VoskAPI:RemoveOrphanComponents():nnet-nnet.cc:847) Removing 0 orphan components.
+LOG (VoskAPI:ReadDataFiles():model.cc:248) Loading i-vector extractor from C:\Users\hp\.cache\vosk\vosk-model-small-hi-0.22/ivector/final.ie
+LOG (VoskAPI:ComputeDerivedVars():ivector-extractor.cc:183) Computing derived variables for iVector extractor
+LOG (VoskAPI:ComputeDerivedVars():ivector-extractor.cc:204) Done.
+LOG (VoskAPI:ReadDataFiles():model.cc:282) Loading HCL and G from C:\Users\hp\.cache\vosk\vosk-model-small-hi-0.22/graph/HCLr.fst C:\Users\hp\.cache\vosk\vosk-model-small-hi-0.22/graph/Gr.fst
+LOG (VoskAPI:ReadDataFiles():model.cc:308) Loading winfo C:\Users\hp\.cache\vosk\vosk-model-small-hi-0.22/graph/phones/word_boundary.int
+  📱 Scanning essential Windows Store apps...
+✅ Discovery complete! Found 105 registered applications.
+✅ Background refresh complete! Found 105 apps
+2026-01-10 22:53:29 | INFO     | ✅ Vosk Hindi model loaded
+2026-01-10 22:53:29 | INFO     | 🎤 Wake word detection started
+2026-01-10 22:53:29 | INFO     | ============================================================
+2026-01-10 22:53:29 | INFO     | 🎤 PROFESSIONAL VOICE SYSTEM ACTIVATED
+2026-01-10 22:53:29 | INFO     | ============================================================
+2026-01-10 22:53:29 | INFO     | ✅ SmartWakeWordDetector - PocketSphinx (Offline)
+2026-01-10 22:53:29 | INFO     | ✅ NeuralVoiceEngine - Edge-TTS + Coqui
+2026-01-10 22:53:29 | INFO     | ✅ VoiceActivityDetector - WebRTC VAD
+2026-01-10 22:53:29 | INFO     | ✅ Speaker Recognition - Enabled
+2026-01-10 22:53:29 | INFO     | ✅ Advanced STT - Whisper + Google + Vosk
+2026-01-10 22:53:29 | INFO     | ✅ Noise Reduction - Active
+2026-01-10 22:53:29 | INFO     | ============================================================
+2026-01-10 22:53:30 | INFO     | Audio stream started
+ðŸ”§ Initializing YourDaddy Assistant...
+✅ Memory system initialized
+⚡ Lazy initialization enabled - features load on first use
+âœ… Assistant initialized successfully
+📋 Registering blueprints...
+2026-01-10 22:53:30 | INFO     | 📅 Session started at 2026-01-10 22:53:06 - Module: backend
+2026-01-10 22:53:30 | INFO     | ================================================================================
+2026-01-10 22:53:30 | INFO     | YourDaddy Assistant - Web Backend Starting
+2026-01-10 22:53:30 | INFO     | ================================================================================
+Server initialized for threading.
+INFO:engineio.server:Server initialized for threading.
+Automation tools loaded successfully
+⚠️ Learning router not available: No module named 'auto_learning_router'
+⚠️ Smart memory retrieval not available: No module named 'smart_memory_retrieval'
+Multilingual support loaded in web backend
+Advanced chat system loaded
+LLM providers loaded
+2026-01-10 22:53:30 | INFO     | ✅ SocketIO initialized with CORS origins: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5173', 'http://127.0.0.1:5000', 'http://127.0.0.1:3000']
+2026-01-10 22:53:30 | WARNING  | ⚠️ VAD module not available: No module named 'webrtcvad'
+2026-01-10 22:53:30 | INFO     | ✅ Noise Reduction module loaded
+2026-01-10 22:53:30 | INFO     | ✅ Async Voice Recognizer module loaded
+2026-01-10 22:53:30 | WARNING  | ⚠️ Voice WebSocket handlers not available: No module named 'ai_assistant.services.voice_websocket_handlers'
+2026-01-10 22:53:30 | INFO     | 🔧 Startup Configuration:
+2026-01-10 22:53:30 | INFO     |   - Lazy Initialization: True
+2026-01-10 22:53:30 | INFO     |   - Background Initialization: True
+2026-01-10 22:53:30 | INFO     |   - Voice Features: True
+2026-01-10 22:53:30 | INFO     |   - Multimodal AI: True
+2026-01-10 22:53:30 | INFO     |   - Conversational AI: True
+2026-01-10 22:53:30 | INFO     |   - System Monitoring: True
+Server initialized for threading.
+INFO:engineio.server:Server initialized for threading.
+2026-01-10 22:53:30 | INFO     | ✅ Voice API blueprint registered at /api/voice
+WARNING:ai_assistant.services.voice_service_manager:Voice services already running
+2026-01-10 22:53:30 | INFO     | ============================================================
+2026-01-10 22:53:30 | INFO     | 🎤 PROFESSIONAL VOICE SYSTEM ACTIVATED
+2026-01-10 22:53:30 | INFO     | ============================================================
+2026-01-10 22:53:30 | INFO     | ✅ SmartWakeWordDetector - PocketSphinx (Offline)
+2026-01-10 22:53:30 | INFO     | ✅ NeuralVoiceEngine - Edge-TTS + Coqui
+2026-01-10 22:53:30 | INFO     | ✅ VoiceActivityDetector - WebRTC VAD
+2026-01-10 22:53:30 | INFO     | ✅ Speaker Recognition - Enabled
+2026-01-10 22:53:30 | INFO     | ✅ Advanced STT - Whisper + Google + Vosk
+2026-01-10 22:53:30 | INFO     | ✅ Noise Reduction - Active
+2026-01-10 22:53:30 | INFO     | ============================================================
+ðŸ”§ Initializing YourDaddy Assistant...
+✅ Memory system initialized
+⚡ Lazy initialization enabled - features load on first use
+âœ… Assistant initialized successfully
+📋 Registering blueprints...
+✅ Chat blueprint registered
+✅ Voice blueprint registered
+✅ Apps blueprint registered
+✅ System blueprint registered
+✅ Auth blueprint registered
+✅ Web scraping blueprint registered
+✅ Learning blueprint registered
+✅ Multimodal blueprint registered
+✅ Preferences blueprint registered
+✅ Memory & Language blueprint registered
+✅ Utilities blueprint registered
+📋 All blueprints registered successfully
+✅ All blueprints registered
+⚠️ Dashboard API not available: No module named 'learning_dashboard_api'
+2026-01-10 22:53:31 | INFO     | ✅ Noise Reduction System initialized
+2026-01-10 22:53:31 | ERROR    | Failed to register voice API blueprint: The name 'voice' is already registered for this blueprint. Use 'name=' to provide a unique name.
+2026-01-10 22:53:31 | WARNING  | ⚠️ Voice WebSocket handlers not available
+2026-01-10 22:53:31 | INFO     | ✅ Chat & Voice Socket.IO handlers registered
+✅ Chat blueprint registered
+✅ Voice blueprint registered
+✅ Apps blueprint registered
+✅ System blueprint registered
+✅ Auth blueprint registered
+✅ Web scraping blueprint registered
+✅ Learning blueprint registered
+✅ Multimodal blueprint registered
+✅ Preferences blueprint registered
+✅ Memory & Language blueprint registered
+✅ Utilities blueprint registered
+📋 All blueprints registered successfully
+✅ All blueprints registered
+⚠️ Dashboard API not available: No module named 'learning_dashboard_api'
+2026-01-10 22:53:31 | INFO     | ✅ Noise Reduction System initialized
+2026-01-10 22:53:31 | ERROR    | Failed to register voice API blueprint: The name 'voice' is already registered for this blueprint. Use 'name=' to provide a unique name.
+2026-01-10 22:53:31 | WARNING  | ⚠️ Voice WebSocket handlers not available
+2026-01-10 22:53:32 | INFO     | ✅ Chat & Voice Socket.IO handlers registered
+============================================================
+🚀 YourDaddy Assistant - Modern Web Backend
+============================================================
+🌐 Server starting on: http://localhost:5000
+⚛️  Bolt.ai React UI (Monochrome Steel Design)
+⚡ Real-time features enabled via WebSockets
+🔧 API endpoints available at /api/*
+🛑 Press Ctrl+C to stop the server
+============================================================
+ðŸ”’ Security: JWT authentication enabled
+ðŸ”’ Security: Rate limiting enabled
+ðŸ”’ Security: CORS restricted to: http://localhost:3000, http://localhost:5000, http://localhost:5173, http://127.0.0.1:5000, http://127.0.0.1:3000
+ðŸ”’ Security: Host binding: 127.0.0.1
+
+âš ï¸  Default credentials: username='admin', password='YourDaddy2025!SecureAdmin'
+âš ï¸  CHANGE THE PASSWORD in .env file before production!
+
+ * Serving Flask app 'modern_web_backend'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]
+emitting event "system_stats_update" to all [/]
+INFO:socketio.server:emitting event "system_stats_update" to all [/]

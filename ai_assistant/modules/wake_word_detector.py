@@ -138,6 +138,9 @@ class SmartWakeWordDetector:
     
     def _listen_loop(self):
         """Main listening loop"""
+        consecutive_errors = 0
+        max_consecutive_errors = 10
+        
         try:
             import pyaudio
             
@@ -159,8 +162,16 @@ class SmartWakeWordDetector:
             
             while self.is_listening:
                 try:
+                    # Check if stream is still active
+                    if not stream.is_active():
+                        logger.warning("Audio stream became inactive, stopping listener")
+                        break
+                    
                     # Read audio chunk
                     audio_chunk = stream.read(self.chunk_size, exception_on_overflow=False)
+                    
+                    # Reset error counter on successful read
+                    consecutive_errors = 0
                     
                     # Put in queue for processing
                     if not self.audio_queue.full():
@@ -169,16 +180,39 @@ class SmartWakeWordDetector:
                     # Process detection
                     self._process_audio_chunk(audio_chunk)
                     
+                except IOError as e:
+                    # Stream closed error
+                    if e.errno == -9988:
+                        logger.error("Audio stream closed unexpectedly. Stopping listener.")
+                        break
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        logger.error(f"Too many consecutive errors ({consecutive_errors}), stopping listener")
+                        break
+                    elif consecutive_errors == 1:  # Only log first error
+                        logger.warning(f"Audio read error: {e}")
+                    time.sleep(0.1)
+                    
                 except Exception as e:
-                    logger.warning(f"Audio read error: {e}")
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        logger.error(f"Too many consecutive errors ({consecutive_errors}), stopping listener")
+                        break
+                    elif consecutive_errors == 1:  # Only log first error
+                        logger.warning(f"Audio read error: {e}")
                     time.sleep(0.1)
             
-            stream.stop_stream()
-            stream.close()
+            # Cleanup
+            try:
+                stream.stop_stream()
+                stream.close()
+            except:
+                pass
             p.terminate()
             
         except Exception as e:
             logger.error(f"❌ Listening loop failed: {e}")
+        finally:
             self.is_listening = False
     
     def _process_audio_chunk(self, audio_chunk):

@@ -33,6 +33,8 @@ interface SystemLog {
     time: string;
 }
 
+type ViewType = 'dashboard' | 'apps' | 'chat' | 'voice' | 'settings' | 'ai-learning' | 'database' | 'systems' | 'conversations' | null;
+
 interface DashboardContextType {
     socket: Socket | null;
     chatMessages: Message[];
@@ -51,6 +53,9 @@ interface DashboardContextType {
     toggleAlwaysActive: () => void;
     wakeWordDetected: boolean;
     speak: (text: string, lang?: string) => void;
+    selectedView: ViewType;
+    setSelectedView: (view: ViewType) => void;
+    closeDetailView: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -85,8 +90,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [taskProgress, setTaskProgress] = useState(0);
     const [isVoiceActive, setIsVoiceActive] = useState(false);
     const [interimTranscript, setInterimTranscript] = useState('');
+    const interimTranscriptRef = useRef(''); // Ref to access current transcript in simulation
     const [recognition, setRecognition] = useState<any>(null);
-    const [voiceLanguage, setVoiceLanguageState] = useState('hi-IN');
+    const [voiceLanguage, setVoiceLanguageState] = useState('en-US'); // Changed default to English
     const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
@@ -95,6 +101,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
     const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
+    const [selectedView, setSelectedView] = useState<ViewType>(null); // Selected detail view
 
     // Audio analysis refs
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -155,14 +162,20 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (voiceLanguage === 'auto') {
                 // Use browser's default language or Hindi as fallback
                 recog.lang = navigator.language || 'hi-IN';
-                console.log(`🌐 Auto-detect: Using ${recog.lang}`);
+                console.log(`🌐 Auto-detect: Using language ${recog.lang}`);
             } else {
                 recog.lang = voiceLanguage;
+                console.log(`🌐 Using selected language: ${recog.lang}`);
             }
             recog.maxAlternatives = 3;  // Get multiple alternatives for better accuracy
 
             recog.onstart = () => {
                 console.log('🎤 Voice recognition started');
+                console.log('   Language:', recog.lang);
+                console.log('   Continuous:', recog.continuous);
+                console.log('   Interim Results:', recog.interimResults);
+                console.log('   Max Alternatives:', recog.maxAlternatives);
+                
                 // Only set active if user didn't manually stop (use ref to avoid stale state)
                 if (!userStoppedRef.current) {
                     setIsVoiceActive(true);
@@ -170,12 +183,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setInterimTranscript('');
                     setIsRecognitionStarted(true);
 
-                    // Start audio level monitoring after delay to prevent conflicts
-                    setTimeout(() => {
-                        if (isVoiceActiveRef.current) {
-                            startAudioLevelMonitoring();
-                        }
-                    }, 300);
+                    // Start audio level monitoring immediately
+                    console.log('🎧 Initiating audio level monitoring...');
+                    startAudioLevelMonitoring().catch(err => {
+                        console.error('❌ Audio monitoring failed:', err);
+                        console.log('📊 Falling back to simulated audio levels');
+                        simulateAudioLevel();
+                    });
                 } else {
                     console.log('⚠️ Recognition started but user stopped - stopping immediately');
                     setIsRecognitionStarted(false);
@@ -184,11 +198,20 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onresult = (event: any) => {
+                console.log('🎯 Recognition event received:', {
+                    resultIndex: event.resultIndex,
+                    resultsLength: event.results.length,
+                    isFinal: event.results[event.resultIndex]?.isFinal
+                });
+                
                 let interim = '';
                 let final = '';
 
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
+                    const confidence = event.results[i][0].confidence;
+                    console.log(`  Result ${i}: "${transcript}" (confidence: ${confidence?.toFixed(2) || 'N/A'}, final: ${event.results[i].isFinal})`);
+                    
                     if (event.results[i].isFinal) {
                         final += transcript;
                     } else {
@@ -196,14 +219,20 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     }
                 }
 
-                // Update interim transcript in real-time
+                // Update interim transcript in real-time (immediate update)
                 if (interim) {
+                    console.log('💬 Setting interim transcript:', interim);
                     setInterimTranscript(interim);
+                    interimTranscriptRef.current = interim; // Update ref for simulation
+                } else {
+                    console.log('⚠️ No interim text');
                 }
 
                 // Process final result
                 if (final) {
+                    console.log('✅ Final transcript:', final);
                     setInterimTranscript('');
+                    interimTranscriptRef.current = ''; // Clear ref
 
                     // Check for wake word if in always-active mode
                     if (alwaysActive && !isProcessingCommand) {
@@ -251,27 +280,23 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onerror = (event: any) => {
-                console.error('Speech recognition error:', event.error);
+                console.error('🚨 Speech recognition error:', event.error);
 
-                // Temporary errors - auto-restart
+                // Ignore 'aborted' errors during normal stop
+                if (event.error === 'aborted') {
+                    console.log('Recognition aborted (normal during stop)');
+                    return;
+                }
+
+                // Temporary errors - just log, continuous mode will handle it
                 if (event.error === 'no-speech') {
-                    console.log('⚠️ No speech detected, continuing to listen...');
-                    // Don't stop, just continue listening
+                    console.log('⚠️ No speech detected, continuous mode will continue...');
                     return;
                 }
 
                 if (event.error === 'audio-capture') {
-                    console.log('⚠️ Audio capture issue, trying to restart...');
-                    // Try to restart after brief delay
-                    setTimeout(() => {
-                        if (isVoiceActive && recognition && !userStoppedRef.current) {
-                            try {
-                                recognition.start();
-                            } catch (e) {
-                                console.error('Failed to restart after audio-capture error');
-                            }
-                        }
-                    }, 200);
+                    console.error('⚠️ Audio capture error - microphone issue');
+                    // Don't try to restart, let the user handle it
                     return;
                 }
 
@@ -280,29 +305,29 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     console.error('🚫 Microphone access denied');
                     alert('Microphone access denied. Please allow microphone access in your browser settings.');
                     setIsVoiceActive(false);
-                    isVoiceActiveRef.current = false; // Sync ref
+                    isVoiceActiveRef.current = false;
                     setInterimTranscript('');
                     setUserStoppedVoice(true);
                     userStoppedRef.current = true;
                     return;
                 }
 
-                // Network errors - try to continue
+                // Network errors
                 if (event.error === 'network') {
-                    console.error('🌐 Network error, will retry on next cycle');
-                    // Let the onend handler restart it
+                    console.error('🌐 Network error during recognition');
                     return;
                 }
 
                 // Language not supported
                 if (event.error === 'language-not-supported') {
                     console.error('❌ Language not supported:', voiceLanguage);
-                    alert(`Language "${voiceLanguage}" is not supported. Switching to Hindi.`);
-                    setVoiceLanguageState('hi-IN');
+                    alert(`Language "${voiceLanguage}" is not supported. Please select a different language.`);
+                    setIsVoiceActive(false);
+                    isVoiceActiveRef.current = false;
                     return;
                 }
 
-                // Other errors - log but try to continue
+                // Other errors - just log
                 console.error('Other recognition error:', event.error);
             };
 
@@ -313,49 +338,33 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 // Stop audio monitoring when recognition ends
                 stopAudioLevelMonitoring();
 
-                // Auto-restart if voice is active AND user hasn't manually stopped (use refs to avoid stale state)
-                if (isVoiceActiveRef.current && !userStoppedRef.current) {
-                    try {
-                        console.log('🔄 Auto-restarting voice recognition...');
-                        // Small delay to prevent rapid restart issues
-                        setTimeout(() => {
+                // Only restart if:
+                // 1. User hasn't manually stopped
+                // 2. Voice is still supposed to be active
+                // 3. Not in always-active mode (which handles its own lifecycle)
+                if (!userStoppedRef.current && isVoiceActiveRef.current && !alwaysActive) {
+                    console.log('🔄 Recognition ended unexpectedly, restarting in 300ms...');
+                    setTimeout(() => {
+                        if (!userStoppedRef.current && isVoiceActiveRef.current && recog) {
                             try {
-                                // Double-check user hasn't stopped in the meantime (use refs)
-                                if (isVoiceActiveRef.current && !userStoppedRef.current && recog) {
-                                    recog.start();
-                                    console.log('✅ Voice recognition restarted');
-                                } else {
-                                    console.log('⚠️ User stopped or voice inactive during restart delay');
-                                }
+                                recog.start();
+                                console.log('✅ Recognition restarted');
                             } catch (error: any) {
-                                console.error('❌ Error in auto-restart:', error);
-                                // Only retry if it's not an "already started" error
-                                if (error.message && !error.message.includes('already started')) {
-                                    // Try one more time after a longer delay
-                                    setTimeout(() => {
-                                        try {
-                                            if (recog && isVoiceActiveRef.current && !userStoppedRef.current) {
-                                                recog.start();
-                                            }
-                                        } catch (e) {
-                                            console.error('Failed to restart, stopping:', e);
-                                            setIsVoiceActive(false);
-                                            isVoiceActiveRef.current = false; // Sync ref
-                                            setInterimTranscript('');
-                                        }
-                                    }, 500);
+                                if (!error.message?.includes('already started')) {
+                                    console.error('❌ Failed to restart:', error);
+                                    setIsVoiceActive(false);
+                                    isVoiceActiveRef.current = false;
                                 }
                             }
-                        }, 100);
-                    } catch (error) {
-                        console.error('Error in restart handler:', error);
+                        }
+                    }, 300);
+                } else {
+                    console.log('🛑 Not restarting - userStopped:', userStoppedRef.current, 'active:', isVoiceActiveRef.current, 'alwaysActive:', alwaysActive);
+                    if (!alwaysActive) {
                         setIsVoiceActive(false);
-                        isVoiceActiveRef.current = false; // Sync ref
+                        isVoiceActiveRef.current = false;
                         setInterimTranscript('');
                     }
-                } else {
-                    console.log('🛑 Listening stopped by user or not active');
-                    setInterimTranscript('');
                 }
             };
 
@@ -366,67 +375,159 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Audio Level Monitoring Functions
     const startAudioLevelMonitoring = async () => {
+        console.log('🔧 Starting audio level monitoring...');
+        
+        // First, try using simulated levels to avoid microphone conflicts
+        // Web Speech API already has microphone access, requesting again can cause issues
+        console.log('💡 Using simulated audio levels to avoid conflicts with Speech Recognition');
+        simulateAudioLevel();
+        
+        /* Disabled real audio monitoring to prevent conflicts with Web Speech API
         try {
-            // Don't request microphone again - Web Speech API already has access
-            // We'll create a new stream, but this shouldn't conflict since permissions are granted
+            // Request microphone access separately for audio visualization
+            console.log('🎤 Requesting microphone access for visualization...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
                 }
             });
+            console.log('✅ Microphone access granted');
             microphoneStreamRef.current = stream;
 
-            // Create audio context and analyser
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            console.log('🔊 Audio context created, state:', audioContext.state);
+            
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+                console.log('▶️ Audio context resumed');
+            }
+            
             const analyser = audioContext.createAnalyser();
             const microphone = audioContext.createMediaStreamSource(stream);
 
-            analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.8;
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.5;
+            analyser.minDecibels = -90;
+            analyser.maxDecibels = -10;
             microphone.connect(analyser);
+            console.log('📊 Analyser configured');
 
             audioContextRef.current = audioContext;
             analyserRef.current = analyser;
 
-            // Start analyzing audio levels
             analyzeAudioLevel();
-            console.log('🎧 Audio level monitoring started');
+            console.log('✅ Audio level monitoring started successfully');
         } catch (error) {
-            console.error('Failed to start audio monitoring:', error);
-            // Don't block speech recognition if audio monitoring fails
-            // Just set a default pulsing level
-            setAudioLevel(30);
+            console.error('❌ Failed to start audio monitoring:', error);
+            throw error;
         }
+        */
     };
 
     const analyzeAudioLevel = () => {
-        if (!analyserRef.current) return;
+        if (!analyserRef.current) {
+            console.warn('⚠️ No analyser available for audio level monitoring');
+            return;
+        }
 
         const analyser = analyserRef.current;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let frameCount = 0;
 
         const updateLevel = () => {
             if (!analyserRef.current || !isVoiceActiveRef.current) {
+                console.log('⏹️ Stopping audio level monitoring');
                 return; // Stop if no longer active
             }
 
+            // Get frequency data
             analyser.getByteFrequencyData(dataArray);
 
-            // Calculate average volume
-            const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+            // Calculate RMS (Root Mean Square) for better volume representation
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const normalized = dataArray[i] / 255;
+                sum += normalized * normalized;
+            }
+            const rms = Math.sqrt(sum / bufferLength);
 
-            // Normalize to 0-100 range with boost for better visualization
-            const normalizedLevel = Math.min(100, (average / 256) * 150);
+            // Convert to 0-100 scale with exponential scaling for better visualization
+            const normalizedLevel = Math.min(100, Math.pow(rms, 0.5) * 150);
 
-            setAudioLevel(normalizedLevel);
+            // Apply smoothing to reduce jitter
+            setAudioLevel(prev => {
+                const smoothingFactor = 0.3;
+                const newLevel = prev * (1 - smoothingFactor) + normalizedLevel * smoothingFactor;
+                
+                // Log every 30 frames (~0.5 seconds) for debugging
+                if (frameCount % 30 === 0) {
+                    console.log('📊 Audio level:', newLevel.toFixed(1), '(RMS:', rms.toFixed(3), ')');
+                }
+                frameCount++;
+                
+                return newLevel;
+            });
 
             // Continue monitoring
             animationFrameRef.current = requestAnimationFrame(updateLevel);
         };
 
+        console.log('🎬 Starting audio level animation loop');
         updateLevel();
+    };
+
+    const simulateAudioLevel = () => {
+        // Simulate realistic audio level when real monitoring unavailable
+        let isSpeaking = false;
+        let speakingStartTime = 0;
+        
+        const simulate = () => {
+            if (!isVoiceActiveRef.current) {
+                return;
+            }
+
+            const now = Date.now();
+            
+            // Check if there's actual speech (transcript is being generated)
+            const hasTranscript = interimTranscriptRef.current.length > 0;
+            
+            // Random speaking bursts every 2-4 seconds when no transcript
+            if (!hasTranscript && !isSpeaking && Math.random() > 0.98) {
+                isSpeaking = true;
+                speakingStartTime = now;
+            }
+            
+            // Speaking duration: 1-3 seconds
+            if (isSpeaking && (now - speakingStartTime) > (1000 + Math.random() * 2000)) {
+                isSpeaking = false;
+            }
+            
+            let level;
+            if (hasTranscript || isSpeaking) {
+                // Simulate speech with varying amplitude
+                const baseLevel = 45;
+                const variation = 25;
+                const frequency = 0.015; // Faster oscillation for speech
+                const noise = (Math.random() - 0.5) * 15; // Add randomness
+                level = baseLevel + Math.sin(now * frequency) * variation + noise;
+            } else {
+                // Low ambient level when silent
+                const baseLevel = 12;
+                const variation = 8;
+                const frequency = 0.005; // Slower oscillation
+                level = baseLevel + Math.sin(now * frequency) * variation;
+            }
+            
+            setAudioLevel(Math.max(0, Math.min(100, level)));
+
+            animationFrameRef.current = requestAnimationFrame(simulate);
+        };
+
+        console.log('📊 Using simulated audio levels (visual feedback mode)');
+        simulate();
     };
 
     const stopAudioLevelMonitoring = () => {
@@ -631,26 +732,37 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             // Stop audio monitoring
             stopAudioLevelMonitoring();
 
-            recognition.stop();
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.warn('Error stopping recognition:', e);
+            }
         } else {
             console.log('▶️ Starting voice recognition (user clicked start)');
             // Clear the stop flags (sync both state and refs)
             setUserStoppedVoice(false);
             userStoppedRef.current = false;
+            
+            // Check if recognition is already running
+            if (isRecognitionStarted) {
+                console.warn('⚠️ Recognition already started, not starting again');
+                setIsVoiceActive(true);
+                isVoiceActiveRef.current = true;
+                return;
+            }
+            
             try {
-                if (!isRecognitionStarted) {
-                    recognition.start();
-                    // State will be set by onstart handler
-                } else {
-                    console.warn('Recognition already started, not calling start() again');
-                    setIsVoiceActive(true); // Sync state
-                }
+                recognition.start();
+                // State will be set by onstart handler
             } catch (error: any) {
                 console.error('Error starting voice recognition:', error);
-                if (error.message && error.message.includes('already started')) {
+                if (error.message?.includes('already started')) {
                     console.log('Recognition already running, setting state to active');
                     setIsVoiceActive(true);
-                    isVoiceActiveRef.current = true; // Sync ref
+                    isVoiceActiveRef.current = true;
+                    setIsRecognitionStarted(true);
+                } else {
+                    alert('Failed to start voice recognition: ' + error.message);
                 }
             }
         }
@@ -720,6 +832,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
     };
 
+    const closeDetailView = () => {
+        setSelectedView(null);
+    };
+
     const value: DashboardContextType = {
         socket,
         chatMessages,
@@ -738,6 +854,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         toggleAlwaysActive,
         wakeWordDetected,
         speak,
+        selectedView,
+        setSelectedView,
+        closeDetailView,
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

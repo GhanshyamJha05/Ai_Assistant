@@ -198,17 +198,65 @@ def get_llm_bandit():
         _llm_bandit = LLMBandit()
     return _llm_bandit
 
+def get_model_compressor():
+    global _model_compressor
+    if _model_compressor is None:
+        _model_compressor = ModelCompressor()
+    return _model_compressor
+
 def get_workflow_scheduler():
     global _workflow_scheduler
     if _workflow_scheduler is None:
         _workflow_scheduler = WorkflowScheduler()
     return _workflow_scheduler
 
+def get_contrastive_learner():
+    global _contrastive_learner
+    if _contrastive_learner is None:
+        _contrastive_learner = ContrastiveLearner()
+    return _contrastive_learner
+
+def get_self_supervised():
+    global _self_supervised
+    if _self_supervised is None:
+        _self_supervised = SelfSupervisedLearner()
+    return _self_supervised
+
 def get_causal_inference():
     global _causal_inference
     if _causal_inference is None:
         _causal_inference = CausalInference()
     return _causal_inference
+
+def get_query_cache():
+    global _query_cache
+    if _query_cache is None:
+        _query_cache = QuerySimilarityCache()
+    return _query_cache
+
+def get_command_sequences():
+    global _command_sequences
+    if _command_sequences is None:
+        _command_sequences = CommandMarkovChain()
+    return _command_sequences
+
+def get_historical_rag():
+    global _historical_rag
+    if _historical_rag is None:
+        _historical_rag = HistoricalRAG()
+    return _historical_rag
+
+def get_command_predictor():
+    global _command_predictor
+    if _command_predictor is None:
+        _command_predictor = CommandSuccessPredictor()
+    return _command_predictor
+
+def get_anomaly_detector():
+    global _anomaly_detector
+    if _anomaly_detector is None:
+        _anomaly_detector = AnomalyDetector()
+    return _anomaly_detector
 
 def get_knowledge_graph():
     global _knowledge_graph

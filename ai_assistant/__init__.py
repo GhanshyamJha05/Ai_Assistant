@@ -47,10 +47,12 @@ try:
 except ImportError:
     pass
 
-try:
-    from .multimodal import *
-except ImportError:
-    pass
+# Skip multimodal import at init to avoid blocking on slow Google API imports
+# Import will be done lazily when needed
+# try:
+#     from .multimodal import *
+# except ImportError:
+#     pass
 
 try:
     from .multilingual import *

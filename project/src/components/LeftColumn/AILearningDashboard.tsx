@@ -3,7 +3,7 @@ import { Database, Activity, MessageSquare } from 'lucide-react';
 import { useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
-const StatCard = ({ icon: Icon, label, value, targetValue, delay }: { icon: any; label: string; value: string; targetValue: number; delay: number }) => {
+const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { icon: any; label: string; value: string; targetValue: number; delay: number; onClick?: () => void }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => {
     if (label === 'Database Stats') return `${latest.toFixed(1)}TB`;
@@ -23,11 +23,13 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay }: { icon: any;
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 flex items-center gap-4 hover:border-[#3B82F6]/30 transition-all duration-200"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 flex items-center gap-4 hover:border-[#3B82F6]/30 transition-all duration-200 cursor-pointer"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay }}
       whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
     >
       <div className="p-2.5 bg-[#3B82F6]/10 rounded-lg">
         <Icon className="w-5 h-5 text-[#3B82F6]" strokeWidth={1.5} />
@@ -42,8 +44,8 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay }: { icon: any;
   );
 };
 
-const LearningStats = () => {
-  const { learningStats } = useDashboard();
+const AILearningDashboard = () => {
+  const { learningStats, setSelectedView } = useDashboard();
 
   // Parse values to get numeric targets
   const dbValue = parseFloat(learningStats.database.replace('TB', '')) || 1.2;
@@ -51,9 +53,9 @@ const LearningStats = () => {
   const convsValue = parseFloat(learningStats.conversations.replace('K', '')) * 1000 || 54300;
 
   const stats = [
-    { icon: Database, label: 'Database Stats', value: learningStats.database, targetValue: dbValue },
-    { icon: Activity, label: 'Active Systems', value: learningStats.systems, targetValue: systemsValue },
-    { icon: MessageSquare, label: 'Conversations', value: learningStats.conversations, targetValue: convsValue },
+    { icon: Database, label: 'Database Stats', value: learningStats.database, targetValue: dbValue, onClick: () => setSelectedView('database') },
+    { icon: Activity, label: 'Active Systems', value: learningStats.systems, targetValue: systemsValue, onClick: () => setSelectedView('systems') },
+    { icon: MessageSquare, label: 'Conversations', value: learningStats.conversations, targetValue: convsValue, onClick: () => setSelectedView('conversations') },
   ];
 
   return (
@@ -63,7 +65,7 @@ const LearningStats = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <h3 className="text-sm font-medium text-white px-1">Learning Stats</h3>
+      <h3 className="text-sm font-medium text-white px-1">AI Learning Dashboard</h3>
       {stats.map((stat, index) => (
         <StatCard key={stat.label} {...stat} delay={0.4 + index * 0.1} />
       ))}
@@ -71,4 +73,4 @@ const LearningStats = () => {
   );
 };
 
-export default LearningStats;
+export default AILearningDashboard;

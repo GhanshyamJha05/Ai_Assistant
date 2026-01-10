@@ -18,22 +18,46 @@ const CameraFeed = () => {
 
   const startCamera = async () => {
     try {
+      console.log('🎥 Starting camera...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
         }
       });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setHasPermission(true);
-        setIsRecording(true);
-        setError('');
-      }
+      console.log('✅ Camera stream obtained:', stream);
+      console.log('📹 Video tracks:', stream.getVideoTracks());
+
+      // Set state FIRST to render the video element
+      streamRef.current = stream;
+      setHasPermission(true);
+      setIsRecording(true);
+      setError('');
+      
+      // Wait for next render cycle, then set the stream
+      setTimeout(() => {
+        if (videoRef.current) {
+          console.log('📺 Setting video srcObject...');
+          videoRef.current.srcObject = stream;
+          
+          videoRef.current.onloadedmetadata = async () => {
+            console.log('🎬 Video metadata loaded');
+            try {
+              await videoRef.current?.play();
+              console.log('▶️ Video playing');
+            } catch (playErr) {
+              console.error('❌ Video play error:', playErr);
+            }
+          };
+        } else {
+          console.error('❌ Video ref is still null after state update');
+        }
+      }, 100);
+      
     } catch (err) {
-      console.error('Camera access error:', err);
+      console.error('❌ Camera access error:', err);
       setError('Camera access denied');
       setHasPermission(false);
     }
@@ -51,6 +75,7 @@ const CameraFeed = () => {
   };
 
   const toggleCamera = () => {
+    console.log('🔄 Toggle camera - current state:', isRecording);
     if (isRecording) {
       stopCamera();
     } else {
@@ -77,20 +102,27 @@ const CameraFeed = () => {
         </motion.button>
       </div>
 
-      <div className="relative bg-[#0A0E12] rounded-lg overflow-hidden aspect-video flex items-center justify-center group cursor-pointer">
+      <div className="relative bg-[#0A0E12] rounded-lg overflow-hidden aspect-video group cursor-pointer">
         {hasPermission && isRecording ? (
-          <>
+          <div className="relative w-full h-full">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
               className="w-full h-full object-cover"
+              style={{ display: 'block', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              onLoadedMetadata={() => {
+                console.log('Video metadata loaded');
+                if (videoRef.current) {
+                  videoRef.current.play().catch(err => console.error('Play error:', err));
+                }
+              }}
             />
 
             {isRecording && (
               <motion.div
-                className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full"
+                className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full z-10"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
@@ -110,7 +142,7 @@ const CameraFeed = () => {
                 <span className="text-xs font-medium text-white">REC</span>
               </motion.div>
             )}
-          </>
+          </div>
         ) : (
           <>
             <motion.div

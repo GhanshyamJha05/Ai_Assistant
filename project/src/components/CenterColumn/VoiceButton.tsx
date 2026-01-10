@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Globe, Zap } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const VoiceButton = () => {
   const {
@@ -16,7 +16,14 @@ const VoiceButton = () => {
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('hi-IN');
+  const [selectedLang, setSelectedLang] = useState('en-US'); // Changed default to English
+
+  // Initialize language on mount
+  useEffect(() => {
+    if (setVoiceLanguage) {
+      setVoiceLanguage('en-US');
+    }
+  }, [setVoiceLanguage]);
 
   const languages = [
     { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
@@ -142,15 +149,22 @@ const VoiceButton = () => {
                   className={`w-1.5 rounded-full ${wakeWordDetected ? 'bg-[#10B981]' : alwaysActive ? 'bg-[#8B5CF6]' : 'bg-[#3B82F6]'
                     }`}
                   animate={{
-                    height: audioLevel > 5 ? `${targetHeight}%` : '20%', // Static at 20% if no audio
+                    height: audioLevel > 1 ? `${targetHeight}%` : '20%', // Show animation even for low levels
                   }}
                   transition={{
-                    duration: 0.1, // Fast response to audio changes
-                    ease: 'easeOut',
+                    duration: 0.08, // Faster response to audio changes
+                    ease: 'linear',
                   }}
                 />
               );
             })}
+          </div>
+        )}
+
+        {/* Audio level debug indicator (remove in production) */}
+        {(isVoiceActive || alwaysActive) && (
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+            {audioLevel.toFixed(0)}%
           </div>
         )}
 
@@ -261,21 +275,21 @@ const VoiceButton = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
         >
-          <div className="text-xs text-[#9CA3AF] mb-1">
-            {wakeWordDetected ? 'Listening for command...' : alwaysActive ? 'Say "Hey Assistant"' : 'Transcribing...'}
+          <div className="text-xs text-[#9CA3AF] mb-1 flex items-center justify-between">
+            <span>{wakeWordDetected ? 'Listening for command...' : alwaysActive ? 'Say "Hey Assistant"' : 'Listening...'}</span>
+            <span className="text-[#3B82F6] text-[10px]">{selectedLang}</span>
           </div>
           <motion.div
-            className="text-sm text-white font-medium min-h-[20px]"
-            animate={{
-              opacity: [1, 0.7, 1],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
+            className="text-sm text-white font-medium min-h-[20px] break-words"
+            key={interimTranscript} // Re-animate on change
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 1 }}
           >
-            {interimTranscript || '...'}
+            {interimTranscript ? (
+              <span className="text-white">{interimTranscript}</span>
+            ) : (
+              <span className="text-[#9CA3AF] italic">Speak now...</span>
+            )}
           </motion.div>
         </motion.div>
       )}
