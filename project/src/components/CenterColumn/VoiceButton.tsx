@@ -7,6 +7,7 @@ const VoiceButton = () => {
   const {
     isVoiceActive,
     interimTranscript,
+    audioLevel,
     toggleVoice,
     setVoiceLanguage,
     alwaysActive,
@@ -41,8 +42,8 @@ const VoiceButton = () => {
       <motion.button
         onClick={toggleAlwaysActive}
         className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${alwaysActive
-            ? 'bg-[#3B82F6]/20 border-[#3B82F6] text-[#3B82F6]'
-            : 'bg-[#16181D] border-[#3B82F6]/30 text-[#9CA3AF] hover:border-[#3B82F6] hover:text-[#3B82F6]'
+          ? 'bg-[#3B82F6]/20 border-[#3B82F6] text-[#3B82F6]'
+          : 'bg-[#16181D] border-[#3B82F6]/30 text-[#9CA3AF] hover:border-[#3B82F6] hover:text-[#3B82F6]'
           }`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -64,10 +65,10 @@ const VoiceButton = () => {
       <motion.button
         onClick={toggleVoice}
         className={`relative w-[180px] h-[180px] rounded-full bg-[#16181D] border-4 flex items-center justify-center cursor-pointer group overflow-hidden ${wakeWordDetected
-            ? 'border-[#10B981]'
-            : alwaysActive && isVoiceActive
-              ? 'border-[#8B5CF6]'
-              : 'border-[#3B82F6]'
+          ? 'border-[#10B981]'
+          : alwaysActive && isVoiceActive
+            ? 'border-[#8B5CF6]'
+            : 'border-[#3B82F6]'
           }`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -123,22 +124,33 @@ const VoiceButton = () => {
         {/* Animated sound wave bars when listening */}
         {(isVoiceActive || alwaysActive) && (
           <div className="absolute inset-0 flex items-center justify-center gap-1.5 z-0">
-            {[...Array(5)].map((_, i) => (
-              <motion.div
-                key={i}
-                className={`w-1.5 rounded-full ${wakeWordDetected ? 'bg-[#10B981]' : alwaysActive ? 'bg-[#8B5CF6]' : 'bg-[#3B82F6]'
-                  }`}
-                animate={{
-                  height: ['20%', '60%', '20%'],
-                }}
-                transition={{
-                  duration: wakeWordDetected ? 0.5 : 0.8,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: i * 0.15,
-                }}
-              />
-            ))}
+            {[...Array(5)].map((_, i) => {
+              // Calculate dynamic height based on audio level
+              // Base height is 20%, max height is 70%
+              const baseHeight = 20;
+              const maxHeight = 70;
+              const heightRange = maxHeight - baseHeight;
+
+              // Use audioLevel (0-100) to determine bar height
+              // Add slight variation per bar for visual interest
+              const barMultiplier = 1 - (Math.abs(i - 2) * 0.1); // Center bar is tallest
+              const targetHeight = baseHeight + (audioLevel / 100) * heightRange * barMultiplier;
+
+              return (
+                <motion.div
+                  key={i}
+                  className={`w-1.5 rounded-full ${wakeWordDetected ? 'bg-[#10B981]' : alwaysActive ? 'bg-[#8B5CF6]' : 'bg-[#3B82F6]'
+                    }`}
+                  animate={{
+                    height: audioLevel > 5 ? `${targetHeight}%` : '20%', // Static at 20% if no audio
+                  }}
+                  transition={{
+                    duration: 0.1, // Fast response to audio changes
+                    ease: 'easeOut',
+                  }}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -240,10 +252,10 @@ const VoiceButton = () => {
       {(isVoiceActive || alwaysActive) && (
         <motion.div
           className={`mt-2 px-6 py-3 border rounded-lg min-w-[300px] max-w-[500px] ${wakeWordDetected
-              ? 'bg-[#10B981]/10 border-[#10B981]/30'
-              : alwaysActive
-                ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
-                : 'bg-[#3B82F6]/10 border-[#3B82F6]/30'
+            ? 'bg-[#10B981]/10 border-[#10B981]/30'
+            : alwaysActive
+              ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
+              : 'bg-[#3B82F6]/10 border-[#3B82F6]/30'
             }`}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

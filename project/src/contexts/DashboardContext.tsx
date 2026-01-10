@@ -43,6 +43,7 @@ interface DashboardContextType {
     taskProgress: number;
     isVoiceActive: boolean;
     interimTranscript: string;
+    audioLevel: number; // 0-100, real-time microphone audio level
     sendCommand: (command: string) => void;
     toggleVoice: () => void;
     setVoiceLanguage?: (lang: string) => void;
@@ -93,6 +94,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
+    const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
+
+    // Audio analysis refs
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const microphoneStreamRef = useRef<MediaStream | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -161,6 +169,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     isVoiceActiveRef.current = true; // Sync ref
                     setInterimTranscript('');
                     setIsRecognitionStarted(true);
+
+                    // Start audio level monitoring after delay to prevent conflicts
+                    setTimeout(() => {
+                        if (isVoiceActiveRef.current) {
+                            startAudioLevelMonitoring();
+                        }
+                    }, 300);
                 } else {
                     console.log('⚠️ Recognition started but user stopped - stopping immediately');
                     setIsRecognitionStarted(false);
@@ -295,6 +310,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.log('🔴 Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
                 setIsRecognitionStarted(false);
 
+                // Stop audio monitoring when recognition ends
+                stopAudioLevelMonitoring();
+
                 // Auto-restart if voice is active AND user hasn't manually stopped (use refs to avoid stale state)
                 if (isVoiceActiveRef.current && !userStoppedRef.current) {
                     try {
@@ -345,6 +363,95 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('✅ Voice recognition initialized (not started)');
         }
     }, [voiceLanguage]); // Only re-initialize when language changes (userStoppedRef used to prevent re-initialization)
+
+    // Audio Level Monitoring Functions
+    const startAudioLevelMonitoring = async () => {
+        try {
+            // Don't request microphone again - Web Speech API already has access
+            // We'll create a new stream, but this shouldn't conflict since permissions are granted
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+            microphoneStreamRef.current = stream;
+
+            // Create audio context and analyser
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.8;
+            microphone.connect(analyser);
+
+            audioContextRef.current = audioContext;
+            analyserRef.current = analyser;
+
+            // Start analyzing audio levels
+            analyzeAudioLevel();
+            console.log('🎧 Audio level monitoring started');
+        } catch (error) {
+            console.error('Failed to start audio monitoring:', error);
+            // Don't block speech recognition if audio monitoring fails
+            // Just set a default pulsing level
+            setAudioLevel(30);
+        }
+    };
+
+    const analyzeAudioLevel = () => {
+        if (!analyserRef.current) return;
+
+        const analyser = analyserRef.current;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const updateLevel = () => {
+            if (!analyserRef.current || !isVoiceActiveRef.current) {
+                return; // Stop if no longer active
+            }
+
+            analyser.getByteFrequencyData(dataArray);
+
+            // Calculate average volume
+            const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+
+            // Normalize to 0-100 range with boost for better visualization
+            const normalizedLevel = Math.min(100, (average / 256) * 150);
+
+            setAudioLevel(normalizedLevel);
+
+            // Continue monitoring
+            animationFrameRef.current = requestAnimationFrame(updateLevel);
+        };
+
+        updateLevel();
+    };
+
+    const stopAudioLevelMonitoring = () => {
+        // Cancel animation frame
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+
+        // Stop microphone stream
+        if (microphoneStreamRef.current) {
+            microphoneStreamRef.current.getTracks().forEach(track => track.stop());
+            microphoneStreamRef.current = null;
+        }
+
+        // Close audio context
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+
+        analyserRef.current = null;
+        setAudioLevel(0);
+        console.log('🎧 Audio level monitoring stopped');
+    };
 
     // Load Learning Stats
     useEffect(() => {
@@ -520,6 +627,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             isVoiceActiveRef.current = false; // Sync ref
             setIsRecognitionStarted(false);
             setInterimTranscript('');
+
+            // Stop audio monitoring
+            stopAudioLevelMonitoring();
+
             recognition.stop();
         } else {
             console.log('▶️ Starting voice recognition (user clicked start)');
@@ -619,6 +730,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         taskProgress,
         isVoiceActive,
         interimTranscript,
+        audioLevel,
         sendCommand,
         toggleVoice,
         setVoiceLanguage,
