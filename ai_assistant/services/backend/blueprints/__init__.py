@@ -76,4 +76,25 @@ def register_all_blueprints(app, assistant_instance):
     except Exception as e:
         print(f"⚠️ Multimodal blueprint registration failed: {e}")
     
+    try:
+        from . import preferences
+        app.register_blueprint(preferences.create_blueprint(assistant_instance))
+        print("✅ Preferences blueprint registered")
+    except Exception as e:
+        print(f"⚠️ Preferences blueprint registration failed: {e}")
+    
+    try:
+        from . import memory
+        app.register_blueprint(memory.create_blueprint(assistant_instance))
+        print("✅ Memory & Language blueprint registered")
+    except Exception as e:
+        print(f"⚠️ Memory blueprint registration failed: {e}")
+    
+    try:
+        from . import utilities
+        app.register_blueprint(utilities.create_blueprint(assistant_instance))
+        print("✅ Utilities blueprint registered")
+    except Exception as e:
+        print(f"⚠️ Utilities blueprint registration failed: {e}")
+    
     print(f"📋 All blueprints registered successfully")

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import io, { Socket } from 'socket.io-client';
 
 interface Message {
@@ -88,6 +88,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [voiceLanguage, setVoiceLanguageState] = useState('hi-IN');
     const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
+    const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
+    const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
@@ -153,9 +155,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             recog.onstart = () => {
                 console.log('🎤 Voice recognition started');
-                // Only set active if user didn't manually stop
-                if (!userStoppedVoice) {
+                // Only set active if user didn't manually stop (use ref to avoid stale state)
+                if (!userStoppedRef.current) {
                     setIsVoiceActive(true);
+                    isVoiceActiveRef.current = true; // Sync ref
                     setInterimTranscript('');
                     setIsRecognitionStarted(true);
                 } else {
@@ -246,7 +249,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     console.log('⚠️ Audio capture issue, trying to restart...');
                     // Try to restart after brief delay
                     setTimeout(() => {
-                        if (isVoiceActive && recognition && !userStoppedVoice) {
+                        if (isVoiceActive && recognition && !userStoppedRef.current) {
                             try {
                                 recognition.start();
                             } catch (e) {
@@ -262,8 +265,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     console.error('🚫 Microphone access denied');
                     alert('Microphone access denied. Please allow microphone access in your browser settings.');
                     setIsVoiceActive(false);
+                    isVoiceActiveRef.current = false; // Sync ref
                     setInterimTranscript('');
                     setUserStoppedVoice(true);
+                    userStoppedRef.current = true;
                     return;
                 }
 
@@ -287,22 +292,22 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onend = () => {
-                console.log('🔴 Recognition ended, current state:', isVoiceActive, 'userStopped:', userStoppedVoice);
+                console.log('🔴 Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
                 setIsRecognitionStarted(false);
 
-                // Auto-restart if user wants to keep listening AND hasn't manually stopped
-                if (isVoiceActive && !userStoppedVoice) {
+                // Auto-restart if voice is active AND user hasn't manually stopped (use refs to avoid stale state)
+                if (isVoiceActiveRef.current && !userStoppedRef.current) {
                     try {
                         console.log('🔄 Auto-restarting voice recognition...');
                         // Small delay to prevent rapid restart issues
                         setTimeout(() => {
                             try {
-                                // Double-check user hasn't stopped in the meantime
-                                if (!userStoppedVoice && recog) {
+                                // Double-check user hasn't stopped in the meantime (use refs)
+                                if (isVoiceActiveRef.current && !userStoppedRef.current && recog) {
                                     recog.start();
                                     console.log('✅ Voice recognition restarted');
                                 } else {
-                                    console.log('⚠️ User stopped during restart delay');
+                                    console.log('⚠️ User stopped or voice inactive during restart delay');
                                 }
                             } catch (error: any) {
                                 console.error('❌ Error in auto-restart:', error);
@@ -311,12 +316,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     // Try one more time after a longer delay
                                     setTimeout(() => {
                                         try {
-                                            if (recog && !userStoppedVoice) {
+                                            if (recog && isVoiceActiveRef.current && !userStoppedRef.current) {
                                                 recog.start();
                                             }
                                         } catch (e) {
                                             console.error('Failed to restart, stopping:', e);
                                             setIsVoiceActive(false);
+                                            isVoiceActiveRef.current = false; // Sync ref
                                             setInterimTranscript('');
                                         }
                                     }, 500);
@@ -326,6 +332,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     } catch (error) {
                         console.error('Error in restart handler:', error);
                         setIsVoiceActive(false);
+                        isVoiceActiveRef.current = false; // Sync ref
                         setInterimTranscript('');
                     }
                 } else {
@@ -337,7 +344,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setRecognition(recog);
             console.log('✅ Voice recognition initialized (not started)');
         }
-    }, [voiceLanguage, userStoppedVoice]); // Re-initialize when language changes or user stop flag changes
+    }, [voiceLanguage]); // Only re-initialize when language changes (userStoppedRef used to prevent re-initialization)
 
     // Load Learning Stats
     useEffect(() => {
@@ -505,17 +512,20 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         if (isVoiceActive) {
             console.log('🛑 Stopping voice recognition (user clicked stop)');
-            // Set flag to prevent onstart from reactivating
+            // Set flags to prevent onstart from reactivating (sync both state and refs)
             setUserStoppedVoice(true);
+            userStoppedRef.current = true;
             // IMPORTANT: Set to false BEFORE calling stop() so onend handler knows not to restart
             setIsVoiceActive(false);
+            isVoiceActiveRef.current = false; // Sync ref
             setIsRecognitionStarted(false);
             setInterimTranscript('');
             recognition.stop();
         } else {
             console.log('▶️ Starting voice recognition (user clicked start)');
-            // Clear the stop flag
+            // Clear the stop flags (sync both state and refs)
             setUserStoppedVoice(false);
+            userStoppedRef.current = false;
             try {
                 if (!isRecognitionStarted) {
                     recognition.start();
@@ -529,6 +539,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 if (error.message && error.message.includes('already started')) {
                     console.log('Recognition already running, setting state to active');
                     setIsVoiceActive(true);
+                    isVoiceActiveRef.current = true; // Sync ref
                 }
             }
         }
@@ -572,8 +583,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         console.log('🔄 Always-active mode:', newState ? 'ON' : 'OFF');
 
         if (newState) {
-            // Start listening when always-active enabled
+            // Start listening when always-active enabled (sync both state and ref)
             setUserStoppedVoice(false);
+            userStoppedRef.current = false;
             if (!isVoiceActive && recognition) {
                 try {
                     recognition.start();
@@ -583,9 +595,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 }
             }
         } else {
-            // Stop listening when always-active disabled
+            // Stop listening when always-active disabled (sync both state and refs)
             if (isVoiceActive && recognition) {
                 setUserStoppedVoice(true);
+                userStoppedRef.current = true;
+                setIsVoiceActive(false);
+                isVoiceActiveRef.current = false; // Sync ref
                 recognition.stop();
                 speak('Always active mode disabled.', voiceLanguage);
             }

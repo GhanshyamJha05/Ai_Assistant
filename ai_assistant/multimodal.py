@@ -10,6 +10,8 @@ Features:
 - Document/image text extraction
 - Real-time visual monitoring
 - Image generation capabilities
+- UI automation with VLM
+- Enhanced document processing
 """
 
 import base64
@@ -17,17 +19,27 @@ import io
 import os
 import json
 import time
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any, Union
 from PIL import Image, ImageGrab, ImageDraw, ImageFont
 import google.generativeai as genai
 from datetime import datetime
 import threading
 import asyncio
 
+# Import new VLM provider architecture
+try:
+    from .vision.vlm_provider import VLMProvider, VLMResponse
+    from .vision.gemini_vision_provider import GeminiVisionProvider
+    from .vision.image_utils import ImageProcessor
+    VLM_AVAILABLE = True
+except ImportError:
+    VLM_AVAILABLE = False
+    print("Warning: New VLM architecture not available, using legacy implementation")
+
 class MultiModalAI:
     """Advanced multi-modal AI system for visual understanding and generation."""
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, use_new_architecture: bool = True):
         """Initialize the multi-modal AI system with API key validation."""
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
@@ -37,18 +49,32 @@ class MultiModalAI:
         if not self.api_key.startswith(('AI', 'sk-')) or len(self.api_key) < 20:
             raise ValueError("Invalid GEMINI_API_KEY format. Please check your API key.")
         
-        # Configure Gemini
-        try:
-            genai.configure(api_key=self.api_key)
-        except Exception as e:
-            raise ValueError(f"Failed to configure Gemini API: {e}")
+        # Choose architecture
+        self.use_new_architecture = use_new_architecture and VLM_AVAILABLE
         
-        # Initialize models
-        try:
-            self.vision_model = genai.GenerativeModel('gemini-2.5-flash')
-            self.text_model = genai.GenerativeModel('gemini-2.5-flash')
-        except Exception as e:
-            raise ValueError(f"Failed to initialize Gemini models: {e}")
+        if self.use_new_architecture:
+            # Use new VLM provider architecture
+            try:
+                self.vlm_provider = GeminiVisionProvider(
+                    api_key=self.api_key,
+                    enable_cache=True,
+                    cache_ttl=300
+                )
+                self.image_processor = ImageProcessor()
+                print("✅ Using new VLM provider architecture")
+            except Exception as e:
+                print(f"⚠️ Failed to initialize new VLM architecture: {e}")
+                print("Falling back to legacy implementation")
+                self.use_new_architecture = False
+        
+        if not self.use_new_architecture:
+            # Legacy implementation
+            try:
+                genai.configure(api_key=self.api_key)
+                self.vision_model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                self.text_model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            except Exception as e:
+                raise ValueError(f"Failed to initialize Gemini models: {e}")
         
         # Screen monitoring
         self.is_monitoring = False
@@ -616,6 +642,139 @@ Please provide:
                 "success": False,
                 "error": f"Video analysis error: {str(e)}"
             }
+    
+    # NEW: VLM-Powered Automation Methods
+    
+    def extract_coordinates(self, element_description: str) -> Dict[str, Any]:
+        """
+        Extract pixel coordinates of UI element for automation.
+        
+        Args:
+            element_description: Description of element to find (e.g., "submit button")
+            
+        Returns:
+            Dict with found status, coordinates, and metadata
+        """
+        if self.use_new_architecture:
+            response = self.vlm_provider.find_element_coordinates(
+                self.capture_screen(),
+                element_description
+            )
+            
+            if response.structured_data:
+                return response.structured_data
+            else:
+                # Try to parse from text
+                return {
+                    "found": False,
+                    "reason": "Could not extract coordinates from VLM response",
+                    "raw_response": response.text
+                }
+        else:
+            # Legacy implementation
+            screenshot = self.capture_screen()
+            prompt = f"""Find this UI element: "{element_description}"
+
+Return ONLY a JSON object:
+{{
+    "found": true/false,
+    "element_type": "button/input/etc",
+    "text": "element text",
+    "location": "top-left/center/etc",
+    "coordinates": {{"x": pixel_x, "y": pixel_y}},
+    "clickable": true/false
+}}"""
+            
+            try:
+                response = self.vision_model.generate_content([prompt, screenshot])
+                import re
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response.text)
+                if json_match:
+                    import json
+                    return json.loads(json_match.group())
+                else:
+                    return {"found": False, "reason": "No JSON in response"}
+            except Exception as e:
+                return {"found": False, "error": str(e)}
+    
+    def identify_ui_actions(self) -> Dict[str, Any]:
+        """
+        Identify all actionable UI elements on current screen.
+        
+        Returns:
+            Dict with list of interactable elements
+        """
+        if self.use_new_architecture:
+            response = self.vlm_provider.extract_ui_elements(
+                self.capture_screen()
+            )
+            
+            return {
+                "elements": response.structured_data or [],
+                "raw_analysis": response.text
+            }
+        else:
+            screenshot = self.capture_screen()
+            prompt = """Identify all interactive UI elements in this screenshot.
+
+Return a JSON array:
+[
+  {
+    "type": "button/input/menu/etc",
+    "text": "label or text",
+    "location": "description",
+    "clickable": true/false
+  }
+]"""
+            
+            try:
+                response = self.vision_model.generate_content([prompt, screenshot])
+                import re, json
+                json_match = re.search(r'\[[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*\]', response.text)
+                if json_match:
+                    return {"elements": json.loads(json_match.group())}
+                else:
+                    return {"elements": [], "raw_text": response.text}
+            except Exception as e:
+                return {"elements": [], "error": str(e)}
+    
+    def analyze_for_automation(self, task_description: str) -> Dict[str, Any]:
+        """
+        Analyze screen for automation task planning.
+        
+        Args:
+            task_description: Task to accomplish (e.g., "save this file")
+            
+        Returns:
+            Dict with suggested steps and UI elements to interact with
+        """
+        screenshot = self.capture_screen()
+        prompt = f"""I need to: {task_description}
+
+Analyze this screenshot and return a JSON object with:
+{{
+    "possible": true/false,
+    "steps": [
+        {{"action": "click/type/etc", "target": "element description", "details": "..."}}
+    ],
+    "warnings": ["any potential issues"]
+}}"""
+        
+        try:
+            if self.use_new_architecture:
+                response = self.vlm_provider.analyze_image(screenshot, prompt)
+                return response.structured_data or {"possible": False, "error": "Could not parse"}
+            else:
+                response = self.vision_model.generate_content([prompt, screenshot])
+                import re, json
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response.text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group())
+                else:
+                    return {"possible": False, "raw_response": response.text}
+        except Exception as e:
+            return {"possible": False, "error": str(e)}
+
 
 # Convenience functions for easy access
 def analyze_current_screen(prompt: str = "What's on the screen?") -> str:

@@ -210,7 +210,7 @@ limiter = Limiter(
 )
 
 # Secure CORS Configuration
-ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173').split(',')
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:15000,http://127.0.0.1:15000').split(',')
 CORS(app, resources={
     r"/api/*": {
         "origins": ALLOWED_ORIGINS,
