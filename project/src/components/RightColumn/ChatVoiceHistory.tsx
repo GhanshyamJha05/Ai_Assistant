@@ -18,7 +18,7 @@ interface VoiceCommand {
 const ChatVoiceHistory = () => {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const voiceScrollRef = useRef<HTMLDivElement>(null);
-  const { chatMessages, voiceCommands } = useDashboard();
+  const { chatMessages, voiceCommands, setSelectedView } = useDashboard();
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -34,7 +34,10 @@ const ChatVoiceHistory = () => {
       transition={{ delay: 0.1 }}
     >
       <div className="grid grid-cols-2 divide-x divide-[#1F2228]">
-        <div className="p-4">
+        <div 
+          className="p-4 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
+          onClick={() => setSelectedView('chat')}
+        >
           <h3 className="text-sm font-medium text-white mb-3">Chat History</h3>
           <div
             ref={chatScrollRef}
@@ -62,7 +65,10 @@ const ChatVoiceHistory = () => {
           </div>
         </div>
 
-        <div className="p-4">
+        <div 
+          className="p-4 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
+          onClick={() => setSelectedView('voice')}
+        >
           <h3 className="text-sm font-medium text-white mb-3">Voice History</h3>
           <div
             ref={voiceScrollRef}

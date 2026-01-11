@@ -3,35 +3,35 @@ import { Grid3x3, BarChart3, Settings, MoreHorizontal } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const QuickOptions = () => {
-  const { sendCommand } = useDashboard();
+  const { setSelectedView } = useDashboard();
 
   const options = [
     {
       icon: Grid3x3,
       label: 'Apps',
       onClick: () => {
-        sendCommand('Show available apps');
+        setSelectedView('apps');
       }
     },
     {
       icon: BarChart3,
-      label: 'Stats',
+      label: 'AI Learning',
       onClick: () => {
-        sendCommand('Show system statistics');
+        setSelectedView('ai-learning');
       }
     },
     {
       icon: Settings,
       label: 'Settings',
       onClick: () => {
-        sendCommand('Open settings');
+        setSelectedView('settings');
       }
     },
     {
       icon: MoreHorizontal,
       label: 'More',
       onClick: () => {
-        sendCommand('Show more options');
+        setSelectedView('dashboard');
       }
     },
   ];

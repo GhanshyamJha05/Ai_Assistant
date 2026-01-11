@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { DashboardProvider } from './contexts/DashboardContext';
+import { DashboardProvider, useDashboard } from './contexts/DashboardContext';
 import QuickOptions from './components/LeftColumn/QuickOptions';
 import CameraFeed from './components/LeftColumn/CameraFeed';
-import LearningStats from './components/LeftColumn/LearningStats';
+import AILearningDashboard from './components/LeftColumn/AILearningDashboard';
 import StatusBar from './components/CenterColumn/StatusBar';
 import VoiceButton from './components/CenterColumn/VoiceButton';
 import CommandInput from './components/CenterColumn/CommandInput';
@@ -10,8 +10,40 @@ import TaskStatus from './components/CenterColumn/TaskStatus';
 import ChatVoiceHistory from './components/RightColumn/ChatVoiceHistory';
 import SystemStats from './components/RightColumn/SystemStats';
 import SystemLogs from './components/RightColumn/SystemLogs';
+import DetailView from './components/DetailView';
+import DashboardDetail from './components/DetailViews/DashboardDetail';
+import AppsDetail from './components/DetailViews/AppsDetail';
+import ChatDetail from './components/DetailViews/ChatDetail';
+import VoiceDetail from './components/DetailViews/VoiceDetail';
+import SettingsDetail from './components/DetailViews/SettingsDetail';
+import AILearningDetail from './components/DetailViews/AILearningDetail';
 
-function App() {
+function AppContent() {
+  const { selectedView, closeDetailView } = useDashboard();
+
+  const getDetailContent = () => {
+    switch (selectedView) {
+      case 'dashboard':
+        return { title: 'System Dashboard', content: <DashboardDetail /> };
+      case 'apps':
+        return { title: 'Integrated Applications', content: <AppsDetail /> };
+      case 'chat':
+        return { title: 'Chat History', content: <ChatDetail /> };
+      case 'voice':
+        return { title: 'Voice Control', content: <VoiceDetail /> };
+      case 'settings':
+        return { title: 'Settings', content: <SettingsDetail /> };
+      case 'ai-learning':
+      case 'database':
+      case 'systems':
+      case 'conversations':
+        return { title: 'AI Learning Dashboard', content: <AILearningDetail /> };
+      default:
+        return null;
+    }
+  };
+
+  const detailContent = getDetailContent();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -32,7 +64,6 @@ function App() {
   };
 
   return (
-    <DashboardProvider>
       <div className="h-screen bg-[#0A0E12] text-white overflow-hidden flex flex-col">
         <motion.div
           className="flex-1 px-4 py-4 max-w-[1920px] mx-auto w-full overflow-hidden"
@@ -47,7 +78,7 @@ function App() {
             >
               <QuickOptions />
               <CameraFeed />
-              <LearningStats />
+              <AILearningDashboard />
             </motion.div>
 
             <motion.div
@@ -72,7 +103,25 @@ function App() {
             </motion.div>
           </div>
         </motion.div>
+
+        {/* Detail View Modal */}
+        {detailContent && (
+          <DetailView
+            isOpen={!!selectedView}
+            onClose={closeDetailView}
+            title={detailContent.title}
+          >
+            {detailContent.content}
+          </DetailView>
+        )}
       </div>
+  );
+}
+
+function App() {
+  return (
+    <DashboardProvider>
+      <AppContent />
     </DashboardProvider>
   );
 }

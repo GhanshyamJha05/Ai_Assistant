@@ -3,7 +3,7 @@ import { Activity, Cpu, HardDrive } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const SystemStats = () => {
-  const { systemStats } = useDashboard();
+  const { systemStats, setSelectedView } = useDashboard();
 
   const stats = [
     { icon: Cpu, label: 'CPU Usage', value: `${systemStats.cpu}%`, color: '#3B82F6' },
@@ -13,10 +13,12 @@ const SystemStats = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 cursor-pointer hover:border-[#3B82F6]/50 transition-all"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
+      whileHover={{ scale: 1.02 }}
+      onClick={() => setSelectedView('dashboard')}
     >
       <h3 className="text-sm font-medium text-white mb-4">System Stats</h3>
       <div className="grid grid-cols-3 gap-3">

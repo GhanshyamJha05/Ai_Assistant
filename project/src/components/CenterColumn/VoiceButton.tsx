@@ -18,13 +18,6 @@ const VoiceButton = () => {
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en-US'); // Changed default to English
 
-  // Initialize language on mount
-  useEffect(() => {
-    if (setVoiceLanguage) {
-      setVoiceLanguage('en-US');
-    }
-  }, [setVoiceLanguage]);
-
   const languages = [
     { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
     { code: 'en-IN', name: 'English (India)', flag: '🇮🇳' },

@@ -143,6 +143,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             addSystemLog(log.type || 'info', log.message);
         });
 
+        // Handle voice command responses with talkback
+        newSocket.on('voice_response', (data: any) => {
+            console.log('🎤 Voice response received:', data);
+            
+            if (data.success && data.response) {
+                addChatMessage(data.response, 'ai');
+                
+                // Speak the response back to user (talkback)
+                speak(data.response, voiceLanguage);
+                
+                addSystemLog('success', `Command processed: ${data.response.substring(0, 50)}...`);
+            } else if (data.error) {
+                const errorMsg = data.response || 'Sorry, I encountered an error processing that command.';
+                addChatMessage(errorMsg, 'ai');
+                speak(errorMsg, voiceLanguage);
+                addSystemLog('error', errorMsg);
+            }
+        });
+
         setSocket(newSocket);
 
         return () => {
@@ -268,7 +287,19 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     // Process command if wake word was detected or not in always-active mode
                     if (!alwaysActive || isProcessingCommand) {
                         addVoiceCommand(final);
-                        sendCommand(final);
+                        
+                        // Send via socket for voice command processing
+                        if (socket && socket.connected) {
+                            console.log('📤 Sending voice command to backend:', final);
+                            socket.emit('voice_command', { 
+                                text: final,
+                                language: voiceLanguage,
+                                timestamp: new Date().toISOString()
+                            });
+                        } else {
+                            // Fallback to regular command
+                            sendCommand(final);
+                        }
 
                         // Reset processing state after command
                         setTimeout(() => {
@@ -660,9 +691,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     const sendCommand = (command: string) => {
+        // Add user message to chat
         addChatMessage(command, 'user');
+        addSystemLog('info', `Processing: ${command}`);
 
         if (socket && socket.connected) {
+            console.log('📤 Sending command via socket:', command);
             socket.emit('command', { command, message: command });
         } else {
             // Fallback to API
@@ -693,23 +727,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     const setVoiceLanguage = (lang: string) => {
+        console.log(`🌍 Changing language to: ${lang}`);
         setVoiceLanguageState(lang);
-        // If recognition is active, restart it with new language
-        if (recognition && isVoiceActive) {
-            recognition.stop();
-            setTimeout(() => {
-                if (recognition) {
-                    recognition.lang = lang;
-                    try {
-                        recognition.start();
-                    } catch (error) {
-                        console.error('Error restarting recognition:', error);
-                    }
-                }
-            }, 100);
-        } else if (recognition) {
+        
+        // Simply update the language property - recognition will use it on next start
+        if (recognition) {
             recognition.lang = lang;
+            console.log(`✅ Language updated to: ${lang}`);
         }
+        
+        // Note: We don't restart recognition here to avoid restart loops
+        // The new language will be used when user starts/restarts recognition manually
     };
 
     const toggleVoice = () => {
