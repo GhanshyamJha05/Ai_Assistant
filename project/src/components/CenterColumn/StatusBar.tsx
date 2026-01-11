@@ -78,35 +78,35 @@ const StatusBar = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg px-6 py-3 flex items-center justify-between"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 flex items-center justify-between flex-shrink-0"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
         <motion.div
           className="relative"
           whileHover={{ scale: 1.1 }}
         >
-          <Bell className="w-5 h-5 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] rounded-full text-[10px] flex items-center justify-center text-white font-bold">
+          <Bell className="w-3 h-3 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EF4444] rounded-full text-[7px] sm:text-[8px] flex items-center justify-center text-white font-bold">
             3
           </span>
         </motion.div>
 
-        <div className="flex items-center gap-2">
-          <Wifi className={`w-5 h-5 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
-          <span className="text-xs text-[#9CA3AF]">{isConnected ? 'Connected' : 'Disconnected'}</span>
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          <Wifi className={`w-3 h-3 sm:w-4 sm:h-4 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
+          <span className="text-[9px] sm:text-[10px] text-[#9CA3AF]">{isConnected ? 'Connected' : 'Disconnected'}</span>
         </div>
       </div>
 
       <motion.div
-        className="flex items-center gap-6"
+        className="flex items-center gap-2 sm:gap-3 md:gap-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <motion.span
             animate={isCharging ? {
               scale: [1, 1.1, 1],
@@ -119,13 +119,13 @@ const StatusBar = () => {
           >
             {getBatteryIcon()}
           </motion.span>
-          <Battery className={`w-5 h-5 ${getBatteryColor()}`} strokeWidth={1.5} />
-          <span className={`text-xs ${getBatteryColor()}`}>
+          <Battery className={`w-3 h-3 sm:w-4 sm:h-4 ${getBatteryColor()}`} strokeWidth={1.5} />
+          <span className={`text-[9px] sm:text-[10px] ${getBatteryColor()}`}>
             {batteryLevel}%{isCharging ? ' ⚡' : ''}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <motion.div
             animate={isVoiceActive ? {
               scale: [1, 1.2, 1],
@@ -136,10 +136,10 @@ const StatusBar = () => {
               ease: 'easeInOut',
             } : {}}
           >
-            <Mic className={`w-5 h-5 ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'} transition-colors`} strokeWidth={1.5} />
+            <Mic className={`w-3 h-3 sm:w-4 sm:h-4 ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'} transition-colors`} strokeWidth={1.5} />
           </motion.div>
           <motion.span
-            className={`text-xs font-semibold ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'}`}
+            className={`text-[9px] sm:text-[10px] font-semibold ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'}`}
             animate={isVoiceActive ? {
               opacity: [1, 0.6, 1],
             } : {}}
@@ -153,8 +153,8 @@ const StatusBar = () => {
           </motion.span>
         </div>
 
-        <div className="px-4 py-1.5 bg-[#3B82F6]/10 rounded-lg">
-          <span className="text-sm font-mono text-white font-semibold tracking-wider">
+        <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-[#3B82F6]/10 rounded-lg">
+          <span className="text-[10px] sm:text-xs font-mono text-white font-semibold tracking-wider">
             {formatTime(currentTime)}
           </span>
         </div>

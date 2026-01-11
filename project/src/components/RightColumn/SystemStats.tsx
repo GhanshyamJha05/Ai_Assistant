@@ -13,28 +13,28 @@ const SystemStats = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 cursor-pointer hover:border-[#3B82F6]/50 transition-all"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2 sm:p-3 cursor-pointer hover:border-[#3B82F6]/50 transition-all flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
       whileHover={{ scale: 1.02 }}
       onClick={() => setSelectedView('dashboard')}
     >
-      <h3 className="text-sm font-medium text-white mb-4">System Stats</h3>
-      <div className="grid grid-cols-3 gap-3">
+      <h3 className="text-xs sm:text-sm font-medium text-white mb-2">System Stats</h3>
+      <div className="grid grid-cols-3 gap-2">
         {stats.map((stat, index) => (
           <motion.div
             key={stat.label}
-            className="bg-[#1F2228] rounded-lg p-3 text-center"
+            className="bg-[#1F2228] rounded-lg p-1.5 sm:p-2 text-center"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * index }}
             whileHover={{ scale: 1.05 }}
           >
-            <stat.icon className="w-5 h-5 mx-auto mb-2" style={{ color: stat.color }} strokeWidth={1.5} />
-            <p className="text-[10px] text-[#9CA3AF] mb-1">{stat.label}</p>
-            <p className="text-lg font-bold text-white">{stat.value}</p>
-            <div className="mt-2 h-8 relative">
+            <stat.icon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mx-auto mb-1 sm:mb-2" style={{ color: stat.color }} strokeWidth={1.5} />
+            <p className="text-[8px] sm:text-[10px] text-[#9CA3AF] mb-0.5 sm:mb-1">{stat.label}</p>
+            <p className="text-sm sm:text-base md:text-lg font-bold text-white">{stat.value}</p>
+            <div className="mt-1 sm:mt-2 h-6 sm:h-8 relative">
               <div className="absolute bottom-0 left-0 right-0 h-full flex items-end justify-center gap-0.5">
                 {[...Array(10)].map((_, i) => (
                   <motion.div

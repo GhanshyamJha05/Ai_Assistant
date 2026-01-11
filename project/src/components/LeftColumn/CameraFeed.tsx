@@ -85,16 +85,16 @@ const CameraFeed = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2 sm:p-2.5 flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-white">Camera Feed</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs sm:text-sm font-medium text-white">Camera Feed</h3>
         <motion.button
           onClick={toggleCamera}
-          className="text-xs text-[#9CA3AF] hover:text-white transition-colors"
+          className="text-[10px] sm:text-xs text-[#9CA3AF] hover:text-white transition-colors"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >

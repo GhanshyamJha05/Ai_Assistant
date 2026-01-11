@@ -1,49 +1,50 @@
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const TaskStatus = () => {
+  const [targetProgress] = useState(() => Math.floor(Math.random() * 30) + 50); // Random 50-80%
   const progress = useMotionValue(0);
   const progressPercent = useTransform(progress, (value) => Math.round(value));
 
   useEffect(() => {
-    const controls = animate(progress, 78, {
+    const controls = animate(progress, targetProgress, {
       duration: 2,
       delay: 0.5,
       ease: 'easeOut',
     });
 
     return controls.stop;
-  }, [progress]);
+  }, [progress, targetProgress]);
 
-  const circumference = 2 * Math.PI * 27;
+  const circumference = 2 * Math.PI * 9;
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-3 flex flex-col items-center"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-1 flex flex-col items-center flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
     >
-      <h3 className="text-xs font-medium text-white mb-2">Task Status</h3>
+      <h3 className="text-[8px] sm:text-[9px] font-medium text-white mb-0.5">Task Status</h3>
 
       <div className="relative">
-        <svg className="w-[63px] h-[63px] -rotate-90" viewBox="0 0 63 63">
+        <svg className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] -rotate-90" viewBox="0 0 24 24">
           <circle
-            cx="31.5"
-            cy="31.5"
-            r="27"
+            cx="12"
+            cy="12"
+            r="9"
             fill="none"
             stroke="#1F2228"
-            strokeWidth="6"
+            strokeWidth="2.5"
           />
 
           <motion.circle
-            cx="31.5"
-            cy="31.5"
-            r="27"
+            cx="12"
+            cy="12"
+            r="9"
             fill="none"
             stroke="#3B82F6"
-            strokeWidth="6"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={useTransform(
@@ -58,15 +59,15 @@ const TaskStatus = () => {
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-xl font-bold text-white">
+          <div className="text-[10px] sm:text-xs font-bold text-white">
             <motion.span>{progressPercent}</motion.span>
-            <span className="text-sm text-[#9CA3AF]">%</span>
+            <span className="text-[7px] sm:text-[8px] text-[#9CA3AF]">%</span>
           </div>
         </div>
       </div>
 
       <motion.div
-        className="mt-3 px-3 py-1 bg-[#3B82F6]/10 rounded-full"
+        className="mt-0.5 px-1 py-0.5 bg-[#3B82F6]/10 rounded-full"
         animate={{
           opacity: [1, 0.6, 1],
         }}
@@ -76,10 +77,10 @@ const TaskStatus = () => {
           ease: 'easeInOut',
         }}
       >
-        <span className="text-xs font-medium text-[#3B82F6]">ACTIVE</span>
+        <span className="text-[6px] sm:text-[8px] font-medium text-[#3B82F6]">ACTIVE</span>
       </motion.div>
 
-      <p className="mt-2 text-xs text-[#9CA3AF] text-center max-w-[200px]">
+      <p className="mt-0.5 text-[6px] sm:text-[8px] text-[#9CA3AF] text-center max-w-[200px]">
         Processing tasks
       </p>
     </motion.div>

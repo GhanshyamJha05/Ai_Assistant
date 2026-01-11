@@ -30,19 +30,19 @@ const SystemLogs = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg overflow-hidden flex flex-col"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg overflow-hidden flex flex-col flex-1"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <div className="p-4 border-b border-[#1F2228] flex items-center gap-2">
+      <div className="p-3 border-b border-[#1F2228] flex items-center gap-2">
         <Terminal className="w-4 h-4 text-[#3B82F6]" />
         <h3 className="text-sm font-medium text-white">System Logs</h3>
       </div>
 
       <div
         ref={logsScrollRef}
-        className="p-4 space-y-1.5 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228] font-mono text-xs"
+        className="p-3 space-y-1.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228] font-mono text-xs"
       >
         {systemLogs.length === 0 ? (
           <p className="text-[#6B7280] text-center py-4">No logs yet</p>

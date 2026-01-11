@@ -38,18 +38,18 @@ const QuickOptions = () => {
 
   return (
     <motion.div
-      className="space-y-3"
+      className="space-y-2 flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
-      <h3 className="text-sm font-medium text-white px-1">Quick Options</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <h3 className="text-xs sm:text-sm font-medium text-white px-1">Quick Options</h3>
+      <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
         {options.map((option, index) => (
           <motion.button
             key={option.label}
             onClick={option.onClick}
-            className="bg-[#16181D] border border-[#1F2228] rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:border-[#3B82F6] hover:shadow-[0_0_12px_rgba(59,130,246,0.3)] transition-all duration-200 cursor-pointer group"
+            className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2.5 sm:p-3.5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 hover:border-[#3B82F6] hover:shadow-[0_0_12px_rgba(59,130,246,0.3)] transition-all duration-200 cursor-pointer group"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * index }}
@@ -57,10 +57,10 @@ const QuickOptions = () => {
             whileTap={{ scale: 0.95 }}
           >
             <option.icon
-              className="w-6 h-6 text-[#3B82F6] group-hover:scale-110 transition-transform"
+              className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#3B82F6] group-hover:scale-110 transition-transform"
               strokeWidth={1.5}
             />
-            <span className="text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium">
+            <span className="text-[10px] sm:text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium">
               {option.label}
             </span>
           </motion.button>

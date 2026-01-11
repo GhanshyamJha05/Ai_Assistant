@@ -28,20 +28,20 @@ const ChatVoiceHistory = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg overflow-hidden"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg overflow-hidden flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
       <div className="grid grid-cols-2 divide-x divide-[#1F2228]">
         <div 
-          className="p-4 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
+          className="p-2 sm:p-3 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
           onClick={() => setSelectedView('chat')}
         >
-          <h3 className="text-sm font-medium text-white mb-3">Chat History</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-white mb-2">Chat History</h3>
           <div
             ref={chatScrollRef}
-            className="space-y-3 max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
+            className="space-y-2 max-h-[120px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
           >
             {chatMessages.length === 0 ? (
               <p className="text-xs text-[#6B7280] text-center py-4">No messages yet</p>

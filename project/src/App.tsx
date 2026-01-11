@@ -66,14 +66,14 @@ function AppContent() {
   return (
       <div className="h-screen bg-[#0A0E12] text-white overflow-hidden flex flex-col">
         <motion.div
-          className="flex-1 px-4 py-4 max-w-[1920px] mx-auto w-full overflow-hidden"
+          className="flex-1 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 md:gap-4 flex-1 overflow-hidden min-h-0">
             <motion.div
-              className="xl:col-span-3 space-y-4 overflow-y-auto"
+              className="lg:col-span-3 flex flex-col gap-2 sm:gap-3 overflow-y-auto min-h-0"
               variants={columnVariants}
             >
               <QuickOptions />
@@ -82,11 +82,11 @@ function AppContent() {
             </motion.div>
 
             <motion.div
-              className="xl:col-span-6 flex flex-col gap-4"
+              className="lg:col-span-6 flex flex-col gap-1 sm:gap-1.5 overflow-hidden min-h-0"
               variants={columnVariants}
             >
               <StatusBar />
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center min-h-0 overflow-visible py-2">
                 <VoiceButton />
               </div>
               <CommandInput />
@@ -94,7 +94,7 @@ function AppContent() {
             </motion.div>
 
             <motion.div
-              className="xl:col-span-3 space-y-4 overflow-y-auto"
+              className="lg:col-span-3 flex flex-col gap-2 sm:gap-3 overflow-hidden min-h-0"
               variants={columnVariants}
             >
               <ChatVoiceHistory />

@@ -44,10 +44,11 @@ const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive
 
   return (
     <svg 
-      width="200" 
-      height="200" 
+      width="100%" 
+      height="100%" 
       viewBox="0 0 200 200" 
       className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      preserveAspectRatio="xMidYMid meet"
     >
       {/* Waveform */}
       <motion.path
@@ -118,16 +119,16 @@ const VoiceButton = () => {
 
   return (
     <motion.div
-      className="flex flex-col items-center gap-6"
+      className="flex flex-col items-center gap-2 sm:gap-3 w-full max-w-sm mx-auto"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       {/* Main circular visualizer */}
-      <div className="relative">
+      <div className="relative w-full max-w-[240px] sm:max-w-[260px] aspect-square overflow-visible">
         {/* Outer glowing circle */}
         <motion.div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full border-2 border-[#00D9FF]"
+          className="absolute inset-0 rounded-full border-2 border-[#00D9FF]"
           style={{
             boxShadow: isListening ? '0 0 40px rgba(0, 217, 255, 0.4), inset 0 0 40px rgba(0, 217, 255, 0.1)' : '0 0 20px rgba(0, 217, 255, 0.2)',
           }}
@@ -143,14 +144,12 @@ const VoiceButton = () => {
         />
 
         {/* Waveform visualization */}
-        <div className="relative w-[280px] h-[280px]">
-          <ModernWaveform audioLevel={audioLevel} isActive={isListening} />
-        </div>
+        <ModernWaveform audioLevel={audioLevel} isActive={isListening} />
 
         {/* Center microphone button */}
         <motion.button
           onClick={toggleVoice}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00D9FF]/30 flex items-center justify-center cursor-pointer group z-10"
+          className="absolute inset-0 m-auto w-[28%] h-[28%] rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00D9FF]/30 flex items-center justify-center cursor-pointer group z-10"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           animate={{
@@ -177,10 +176,10 @@ const VoiceButton = () => {
                 ease: 'easeInOut',
               }}
             >
-              <Mic className="w-8 h-8 text-[#00D9FF]" strokeWidth={2} />
+              <Mic className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00D9FF]" strokeWidth={2} />
             </motion.div>
           ) : (
-            <MicOff className="w-8 h-8 text-[#00D9FF]/60 group-hover:text-[#00D9FF] transition-colors" strokeWidth={2} />
+            <MicOff className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00D9FF]/60 group-hover:text-[#00D9FF] transition-colors" strokeWidth={2} />
           )}
         </motion.button>
 
@@ -188,8 +187,7 @@ const VoiceButton = () => {
         {isListening && (
           <>
             <motion.div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#00D9FF]/40"
-              style={{ width: '280px', height: '280px' }}
+              className="absolute inset-0 rounded-full border-2 border-[#00D9FF]/40"
               animate={{
                 scale: [1, 1.15, 1.15],
                 opacity: [0.6, 0, 0],
@@ -201,8 +199,7 @@ const VoiceButton = () => {
               }}
             />
             <motion.div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#00D9FF]/40"
-              style={{ width: '280px', height: '280px' }}
+              className="absolute inset-0 rounded-full border-2 border-[#00D9FF]/40"
               animate={{
                 scale: [1, 1.15, 1.15],
                 opacity: [0.6, 0, 0],
@@ -230,14 +227,14 @@ const VoiceButton = () => {
           ease: 'easeInOut',
         }}
       >
-        <p className="text-[#00D9FF] text-lg font-light tracking-wide">
+        <p className="text-[#00D9FF] text-sm sm:text-base md:text-lg font-light tracking-wide">
           {isListening ? 'Listening...' : 'Tap to speak'}
         </p>
         {isListening && interimTranscript && (
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-white/60 text-sm mt-2 max-w-md"
+            className="text-white/60 text-xs sm:text-sm mt-2 max-w-md px-4"
           >
             {interimTranscript}
           </motion.p>
@@ -245,10 +242,10 @@ const VoiceButton = () => {
       </motion.div>
 
       {/* Compact controls */}
-      <div className="flex gap-3 items-center">
+      <div className="flex gap-2 sm:gap-3 items-center flex-wrap justify-center">
         <motion.button
           onClick={toggleAlwaysActive}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${
             alwaysActive
               ? 'bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/40'
               : 'bg-[#1a1f2e] text-[#00D9FF]/50 border border-[#00D9FF]/20 hover:border-[#00D9FF]/40'
@@ -256,16 +253,16 @@ const VoiceButton = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Zap className="w-3 h-3 inline mr-1" />
+          <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Always On
         </motion.button>
 
         <button
           onClick={() => setShowLangSelector(!showLangSelector)}
-          className="px-3 py-1.5 bg-[#1a1f2e] border border-[#00D9FF]/20 rounded-lg hover:border-[#00D9FF]/40 transition-all"
+          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1a1f2e] border border-[#00D9FF]/20 rounded-lg hover:border-[#00D9FF]/40 transition-all"
         >
-          <Globe className="w-3 h-3 text-[#00D9FF]/60 inline mr-1" />
-          <span className="text-xs text-[#00D9FF]/60">
+          <Globe className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#00D9FF]/60 inline mr-1" />
+          <span className="text-[10px] sm:text-xs text-[#00D9FF]/60">
             {languages.find(l => l.code === selectedLang)?.flag}
           </span>
         </button>
