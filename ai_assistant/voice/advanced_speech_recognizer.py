@@ -130,24 +130,35 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.warning(f"⚠️ Speech Recognition failed: {e}")
         
-        # Vosk (offline, instant)
+        # Vosk (offline, instant) - Load English first for better performance
         if VOSK_AVAILABLE:
             try:
-                # Load English model
+                # Load English model first (primary language)
                 try:
                     model = Model(lang="en")
                     self.vosk_models['en'] = model
                     logger.info("✅ Vosk English model loaded")
-                except:
-                    logger.warning("⚠️ Vosk English model not found")
+                except Exception as e:
+                    # Try loading from cache path if direct load fails
+                    try:
+                        import os
+                        cache_path = os.path.expanduser("~/.cache/vosk/vosk-model-small-en-us-0.15")
+                        if os.path.exists(cache_path):
+                            model = Model(cache_path)
+                            self.vosk_models['en'] = model
+                            logger.info("✅ Vosk English model loaded from cache")
+                        else:
+                            logger.warning("⚠️ Vosk English model not found")
+                    except:
+                        logger.warning("⚠️ Vosk English model not found")
                 
-                # Load Hindi model if available
+                # Optionally load Hindi model (secondary)
                 try:
                     model = Model(lang="hi")
                     self.vosk_models['hi'] = model
-                    logger.info("✅ Vosk Hindi model loaded")
+                    logger.info("✅ Vosk Hindi model loaded (optional)")
                 except:
-                    logger.warning("⚠️ Vosk Hindi model not found")
+                    pass  # Silent - Hindi is optional
                     
             except Exception as e:
                 logger.warning(f"⚠️ Vosk initialization failed: {e}")
@@ -433,22 +444,23 @@ class AdvancedSpeechRecognizer:
         # Normalize language code for better compatibility
         normalized_lang = language.lower()
         
-        # Map common variations
-        if normalized_lang in ["hinglish", "auto"]:
-            whisper_lang = "auto"
-            google_lang = "hi-IN"  # Fallback to Hindi for Google
-            vosk_lang = "hi"
+        # Map common variations - DEFAULT TO ENGLISH for best performance
+        if normalized_lang in ["en", "en-us", "en-in", "en-gb", "english", "auto"]:
+            whisper_lang = "en"
+            google_lang = "en-US"  # US English as default
+            vosk_lang = "en"
+        elif normalized_lang in ["hinglish"]:
+            whisper_lang = "auto"  # Let Whisper detect
+            google_lang = "en-IN"  # Indian English for hinglish
+            vosk_lang = "en"  # Use English model for hinglish
         elif normalized_lang in ["hi", "hi-in", "hindi"]:
             whisper_lang = "hi"
             google_lang = "hi-IN"
-            vosk_lang = "hi"
-        elif normalized_lang in ["en", "en-us", "en-in", "en-gb", "english"]:
-            whisper_lang = "en"
-            google_lang = "en-IN" if "in" in normalized_lang else "en-US"
-            vosk_lang = "en"
+            vosk_lang = "hi" if "hi" in self.vosk_models else "en"  # Fallback to English if Hindi not available
         else:
-            whisper_lang = "auto"
-            google_lang = language
+            # Unknown language - default to English
+            whisper_lang = "en"
+            google_lang = "en-US"
             vosk_lang = "en"
         
         logger.info(f"🌐 Language mapping: input='{language}' -> whisper='{whisper_lang}', google='{google_lang}'")

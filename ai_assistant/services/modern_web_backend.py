@@ -230,11 +230,18 @@ socketio = SocketIO(
     app,
     cors_allowed_origins=ALLOWED_ORIGINS,
     async_mode='threading',
-    logger=True,
-    engineio_logger=True,
+    logger=False,  # Disable verbose logging
+    engineio_logger=False,  # Disable engine.io logging
     ping_timeout=60,
     ping_interval=25
 )
+
+# Configure logging levels for production - silence socketio spam
+logging.getLogger('socketio').setLevel(logging.ERROR)
+logging.getLogger('socketio.server').setLevel(logging.ERROR)
+logging.getLogger('engineio').setLevel(logging.ERROR)
+logging.getLogger('engineio.server').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 logger.info("✅ SocketIO initialized with CORS origins: %s", ALLOWED_ORIGINS)
 
@@ -1047,7 +1054,13 @@ def api_all_learning_stats():
         from ai_assistant.services.learning_integration import get_learning_stats, LEARNING_SYSTEMS_AVAILABLE
         
         if not LEARNING_SYSTEMS_AVAILABLE:
-            return jsonify({"error": "Learning systems not available"}), 503
+            logger.warning("Learning systems not available")
+            return jsonify({
+                "success": False,
+                "error": "Learning systems not available",
+                "systems": {},
+                "total_systems": 0
+            }), 200  # Return 200 with error flag instead of 503
         
         stats = get_learning_stats()
         return jsonify({
@@ -1056,9 +1069,22 @@ def api_all_learning_stats():
             "systems": stats,
             "total_systems": len(stats)
         })
+    except ImportError as e:
+        logger.error(f"Learning stats import error: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": "Learning module not found",
+            "systems": {},
+            "total_systems": 0
+        }), 200
     except Exception as e:
-        logger.error(f"All learning stats error: {e}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Learning stats error: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "systems": {},
+            "total_systems": 0
+        }), 200
 
 @app.route('/api/learning/smart-commands/predict', methods=['POST'])
 @jwt_required(optional=True)
@@ -3716,22 +3742,44 @@ try:
                 'timestamp': datetime.now().isoformat()
             })
 
-    # System stats broadcaster
+    # System stats broadcaster with caching
+    _stats_cache = {'data': None, 'timestamp': 0}
+    STATS_CACHE_DURATION = 2  # Cache for 2 seconds
+    BROADCAST_INTERVAL = 3  # Broadcast every 3 seconds
+    
+    def get_cached_stats():
+        """Get system stats with caching to reduce CPU usage"""
+        current_time = time.time()
+        if _stats_cache['data'] and (current_time - _stats_cache['timestamp']) < STATS_CACHE_DURATION:
+            return _stats_cache['data']
+        
+        try:
+            if PSUTIL_AVAILABLE:
+                stats = assistant.get_system_status()
+                _stats_cache['data'] = stats
+                _stats_cache['timestamp'] = current_time
+                return stats
+        except Exception as e:
+            logger.error(f'Stats collection error: {e}', exc_info=True)
+        return None
+    
     def broadcast_system_stats():
-        """Broadcast system statistics every 5 seconds"""
+        """Broadcast system statistics every 3 seconds with caching"""
         while True:
             try:
-                if PSUTIL_AVAILABLE:
-                    stats = {
-                        'cpu_usage': psutil.cpu_percent(interval=1),
-                        'memory_usage': psutil.virtual_memory().percent,
-                        'disk_usage': psutil.disk_usage('/').percent,
-                        'network_speed': 0  # Placeholder
+                stats = get_cached_stats()
+                if stats:
+                    # Only broadcast essential stats to reduce bandwidth
+                    broadcast_stats = {
+                        'cpu_usage': stats.get('cpu_usage', 0),
+                        'memory_usage': stats.get('memory_usage', 0),
+                        'disk_usage': stats.get('disk_usage', 0),
+                        'network_speed': stats.get('network_mbps', 0)
                     }
-                    socketio.emit('system_stats_update', stats)
+                    socketio.emit('system_stats_update', broadcast_stats)
             except Exception as e:
-                print(f'Stats broadcast error: {e}')
-            time.sleep(5)
+                logger.error(f'Stats broadcast error: {e}')
+            time.sleep(BROADCAST_INTERVAL)
 
     # Start stats broadcaster
     stats_thread = threading.Thread(target=broadcast_system_stats, daemon=True)

@@ -3,6 +3,90 @@ import { Mic, MicOff, Globe, Zap } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useState, useEffect } from 'react';
 
+// Modern Circular Audio Waveform (like the reference image)
+const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive: boolean }) => {
+  const points = 100;
+  const centerY = 100;
+  const amplitude = isActive ? 30 + (audioLevel / 100) * 40 : 20;
+  
+  // Generate smooth waveform path
+  const generateWavePath = () => {
+    let path = `M 0 ${centerY}`;
+    
+    for (let i = 0; i <= points; i++) {
+      const x = (i / points) * 200;
+      const frequency = 0.05;
+      const time = Date.now() * 0.001;
+      
+      // Multiple sine waves for organic feel
+      const y = centerY + 
+        Math.sin(i * frequency + time * 2) * amplitude * 0.4 +
+        Math.sin(i * frequency * 2 + time * 3) * amplitude * 0.3 +
+        Math.sin(i * frequency * 0.5 + time) * amplitude * 0.3;
+      
+      path += ` L ${x} ${y}`;
+    }
+    
+    return path;
+  };
+
+  const [path, setPath] = useState(generateWavePath());
+
+  useEffect(() => {
+    if (!isActive && audioLevel < 5) return;
+    
+    const interval = setInterval(() => {
+      setPath(generateWavePath());
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [isActive, audioLevel]);
+
+  return (
+    <svg 
+      width="200" 
+      height="200" 
+      viewBox="0 0 200 200" 
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+    >
+      {/* Waveform */}
+      <motion.path
+        d={path}
+        stroke="#00D9FF"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+        initial={{ opacity: 0 }}
+        animate={{ 
+          opacity: isActive ? [0.6, 1, 0.6] : 0.3,
+          filter: isActive ? 'drop-shadow(0 0 8px #00D9FF)' : 'none'
+        }}
+        transition={{ 
+          opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+        }}
+      />
+      
+      {/* Mirror waveform */}
+      <motion.path
+        d={path}
+        stroke="#00D9FF"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+        className="origin-center scale-y-[-1]"
+        initial={{ opacity: 0 }}
+        animate={{ 
+          opacity: isActive ? [0.4, 0.7, 0.4] : 0.2,
+          filter: isActive ? 'drop-shadow(0 0 6px #00D9FF)' : 'none'
+        }}
+        transition={{ 
+          opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }
+        }}
+      />
+    </svg>
+  );
+};
+
 const VoiceButton = () => {
   const {
     isVoiceActive,
@@ -11,12 +95,11 @@ const VoiceButton = () => {
     toggleVoice,
     setVoiceLanguage,
     alwaysActive,
-    toggleAlwaysActive,
-    wakeWordDetected
+    toggleAlwaysActive
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('en-US'); // Changed default to English
+  const [selectedLang, setSelectedLang] = useState('en-US');
 
   const languages = [
     { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
@@ -31,177 +114,162 @@ const VoiceButton = () => {
     setShowLangSelector(false);
   };
 
+  const isListening = isVoiceActive || alwaysActive;
+
   return (
     <motion.div
-      className="flex flex-col items-center gap-4"
-      initial={{ opacity: 0, scale: 0.8 }}
+      className="flex flex-col items-center gap-6"
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.2, duration: 0.5 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
     >
-      {/* Always-Active Mode Toggle */}
-      <motion.button
-        onClick={toggleAlwaysActive}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${alwaysActive
-          ? 'bg-[#3B82F6]/20 border-[#3B82F6] text-[#3B82F6]'
-          : 'bg-[#16181D] border-[#3B82F6]/30 text-[#9CA3AF] hover:border-[#3B82F6] hover:text-[#3B82F6]'
-          }`}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <Zap className={`w-4 h-4 ${alwaysActive ? 'text-[#3B82F6]' : ''}`} strokeWidth={2} />
-        <span className="text-sm font-medium">
-          {alwaysActive ? '⚡ Always Active' : 'Always Active'}
-        </span>
-        {alwaysActive && (
-          <motion.div
-            className="w-2 h-2 rounded-full bg-[#3B82F6]"
-            animate={{ opacity: [1, 0.3, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
-        )}
-      </motion.button>
-
-      {/* Main Voice Button */}
-      <motion.button
-        onClick={toggleVoice}
-        className={`relative w-[180px] h-[180px] rounded-full bg-[#16181D] border-4 flex items-center justify-center cursor-pointer group overflow-hidden ${wakeWordDetected
-          ? 'border-[#10B981]'
-          : alwaysActive && isVoiceActive
-            ? 'border-[#8B5CF6]'
-            : 'border-[#3B82F6]'
-          }`}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        disabled={alwaysActive}
-      >
-        {/* Outer pulsing rings */}
-        {(isVoiceActive || alwaysActive) && (
-          <>
-            <motion.div
-              className={`absolute inset-0 rounded-full border-4 ${wakeWordDetected ? 'border-[#10B981]' : alwaysActive ? 'border-[#8B5CF6]' : 'border-[#3B82F6]'
-                }`}
-              animate={{
-                scale: [1, 1.3, 1.3],
-                opacity: [0.6, 0, 0],
-              }}
-              transition={{
-                duration: alwaysActive && !wakeWordDetected ? 3 : 2,
-                repeat: Infinity,
-                ease: 'easeOut',
-              }}
-            />
-            <motion.div
-              className={`absolute inset-0 rounded-full border-4 ${wakeWordDetected ? 'border-[#10B981]' : alwaysActive ? 'border-[#8B5CF6]' : 'border-[#3B82F6]'
-                }`}
-              animate={{
-                scale: [1, 1.5, 1.5],
-                opacity: [0.4, 0, 0],
-              }}
-              transition={{
-                duration: alwaysActive && !wakeWordDetected ? 3 : 2,
-                repeat: Infinity,
-                ease: 'easeOut',
-                delay: 0.4,
-              }}
-            />
-          </>
-        )}
-
-        {/* Background glow */}
+      {/* Main circular visualizer */}
+      <div className="relative">
+        {/* Outer glowing circle */}
         <motion.div
-          className={`absolute inset-0 rounded-full ${wakeWordDetected ? 'bg-[#10B981]' : alwaysActive ? 'bg-[#8B5CF6]' : 'bg-[#3B82F6]'
-            }`}
-          animate={{
-            opacity: isVoiceActive || alwaysActive ? [0.2, 0.4, 0.2] : 0,
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full border-2 border-[#00D9FF]"
+          style={{
+            boxShadow: isListening ? '0 0 40px rgba(0, 217, 255, 0.4), inset 0 0 40px rgba(0, 217, 255, 0.1)' : '0 0 20px rgba(0, 217, 255, 0.2)',
           }}
-          transition={isVoiceActive || alwaysActive ? {
-            duration: wakeWordDetected ? 0.8 : 1.5,
+          animate={{
+            scale: isListening ? [1, 1.02, 1] : 1,
+            opacity: isListening ? [0.8, 1, 0.8] : 0.6,
+          }}
+          transition={{
+            duration: 3,
             repeat: Infinity,
             ease: 'easeInOut',
-          } : {}}
+          }}
         />
 
-        {/* Animated sound wave bars when listening */}
-        {(isVoiceActive || alwaysActive) && (
-          <div className="absolute inset-0 flex items-center justify-center gap-1.5 z-0">
-            {[...Array(5)].map((_, i) => {
-              // Calculate dynamic height based on audio level
-              // Base height is 20%, max height is 70%
-              const baseHeight = 20;
-              const maxHeight = 70;
-              const heightRange = maxHeight - baseHeight;
+        {/* Waveform visualization */}
+        <div className="relative w-[280px] h-[280px]">
+          <ModernWaveform audioLevel={audioLevel} isActive={isListening} />
+        </div>
 
-              // Use audioLevel (0-100) to determine bar height
-              // Add slight variation per bar for visual interest
-              const barMultiplier = 1 - (Math.abs(i - 2) * 0.1); // Center bar is tallest
-              const targetHeight = baseHeight + (audioLevel / 100) * heightRange * barMultiplier;
-
-              return (
-                <motion.div
-                  key={i}
-                  className={`w-1.5 rounded-full ${wakeWordDetected ? 'bg-[#10B981]' : alwaysActive ? 'bg-[#8B5CF6]' : 'bg-[#3B82F6]'
-                    }`}
-                  animate={{
-                    height: audioLevel > 1 ? `${targetHeight}%` : '20%', // Show animation even for low levels
-                  }}
-                  transition={{
-                    duration: 0.08, // Faster response to audio changes
-                    ease: 'linear',
-                  }}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        {/* Audio level debug indicator (remove in production) */}
-        {(isVoiceActive || alwaysActive) && (
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
-            {audioLevel.toFixed(0)}%
-          </div>
-        )}
-
-        {/* Microphone icon */}
-        <div className="relative z-10">
-          {isVoiceActive || alwaysActive ? (
+        {/* Center microphone button */}
+        <motion.button
+          onClick={toggleVoice}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00D9FF]/30 flex items-center justify-center cursor-pointer group z-10"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          animate={{
+            boxShadow: isListening 
+              ? ['0 0 20px rgba(0, 217, 255, 0.5)', '0 0 30px rgba(0, 217, 255, 0.7)', '0 0 20px rgba(0, 217, 255, 0.5)']
+              : '0 0 10px rgba(0, 217, 255, 0.2)',
+          }}
+          transition={{
+            boxShadow: {
+              duration: 2,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            },
+          }}
+        >
+          {isListening ? (
             <motion.div
               animate={{
-                scale: wakeWordDetected ? [1, 1.2, 1] : [1, 1.1, 1],
+                scale: [1, 1.2, 1],
               }}
               transition={{
-                duration: wakeWordDetected ? 0.5 : 1,
+                duration: 1.5,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
             >
-              <Mic
-                className={`w-16 h-16 text-white drop-shadow-lg ${wakeWordDetected ? 'animate-pulse' : ''}`}
-                strokeWidth={1.5}
-              />
+              <Mic className="w-8 h-8 text-[#00D9FF]" strokeWidth={2} />
             </motion.div>
           ) : (
-            <MicOff className="w-16 h-16 text-[#3B82F6] group-hover:text-white transition-colors group-hover:scale-110" strokeWidth={1.5} />
+            <MicOff className="w-8 h-8 text-[#00D9FF]/60 group-hover:text-[#00D9FF] transition-colors" strokeWidth={2} />
           )}
-        </div>
+        </motion.button>
 
-        {/* Hover glow effect when not active */}
-        {!isVoiceActive && !alwaysActive && (
-          <motion.div
-            className="absolute inset-0 rounded-full bg-[#3B82F6] opacity-0 group-hover:opacity-30 blur-xl transition-opacity"
-          />
+        {/* Pulsing rings when active */}
+        {isListening && (
+          <>
+            <motion.div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#00D9FF]/40"
+              style={{ width: '280px', height: '280px' }}
+              animate={{
+                scale: [1, 1.15, 1.15],
+                opacity: [0.6, 0, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeOut',
+              }}
+            />
+            <motion.div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#00D9FF]/40"
+              style={{ width: '280px', height: '280px' }}
+              animate={{
+                scale: [1, 1.15, 1.15],
+                opacity: [0.6, 0, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeOut',
+                delay: 0.7,
+              }}
+            />
+          </>
         )}
-      </motion.button>
+      </div>
 
-      {/* Language selector button */}
-      <button
-        onClick={() => setShowLangSelector(!showLangSelector)}
-        className="flex items-center gap-2 px-4 py-2 bg-[#16181D] border border-[#3B82F6]/30 rounded-lg hover:border-[#3B82F6] transition-colors"
+      {/* Status text */}
+      <motion.div
+        className="text-center"
+        animate={{
+          opacity: isListening ? [0.7, 1, 0.7] : 0.5,
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
       >
-        <Globe className="w-4 h-4 text-[#3B82F6]" />
-        <span className="text-sm text-[#9CA3AF]">
-          {languages.find(l => l.code === selectedLang)?.name || 'Select Language'}
-        </span>
-      </button>
+        <p className="text-[#00D9FF] text-lg font-light tracking-wide">
+          {isListening ? 'Listening...' : 'Tap to speak'}
+        </p>
+        {isListening && interimTranscript && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-white/60 text-sm mt-2 max-w-md"
+          >
+            {interimTranscript}
+          </motion.p>
+        )}
+      </motion.div>
+
+      {/* Compact controls */}
+      <div className="flex gap-3 items-center">
+        <motion.button
+          onClick={toggleAlwaysActive}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            alwaysActive
+              ? 'bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/40'
+              : 'bg-[#1a1f2e] text-[#00D9FF]/50 border border-[#00D9FF]/20 hover:border-[#00D9FF]/40'
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Zap className="w-3 h-3 inline mr-1" />
+          Always On
+        </motion.button>
+
+        <button
+          onClick={() => setShowLangSelector(!showLangSelector)}
+          className="px-3 py-1.5 bg-[#1a1f2e] border border-[#00D9FF]/20 rounded-lg hover:border-[#00D9FF]/40 transition-all"
+        >
+          <Globe className="w-3 h-3 text-[#00D9FF]/60 inline mr-1" />
+          <span className="text-xs text-[#00D9FF]/60">
+            {languages.find(l => l.code === selectedLang)?.flag}
+          </span>
+        </button>
+      </div>
 
       {/* Language dropdown */}
       <AnimatePresence>
@@ -210,93 +278,26 @@ const VoiceButton = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-[300px] bg-[#16181D] border border-[#3B82F6]/30 rounded-lg overflow-hidden shadow-xl z-50"
+            className="absolute top-[400px] bg-[#1a1f2e] border border-[#00D9FF]/30 rounded-lg overflow-hidden shadow-xl z-50"
           >
             {languages.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => handleLanguageChange(lang.code)}
-                className={`w-full px-6 py-3 flex items-center gap-3 hover:bg-[#3B82F6]/20 transition-colors ${selectedLang === lang.code ? 'bg-[#3B82F6]/10' : ''
-                  }`}
+                className={`w-full px-4 py-2 flex items-center gap-3 hover:bg-[#00D9FF]/10 transition-colors ${
+                  selectedLang === lang.code ? 'bg-[#00D9FF]/10' : ''
+                }`}
               >
-                <span className="text-2xl">{lang.flag}</span>
-                <span className="text-sm text-white">{lang.name}</span>
+                <span className="text-lg">{lang.flag}</span>
+                <span className="text-sm text-white/80">{lang.name}</span>
                 {selectedLang === lang.code && (
-                  <span className="ml-auto text-[#3B82F6]">✓</span>
+                  <span className="ml-auto text-[#00D9FF]">✓</span>
                 )}
               </button>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Status text below button */}
-      <motion.div
-        className="text-sm font-medium text-center"
-        animate={{
-          color: wakeWordDetected
-            ? '#10B981'
-            : alwaysActive && isVoiceActive
-              ? '#8B5CF6'
-              : isVoiceActive
-                ? '#3B82F6'
-                : '#9CA3AF',
-          scale: (isVoiceActive || alwaysActive) ? [1, 1.05, 1] : 1,
-        }}
-        transition={(isVoiceActive || alwaysActive) ? {
-          duration: 1.5,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        } : {}}
-      >
-        {wakeWordDetected && '🎯 WAKE WORD DETECTED'}
-        {!wakeWordDetected && alwaysActive && isVoiceActive && '👂 Waiting for wake word...'}
-        {!wakeWordDetected && !alwaysActive && isVoiceActive && '🎤 LISTENING...'}
-        {!wakeWordDetected && !alwaysActive && !isVoiceActive && 'Click to speak'}
-      </motion.div>
-
-      {/* Real-time transcription */}
-      {(isVoiceActive || alwaysActive) && (
-        <motion.div
-          className={`mt-2 px-6 py-3 border rounded-lg min-w-[300px] max-w-[500px] ${wakeWordDetected
-            ? 'bg-[#10B981]/10 border-[#10B981]/30'
-            : alwaysActive
-              ? 'bg-[#8B5CF6]/10 border-[#8B5CF6]/30'
-              : 'bg-[#3B82F6]/10 border-[#3B82F6]/30'
-            }`}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-        >
-          <div className="text-xs text-[#9CA3AF] mb-1 flex items-center justify-between">
-            <span>{wakeWordDetected ? 'Listening for command...' : alwaysActive ? 'Say "Hey Assistant"' : 'Listening...'}</span>
-            <span className="text-[#3B82F6] text-[10px]">{selectedLang}</span>
-          </div>
-          <motion.div
-            className="text-sm text-white font-medium min-h-[20px] break-words"
-            key={interimTranscript} // Re-animate on change
-            initial={{ opacity: 0.5 }}
-            animate={{ opacity: 1 }}
-          >
-            {interimTranscript ? (
-              <span className="text-white">{interimTranscript}</span>
-            ) : (
-              <span className="text-[#9CA3AF] italic">Speak now...</span>
-            )}
-          </motion.div>
-        </motion.div>
-      )}
-
-      {/* Wake Word Instructions */}
-      {alwaysActive && !wakeWordDetected && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-xs text-[#8B5CF6]/70 text-center max-w-[280px]"
-        >
-          Say: "Hey Assistant", "Ok Assistant", or "Hey Daddy"
-        </motion.div>
-      )}
     </motion.div>
   );
 };

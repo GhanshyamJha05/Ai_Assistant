@@ -73,7 +73,7 @@ function AppContent() {
         >
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
             <motion.div
-              className="xl:col-span-2 space-y-4 overflow-y-auto"
+              className="xl:col-span-3 space-y-4 overflow-y-auto"
               variants={columnVariants}
             >
               <QuickOptions />
@@ -94,7 +94,7 @@ function AppContent() {
             </motion.div>
 
             <motion.div
-              className="xl:col-span-4 space-y-4 overflow-y-auto"
+              className="xl:col-span-3 space-y-4 overflow-y-auto"
               variants={columnVariants}
             >
               <ChatVoiceHistory />

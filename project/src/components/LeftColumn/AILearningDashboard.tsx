@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { Database, Activity, MessageSquare } from 'lucide-react';
+import { Database, Activity, MessageSquare, Brain } from 'lucide-react';
 import { useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -8,6 +8,7 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
   const rounded = useTransform(count, (latest) => {
     if (label === 'Database Stats') return `${latest.toFixed(1)}TB`;
     if (label === 'Active Systems') return `${Math.round(latest)}/27`;
+    if (label === 'Model Accuracy') return `${latest.toFixed(1)}%`;
     return `${(latest / 1000).toFixed(1)}K`;
   });
 
@@ -51,11 +52,13 @@ const AILearningDashboard = () => {
   const dbValue = parseFloat(learningStats.database.replace('TB', '')) || 1.2;
   const systemsValue = parseInt(learningStats.systems.split('/')[0]) || 27;
   const convsValue = parseFloat(learningStats.conversations.replace('K', '')) * 1000 || 54300;
+  const accuracyValue = 96.8;
 
   const stats = [
     { icon: Database, label: 'Database Stats', value: learningStats.database, targetValue: dbValue, onClick: () => setSelectedView('database') },
     { icon: Activity, label: 'Active Systems', value: learningStats.systems, targetValue: systemsValue, onClick: () => setSelectedView('systems') },
     { icon: MessageSquare, label: 'Conversations', value: learningStats.conversations, targetValue: convsValue, onClick: () => setSelectedView('conversations') },
+    { icon: Brain, label: 'Model Accuracy', value: '96.8%', targetValue: accuracyValue, onClick: () => setSelectedView('ai-learning') },
   ];
 
   return (
@@ -66,9 +69,11 @@ const AILearningDashboard = () => {
       transition={{ delay: 0.3 }}
     >
       <h3 className="text-sm font-medium text-white px-1">AI Learning Dashboard</h3>
-      {stats.map((stat, index) => (
-        <StatCard key={stat.label} {...stat} delay={0.4 + index * 0.1} />
-      ))}
+      <div className="grid grid-cols-2 gap-3">
+        {stats.map((stat, index) => (
+          <StatCard key={stat.label} {...stat} delay={0.4 + index * 0.1} />
+        ))}
+      </div>
     </motion.div>
   );
 };

@@ -176,16 +176,18 @@ class AppDiscovery:
             except Exception as e:
                 print(f"win32com shortcut resolution failed: {e}")
             
-            # Method 2: PowerShell approach
+            # Method 2: PowerShell approach (with shorter timeout)
             try:
                 cmd = f'powershell -Command "(New-Object -ComObject WScript.Shell).CreateShortcut(\'{shortcut_path}\').TargetPath"'
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=2)
                 if result.returncode == 0 and result.stdout.strip():
                     target = result.stdout.strip()
                     if os.path.exists(target):
                         return target
+            except subprocess.TimeoutExpired:
+                pass  # Silent timeout - skip slow shortcuts
             except Exception as e:
-                print(f"PowerShell shortcut resolution failed: {e}")
+                pass  # Silent errors to avoid log spam
             
             # Method 3: Python-only approach using struct (parse .lnk binary)
             try:

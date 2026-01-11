@@ -51,6 +51,8 @@ interface DashboardContextType {
     setVoiceLanguage?: (lang: string) => void;
     alwaysActive: boolean;
     toggleAlwaysActive: () => void;
+    toggleWakeWord: () => void;
+    requireWakeWord: boolean;
     wakeWordDetected: boolean;
     speak: (text: string, lang?: string) => void;
     selectedView: ViewType;
@@ -98,6 +100,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
+    const [requireWakeWord, setRequireWakeWord] = useState(false); // Require wake word in always-active mode
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
     const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
@@ -253,8 +256,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setInterimTranscript('');
                     interimTranscriptRef.current = ''; // Clear ref
 
-                    // Check for wake word if in always-active mode
-                    if (alwaysActive && !isProcessingCommand) {
+                    // Always-active mode with wake word requirement
+                    if (alwaysActive && requireWakeWord && !isProcessingCommand) {
                         const wakeWords = ['hey assistant', 'ok assistant', 'hey daddy', 'ok daddy', 'assistant'];
                         const detectedWake = wakeWords.find(wake => final.toLowerCase().includes(wake));
 
@@ -281,11 +284,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 }
                             }, 10000);
                             return;
+                        } else {
+                            // In wake word mode, ignore commands without wake word
+                            console.log('⏭️ Skipping - waiting for wake word');
+                            return;
                         }
                     }
 
-                    // Process command if wake word was detected or not in always-active mode
-                    if (!alwaysActive || isProcessingCommand) {
+                    // Process command directly (no wake word required or wake word detected)
+                    const shouldProcess = !alwaysActive || !requireWakeWord || isProcessingCommand;
+                    
+                    if (shouldProcess) {
+                        console.log('🎯 Processing voice command:', final);
                         addVoiceCommand(final);
                         
                         // Send via socket for voice command processing
@@ -302,10 +312,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
 
                         // Reset processing state after command
-                        setTimeout(() => {
-                            setIsProcessingCommand(false);
-                            setWakeWordDetected(false);
-                        }, 1000);
+                        if (requireWakeWord) {
+                            setTimeout(() => {
+                                setIsProcessingCommand(false);
+                                setWakeWordDetected(false);
+                            }, 1000);
+                        }
                     }
                 }
             };
@@ -832,6 +844,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setAlwaysActive(newState);
 
         console.log('🔄 Always-active mode:', newState ? 'ON' : 'OFF');
+        console.log('   Wake word required:', requireWakeWord);
 
         if (newState) {
             // Start listening when always-active enabled (sync both state and ref)
@@ -840,7 +853,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (!isVoiceActive && recognition) {
                 try {
                     recognition.start();
-                    speak('Always active mode enabled. Waiting for wake word.', voiceLanguage);
+                    const message = requireWakeWord 
+                        ? 'Always active mode enabled. Waiting for wake word.'
+                        : 'Always active mode enabled. Just speak your command.';
+                    speak(message, voiceLanguage);
                 } catch (error) {
                     console.error('Error starting always-active:', error);
                 }
@@ -858,6 +874,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setWakeWordDetected(false);
             setIsProcessingCommand(false);
         }
+    };
+
+    // Toggle wake word requirement
+    const toggleWakeWord = () => {
+        const newState = !requireWakeWord;
+        setRequireWakeWord(newState);
+        console.log('🔄 Wake word requirement:', newState ? 'ON' : 'OFF');
+        
+        const message = newState
+            ? 'Wake word enabled. Say "Hey Assistant" before commands.'
+            : 'Wake word disabled. Just speak your commands directly.';
+        speak(message, voiceLanguage);
     };
 
     const closeDetailView = () => {
@@ -880,6 +908,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setVoiceLanguage,
         alwaysActive,
         toggleAlwaysActive,
+        toggleWakeWord,
+        requireWakeWord,
         wakeWordDetected,
         speak,
         selectedView,

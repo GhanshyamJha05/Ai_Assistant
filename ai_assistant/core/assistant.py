@@ -553,9 +553,9 @@ class ModernAssistant:
         
         if PSUTIL_AVAILABLE:
             try:
-                # Basic system stats
+                # Basic system stats - use non-blocking calls
                 stats.update({
-                    "cpu_usage": psutil.cpu_percent(interval=0.1),
+                    "cpu_usage": psutil.cpu_percent(interval=0),  # Non-blocking
                     "memory_usage": psutil.virtual_memory().percent,
                     "disk_usage": psutil.disk_usage('C:\\' if os.name == 'nt' else '/').percent,
                     "active_tasks": len(psutil.pids()),
@@ -566,7 +566,10 @@ class ModernAssistant:
                 stats.update(network_stats)
                 
             except Exception as e:
+                # Log but don't crash on stats collection errors
+                import traceback
                 print(f"PSUtil error: {e}")
+                print(traceback.format_exc())
         
         self.system_stats_cache = stats
         self.cache_timestamp = current_time
@@ -584,14 +587,20 @@ class ModernAssistant:
             # Get current network I/O counters
             current_net = psutil.net_io_counters()
             
+            # Initialize on first call
+            if self.last_network_stats is None:
+                self.last_network_stats = current_net
+                self.last_network_time = current_time
+                return network_stats
+            
             if self.last_network_stats is not None and self.last_network_time is not None:
                 # Calculate time difference
                 time_diff = current_time - self.last_network_time
                 
-                if time_diff > 0:
+                if time_diff > 0.5:  # Only calculate if enough time passed (avoid division issues)
                     # Calculate bytes transferred since last measurement
-                    bytes_sent_diff = current_net.bytes_sent - self.last_network_stats.bytes_sent
-                    bytes_recv_diff = current_net.bytes_recv - self.last_network_stats.bytes_recv
+                    bytes_sent_diff = max(0, current_net.bytes_sent - self.last_network_stats.bytes_sent)
+                    bytes_recv_diff = max(0, current_net.bytes_recv - self.last_network_stats.bytes_recv)
                     
                     # Convert to Mbps (bytes/sec -> Mbps)
                     upload_bps = bytes_sent_diff / time_diff
