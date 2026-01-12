@@ -130,38 +130,32 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.warning(f"⚠️ Speech Recognition failed: {e}")
         
-        # Vosk (offline, instant) - Load English first for better performance
+        # Vosk (offline, instant) - 100% privacy, no internet required
         if VOSK_AVAILABLE:
-            try:
-                # Load English model first (primary language)
+            import os
+            # Load English model
+            en_model_path = Path("model/vosk-model-small-en-us-0.15")
+            if en_model_path.exists():
                 try:
-                    model = Model(lang="en")
+                    model = Model(str(en_model_path))
                     self.vosk_models['en'] = model
-                    logger.info("✅ Vosk English model loaded")
+                    logger.info(f"✅ Vosk English model loaded (offline/private)")
                 except Exception as e:
-                    # Try loading from cache path if direct load fails
-                    try:
-                        import os
-                        cache_path = os.path.expanduser("~/.cache/vosk/vosk-model-small-en-us-0.15")
-                        if os.path.exists(cache_path):
-                            model = Model(cache_path)
-                            self.vosk_models['en'] = model
-                            logger.info("✅ Vosk English model loaded from cache")
-                        else:
-                            logger.warning("⚠️ Vosk English model not found")
-                    except:
-                        logger.warning("⚠️ Vosk English model not found")
-                
-                # Optionally load Hindi model (secondary)
+                    logger.error(f"❌ Failed to load English model: {e}")
+            else:
+                logger.warning(f"⚠️ Vosk English model not found at {en_model_path}")
+            
+            # Load Hindi model (optional)
+            hi_model_path = Path("model/vosk-model-small-hi-0.22")
+            if hi_model_path.exists():
                 try:
-                    model = Model(lang="hi")
+                    model = Model(str(hi_model_path))
                     self.vosk_models['hi'] = model
-                    logger.info("✅ Vosk Hindi model loaded (optional)")
-                except:
-                    pass  # Silent - Hindi is optional
-                    
-            except Exception as e:
-                logger.warning(f"⚠️ Vosk initialization failed: {e}")
+                    logger.info(f"✅ Vosk Hindi model loaded (offline/private)")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to load Hindi model: {e}")
+            else:
+                logger.info("ℹ️ Vosk Hindi model not needed (optional)")
         
         # Whisper API
         if WHISPER_API_AVAILABLE and self.whisper_api_key:

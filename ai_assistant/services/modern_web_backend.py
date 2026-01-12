@@ -153,6 +153,32 @@ except ImportError as e:
     LLM_PROVIDER_AVAILABLE = False
     print(f"LLM providers not available: {e}")
 
+# Import NEW ADVANCED FEATURES
+try:
+    from ai_assistant.core.enhanced_integration import get_enhanced_ai
+    enhanced_ai = get_enhanced_ai()
+    ENHANCED_AI_AVAILABLE = True
+    print("✅ Enhanced AI loaded - All advanced features active!")
+    print("   • Semantic response cache")
+    print("   • Intelligent model routing")
+    print("   • Streaming responses")
+    print("   • Emotion detection")
+    print("   • Visual verification")
+except ImportError as e:
+    ENHANCED_AI_AVAILABLE = False
+    enhanced_ai = None
+    print(f"⚠️ Enhanced AI not available: {e}")
+
+try:
+    from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+    usage_analyzer = UsagePatternAnalyzer()
+    USAGE_ANALYZER_AVAILABLE = True
+    print("✅ Usage pattern analyzer loaded")
+except ImportError as e:
+    USAGE_ANALYZER_AVAILABLE = False
+    usage_analyzer = None
+    print(f"⚠️ Usage analyzer not available: {e}")
+
 # System monitoring
 try:
     import psutil
@@ -307,6 +333,17 @@ try:
 except ImportError as e:
     VOICE_WEBSOCKET_AVAILABLE = False
     logger.warning(f"⚠️ Voice WebSocket handlers not available: {e}")
+
+# Import Vosk WebSocket handlers for offline recognition
+try:
+    from ai_assistant.services.vosk_websocket_handler import register_vosk_handlers, VOSK_AVAILABLE as VOSK_WS_AVAILABLE
+    if VOSK_WS_AVAILABLE:
+        logger.info("✅ Vosk WebSocket handler loaded (offline recognition ready)")
+    else:
+        logger.warning("⚠️ Vosk library not installed")
+except ImportError as e:
+    VOSK_WS_AVAILABLE = False
+    logger.warning(f"⚠️ Vosk WebSocket handler not available: {e}")
 
 # =============================================================================
 # STARTUP OPTIMIZATION - Feature Toggle Configuration
@@ -866,7 +903,15 @@ def api_status():
             "conversational_ai": CONVERSATIONAL_AI_AVAILABLE,
             "voice": VOICE_AVAILABLE,
             "system_monitoring": PSUTIL_AVAILABLE,
-            "learning_systems": learning_systems_available
+            "learning_systems": learning_systems_available,
+            # NEW ADVANCED FEATURES
+            "enhanced_ai": ENHANCED_AI_AVAILABLE,
+            "usage_analyzer": USAGE_ANALYZER_AVAILABLE,
+            "semantic_cache": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.cache is not None,
+            "model_router": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.router is not None,
+            "streaming": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.streaming is not None,
+            "emotion_detection": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.emotion_detector is not None,
+            "visual_verification": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.verifier is not None
         }
     })
 
@@ -1573,6 +1618,210 @@ def api_startup_briefing():
 
 # ============================================================================
 # End of Startup Sequence API Endpoints
+# ============================================================================
+
+# ============================================================================
+# ADVANCED FEATURES API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/enhanced/chat', methods=['POST'])
+@jwt_required(optional=True)
+@limiter.limit("60 per minute")
+async def api_enhanced_chat():
+    """Enhanced chat with all advanced features: caching, routing, streaming, emotion detection"""
+    try:
+        if not ENHANCED_AI_AVAILABLE:
+            return jsonify({
+                "error": "Enhanced AI not available. Run: pip install diskcache sentence-transformers",
+                "fallback": True
+            }), 503
+        
+        current_user = get_jwt_identity() or "anonymous"
+        data = request.get_json()
+        
+        message = data.get('message', '')
+        if not message:
+            return jsonify({"error": "No message provided"}), 400
+        
+        # Optional parameters
+        enable_cache = data.get('enable_cache', True)
+        enable_streaming = data.get('enable_streaming', False)
+        audio_path = data.get('audio_path', None)  # For emotion detection
+        context = data.get('context', {})
+        
+        # Process with enhanced AI
+        result = await enhanced_ai.process_query(
+            query=message,
+            context=context,
+            enable_cache=enable_cache,
+            enable_streaming=enable_streaming,
+            audio_path=audio_path
+        )
+        
+        # Log for learning
+        if LEARNING_ROUTER_AVAILABLE and learning_router:
+            learning_router.route_conversation(message, result['text'], current_user)
+        
+        return jsonify({
+            "success": True,
+            "message": message,
+            "response": result['text'],
+            "metadata": {
+                "model": result['model'],
+                "cached": result['cached'],
+                "emotion": result.get('emotion'),
+                "complexity": result.get('complexity', 0),
+                "time_ms": result['time_ms'],
+                "tokens": result.get('tokens', 0),
+                "cost_usd": result.get('cost_usd', 0)
+            },
+            "features_used": ["enhanced_ai", "semantic_cache", "model_routing"],
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Enhanced chat error: {e}")
+        return jsonify({
+            "error": str(e),
+            "success": False
+        }), 500
+
+@app.route('/api/enhanced/stats', methods=['GET'])
+@limiter.limit("30 per minute")
+def api_enhanced_stats():
+    """Get comprehensive stats for all advanced features"""
+    try:
+        if not ENHANCED_AI_AVAILABLE:
+            return jsonify({"error": "Enhanced AI not available"}), 503
+        
+        stats = enhanced_ai.get_stats()
+        
+        return jsonify({
+            "success": True,
+            "stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Enhanced stats error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enhanced/cache/clear', methods=['POST'])
+@jwt_required()
+@limiter.limit("10 per minute")
+def api_clear_cache():
+    """Clear the semantic response cache"""
+    try:
+        if not ENHANCED_AI_AVAILABLE:
+            return jsonify({"error": "Enhanced AI not available"}), 503
+        
+        if enhanced_ai.cache:
+            enhanced_ai.cache.invalidate()  # Clear all cache
+            
+            return jsonify({
+                "success": True,
+                "message": "Cache cleared successfully",
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({"error": "Cache not available"}), 503
+        
+    except Exception as e:
+        logger.error(f"Cache clear error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/usage-analysis', methods=['GET'])
+@jwt_required(optional=True)
+@limiter.limit("10 per minute")
+def api_usage_analysis():
+    """Get usage pattern analysis and training data"""
+    try:
+        if not USAGE_ANALYZER_AVAILABLE:
+            return jsonify({"error": "Usage analyzer not available"}), 503
+        
+        days_back = int(request.args.get('days', 30))
+        
+        # Run analysis
+        results = usage_analyzer.analyze_all(days_back=days_back)
+        
+        return jsonify({
+            "success": True,
+            "analysis": {
+                "common_commands": results.get('common_commands', [])[:10],
+                "frequent_topics": results.get('frequent_topics', [])[:10],
+                "time_patterns": results.get('time_patterns', {}),
+                "app_usage": results.get('app_usage', {}),
+                "command_sequences": results.get('command_sequences', [])[:5],
+                "preferences": results.get('preferences', {}),
+                "training_data_count": len(results.get('training_data', []))
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Usage analysis error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/usage-analysis/export', methods=['POST'])
+@jwt_required()
+@limiter.limit("5 per minute")
+def api_export_training_data():
+    """Export training data for fine-tuning"""
+    try:
+        if not USAGE_ANALYZER_AVAILABLE:
+            return jsonify({"error": "Usage analyzer not available"}), 503
+        
+        data = request.get_json()
+        format_type = data.get('format', 'openai')  # 'openai' or 'huggingface'
+        days_back = data.get('days', 30)
+        
+        # Analyze
+        results = usage_analyzer.analyze_all(days_back=days_back)
+        
+        # Export
+        output_path = f"data/training/finetuning_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
+        exported_file = usage_analyzer.export_for_finetuning(output_path, format=format_type)
+        
+        return jsonify({
+            "success": True,
+            "file_path": exported_file,
+            "examples_count": len(results.get('training_data', [])),
+            "format": format_type,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Export training data error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/automation/verify', methods=['POST'])
+@jwt_required(optional=True)
+@limiter.limit("30 per minute")
+async def api_verify_automation():
+    """Verify automation action using visual verification"""
+    try:
+        if not ENHANCED_AI_AVAILABLE:
+            return jsonify({"error": "Visual verification not available"}), 503
+        
+        data = request.get_json()
+        action_name = data.get('action_name', 'automation')
+        app_name = data.get('app_name', None)
+        
+        # Verify automation
+        result = await enhanced_ai.verify_automation(action_name, app_name)
+        
+        return jsonify({
+            "success": result['success'],
+            "verification": result,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Automation verification error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ============================================================================
+# End of Advanced Features API Endpoints
 # ============================================================================
 
 
@@ -2731,6 +2980,7 @@ def handle_voice_command(data):
         
         print(f"✅ Voice command processed successfully")
         print(f"   Response: {response[:100]}...")
+        print(f"🔊 Emitted voice_response event for talkback")
         
     except Exception as e:
         import traceback
@@ -2981,6 +3231,493 @@ def api_load_settings():
     except Exception as e:
         print(f"Failed to load settings: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/all', methods=['GET'])
+def api_get_all_settings():
+    """Get all comprehensive settings"""
+    try:
+        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+        else:
+            # Default settings
+            settings = {
+                "appearance": {
+                    "theme": "dark",
+                    "accentColor": "blue",
+                    "fontSize": "medium",
+                    "language": "en-US"
+                },
+                "notifications": {
+                    "pushNotifications": True,
+                    "soundAlerts": True,
+                    "emailNotifications": False,
+                    "desktopNotifications": True
+                },
+                "privacy": {
+                    "dataCollection": "minimal",
+                    "encryption": True,
+                    "autoLock": "5 minutes",
+                    "twoFactorAuth": False
+                },
+                "voice": {
+                    "engine": "edge_tts",
+                    "voice": "en-US-AriaNeural",
+                    "speed": 1.0,
+                    "volume": 0.9,
+                    "wakeWord": "assistant",
+                    "continuousListening": False
+                },
+                "ai": {
+                    "preferredModel": "gemini-2.0-flash-exp",
+                    "autoRoute": True,
+                    "contextMemory": True,
+                    "learningEnabled": True
+                },
+                "automation": {
+                    "autoUpdate": True,
+                    "backgroundTasks": True,
+                    "autoBackup": "daily"
+                }
+            }
+        
+        return jsonify({"success": True, "settings": settings})
+    
+    except Exception as e:
+        logger.error(f"Failed to load settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/update', methods=['POST'])
+def api_update_settings():
+    """Update specific settings"""
+    try:
+        data = request.get_json()
+        category = data.get('category')
+        settings_data = data.get('settings')
+        
+        if not category or not settings_data:
+            return jsonify({"success": False, "error": "Category and settings required"}), 400
+        
+        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Load existing settings
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                all_settings = json.load(f)
+        else:
+            all_settings = {}
+        
+        # Update category
+        all_settings[category] = settings_data
+        
+        # Save
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(all_settings, f, indent=2)
+        
+        return jsonify({
+            "success": True,
+            "message": f"{category.capitalize()} settings updated",
+            "settings": all_settings
+        })
+    
+    except Exception as e:
+        logger.error(f"Failed to update settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/reset', methods=['POST'])
+def api_reset_settings():
+    """Reset settings to default"""
+    try:
+        data = request.get_json()
+        category = data.get('category')  # Optional: reset specific category
+        
+        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        
+        if category:
+            # Reset specific category
+            if settings_file.exists():
+                with open(settings_file, 'r', encoding='utf-8') as f:
+                    all_settings = json.load(f)
+            else:
+                all_settings = {}
+            
+            # Remove category
+            if category in all_settings:
+                del all_settings[category]
+            
+            with open(settings_file, 'w', encoding='utf-8') as f:
+                json.dump(all_settings, f, indent=2)
+            
+            return jsonify({"success": True, "message": f"{category.capitalize()} settings reset"})
+        else:
+            # Reset all settings
+            if settings_file.exists():
+                settings_file.unlink()
+            
+            return jsonify({"success": True, "message": "All settings reset to default"})
+    
+    except Exception as e:
+        logger.error(f"Failed to reset settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/export', methods=['GET'])
+def api_export_settings():
+    """Export settings as JSON"""
+    try:
+        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+        else:
+            settings = {}
+        
+        return jsonify({
+            "success": True,
+            "data": settings,
+            "exportedAt": datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Failed to export settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/settings/import', methods=['POST'])
+def api_import_settings():
+    """Import settings from JSON"""
+    try:
+        data = request.get_json()
+        imported_settings = data.get('settings')
+        
+        if not imported_settings:
+            return jsonify({"success": False, "error": "No settings data provided"}), 400
+        
+        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(imported_settings, f, indent=2)
+        
+        return jsonify({
+            "success": True,
+            "message": "Settings imported successfully",
+            "settings": imported_settings
+        })
+    
+    except Exception as e:
+        logger.error(f"Failed to import settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ============================================================
+# MODEL SELECTION & PREFERENCES API ENDPOINTS
+# ============================================================
+
+@app.route('/api/models/available', methods=['GET'])
+@limiter.limit("30 per minute")
+def api_get_available_models():
+    """Get list of all available models with their providers"""
+    try:
+        models_list = []
+        
+        # Get models from router if available
+        if ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.router:
+            router_models = enhanced_ai.router.models
+            for model in router_models:
+                models_list.append({
+                    'id': model.name,
+                    'name': model.name,
+                    'provider': model.tier.value,
+                    'tier': model.tier.value,
+                    'max_tokens': model.max_tokens,
+                    'cost_per_1k_tokens': model.cost_per_1k_tokens,
+                    'avg_latency_ms': model.avg_latency_ms,
+                    'capabilities': model.capabilities,
+                    'priority': model.priority
+                })
+        else:
+            # Fallback: provide default model list
+            models_list = [
+                {
+                    'id': 'gemini-2.0-flash-exp',
+                    'name': 'Gemini 2.0 Flash',
+                    'provider': 'Google',
+                    'tier': 'fast',
+                    'max_tokens': 8192,
+                    'cost_per_1k_tokens': 0.0001,
+                    'avg_latency_ms': 500,
+                    'capabilities': ['general', 'multimodal', 'coding'],
+                    'priority': 10,
+                    'description': 'Fast, cost-effective model for general queries'
+                },
+                {
+                    'id': 'gpt-3.5-turbo',
+                    'name': 'GPT-3.5 Turbo',
+                    'provider': 'OpenAI',
+                    'tier': 'standard',
+                    'max_tokens': 4096,
+                    'cost_per_1k_tokens': 0.002,
+                    'avg_latency_ms': 1000,
+                    'capabilities': ['general', 'coding', 'reasoning'],
+                    'priority': 5,
+                    'description': 'Balanced model for medium complexity tasks'
+                },
+                {
+                    'id': 'gpt-4-turbo',
+                    'name': 'GPT-4 Turbo',
+                    'provider': 'OpenAI',
+                    'tier': 'advanced',
+                    'max_tokens': 8192,
+                    'cost_per_1k_tokens': 0.03,
+                    'avg_latency_ms': 3000,
+                    'capabilities': ['general', 'coding', 'reasoning', 'creativity', 'math'],
+                    'priority': 1,
+                    'description': 'Most capable model for complex tasks'
+                },
+                {
+                    'id': 'gemini-2.0-pro',
+                    'name': 'Gemini 2.0 Pro',
+                    'provider': 'Google',
+                    'tier': 'advanced',
+                    'max_tokens': 32768,
+                    'cost_per_1k_tokens': 0.0025,
+                    'avg_latency_ms': 2000,
+                    'capabilities': ['general', 'multimodal', 'reasoning', 'coding'],
+                    'priority': 2,
+                    'description': 'Advanced multimodal model with large context'
+                },
+                {
+                    'id': 'claude-3-sonnet',
+                    'name': 'Claude 3 Sonnet',
+                    'provider': 'Anthropic',
+                    'tier': 'standard',
+                    'max_tokens': 4096,
+                    'cost_per_1k_tokens': 0.015,
+                    'avg_latency_ms': 1500,
+                    'capabilities': ['general', 'reasoning', 'coding'],
+                    'priority': 4,
+                    'description': 'Balanced Claude model'
+                }
+            ]
+        
+        # Group by provider
+        by_provider = {}
+        for model in models_list:
+            provider = model.get('provider', 'Unknown')
+            if provider not in by_provider:
+                by_provider[provider] = []
+            by_provider[provider].append(model)
+        
+        return jsonify({
+            'success': True,
+            'models': models_list,
+            'by_provider': by_provider,
+            'total_models': len(models_list),
+            'providers': list(by_provider.keys()),
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Get available models error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/models/preference', methods=['GET'])
+@jwt_required(optional=True)
+def api_get_model_preference():
+    """Get user's preferred model"""
+    try:
+        current_user = get_jwt_identity() or "anonymous"
+        
+        # Load preferences from file
+        prefs_file = Path('data') / 'user_preferences' / f'{current_user}_model_pref.json'
+        
+        if prefs_file.exists():
+            with open(prefs_file, 'r') as f:
+                preference = json.load(f)
+        else:
+            # Default preference
+            preference = {
+                'preferred_model': 'gemini-2.0-flash-exp',
+                'auto_route': True,
+                'fallback_model': 'gpt-3.5-turbo',
+                'max_cost_per_query': 0.01
+            }
+        
+        return jsonify({
+            'success': True,
+            'preference': preference,
+            'user': current_user,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Get model preference error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/models/preference', methods=['POST'])
+@jwt_required(optional=True)
+@limiter.limit("30 per minute")
+def api_set_model_preference():
+    """Set user's preferred model"""
+    try:
+        current_user = get_jwt_identity() or "anonymous"
+        data = request.get_json()
+        
+        preferred_model = data.get('preferred_model')
+        auto_route = data.get('auto_route', True)
+        fallback_model = data.get('fallback_model')
+        max_cost_per_query = data.get('max_cost_per_query', 0.01)
+        
+        if not preferred_model:
+            return jsonify({'success': False, 'error': 'preferred_model is required'}), 400
+        
+        # Save preference
+        preference = {
+            'preferred_model': preferred_model,
+            'auto_route': auto_route,
+            'fallback_model': fallback_model or 'gpt-3.5-turbo',
+            'max_cost_per_query': max_cost_per_query,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        prefs_dir = Path('data') / 'user_preferences'
+        prefs_dir.mkdir(parents=True, exist_ok=True)
+        
+        prefs_file = prefs_dir / f'{current_user}_model_pref.json'
+        with open(prefs_file, 'w') as f:
+            json.dump(preference, f, indent=2)
+        
+        logger.info(f"User {current_user} set preferred model to {preferred_model}")
+        
+        return jsonify({
+            'success': True,
+            'preference': preference,
+            'message': f'Model preference saved: {preferred_model}',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Set model preference error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/models/stats', methods=['GET'])
+@jwt_required(optional=True)
+@limiter.limit("30 per minute")
+def api_get_model_stats():
+    """Get usage statistics for each model"""
+    try:
+        current_user = get_jwt_identity() or "anonymous"
+        
+        stats = {}
+        
+        # Get stats from router if available
+        if ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.router:
+            router_stats = enhanced_ai.router.get_stats()
+            stats['routing'] = router_stats
+        
+        # Get stats from enhanced AI
+        if ENHANCED_AI_AVAILABLE and enhanced_ai:
+            ai_stats = enhanced_ai.get_stats()
+            stats['enhanced_ai'] = ai_stats
+        
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'user': current_user,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Get model stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/models/compare', methods=['POST'])
+@limiter.limit("20 per minute")
+def api_compare_models():
+    """Compare multiple models side by side"""
+    try:
+        data = request.get_json()
+        model_ids = data.get('model_ids', [])
+        
+        if not model_ids or len(model_ids) < 2:
+            return jsonify({'success': False, 'error': 'At least 2 model IDs required'}), 400
+        
+        # Get model details
+        comparison = []
+        
+        if ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.router:
+            for model_id in model_ids:
+                model = next((m for m in enhanced_ai.router.models if m.name == model_id), None)
+                if model:
+                    comparison.append({
+                        'id': model.name,
+                        'name': model.name,
+                        'tier': model.tier.value,
+                        'cost_per_1k_tokens': model.cost_per_1k_tokens,
+                        'max_tokens': model.max_tokens,
+                        'avg_latency_ms': model.avg_latency_ms,
+                        'capabilities': model.capabilities
+                    })
+        
+        return jsonify({
+            'success': True,
+            'comparison': comparison,
+            'model_count': len(comparison),
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Compare models error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/models/providers', methods=['GET'])
+@limiter.limit("30 per minute")
+def api_get_providers():
+    """Get list of all available LLM providers"""
+    try:
+        providers = [
+            {
+                'id': 'google',
+                'name': 'Google',
+                'description': 'Google Gemini models',
+                'models': ['gemini-2.0-flash-exp', 'gemini-2.0-pro', 'gemini-1.5-pro'],
+                'features': ['multimodal', 'fast', 'cost-effective'],
+                'api_key_required': True,
+                'status': 'active'
+            },
+            {
+                'id': 'openai',
+                'name': 'OpenAI',
+                'description': 'GPT models from OpenAI',
+                'models': ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o'],
+                'features': ['versatile', 'powerful', 'coding'],
+                'api_key_required': True,
+                'status': 'active'
+            },
+            {
+                'id': 'anthropic',
+                'name': 'Anthropic',
+                'description': 'Claude models',
+                'models': ['claude-3-sonnet', 'claude-3-opus', 'claude-3-haiku'],
+                'features': ['safe', 'reasoning', 'long-context'],
+                'api_key_required': True,
+                'status': 'active'
+            }
+        ]
+        
+        return jsonify({
+            'success': True,
+            'providers': providers,
+            'total_providers': len(providers),
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Get providers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================
 # FILE OPERATIONS API ENDPOINTS
@@ -3698,6 +4435,7 @@ try:
                 return
             
             print(f'📨 Command received ({source}): {command_text}')
+            print(f'   Using assistant: {type(handle_command.assistant).__name__ if hasattr(handle_command, "assistant") else "Not created yet"}')
             
             # Process command through assistant
             try:
@@ -3717,6 +4455,8 @@ try:
                     'timestamp': datetime.now().isoformat()
                 })
                 
+                print(f'✅ Response sent: {response_text[:100]}...')
+                
                 # Emit log update
                 emit('log_update', {
                     'type': 'info',
@@ -3726,13 +4466,27 @@ try:
                 
             except Exception as process_error:
                 print(f'❌ Processing error: {process_error}')
+                import traceback
+                print(traceback.format_exc())
+                
+                # Fallback: Simple greeting responses
+                cmd_lower = command_text.lower()
+                if any(word in cmd_lower for word in ['hello', 'hi', 'hey']):
+                    fallback_response = "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, and much more. What would you like me to do?"
+                elif any(word in cmd_lower for word in ['how are you']):
+                    fallback_response = "I'm doing great, thank you for asking! 😊 How can I help you today?"
+                else:
+                    fallback_response = f'I received: "{command_text}". Let me help you with that!'
+                
                 emit('command_response', {
                     'success': True,
-                    'response': f'I received: "{command_text}". Processing your request...',
+                    'response': fallback_response,
                     'command': command_text,
                     'source': source,
                     'timestamp': datetime.now().isoformat()
                 })
+                
+                print(f'✅ Fallback response sent: {fallback_response[:100]}...')
                 
         except Exception as e:
             print(f'❌ Command error: {e}')
@@ -3755,7 +4509,7 @@ try:
         
         try:
             if PSUTIL_AVAILABLE:
-                stats = assistant.get_system_status()
+                stats = assistant.get_real_time_system_stats()
                 _stats_cache['data'] = stats
                 _stats_cache['timestamp'] = current_time
                 return stats
@@ -3784,6 +4538,14 @@ try:
     # Start stats broadcaster
     stats_thread = threading.Thread(target=broadcast_system_stats, daemon=True)
     stats_thread.start()
+    
+    # Register Vosk WebSocket handlers for offline recognition
+    if VOSK_WS_AVAILABLE:
+        try:
+            register_vosk_handlers(socketio)
+            logger.info("✅ Vosk WebSocket handlers registered (offline recognition enabled)")
+        except Exception as e:
+            logger.error(f"Failed to register Vosk handlers: {e}")
     
     logger.info("✅ Chat & Voice Socket.IO handlers registered")
     

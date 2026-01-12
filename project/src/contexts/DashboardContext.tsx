@@ -54,6 +54,8 @@ interface DashboardContextType {
     toggleWakeWord: () => void;
     requireWakeWord: boolean;
     wakeWordDetected: boolean;
+    recognitionMode: 'web' | 'vosk';
+    toggleRecognitionMode: () => void;
     speak: (text: string, lang?: string) => void;
     selectedView: ViewType;
     setSelectedView: (view: ViewType) => void;
@@ -98,6 +100,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
+    const [recognitionMode, setRecognitionMode] = useState<'web' | 'vosk'>('web'); // 'web' = Google, 'vosk' = offline
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
     const [requireWakeWord, setRequireWakeWord] = useState(false); // Require wake word in always-active mode
@@ -127,10 +132,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         newSocket.on('command_response', (data: any) => {
+            console.log('📢 command_response received:', data);
             if (data.success) {
-                addChatMessage(data.response || data.message, 'ai');
+                const message = data.response || data.message;
+                addChatMessage(message, 'ai');
+                // Add speak here too for command_response
+                console.log('🔊 Speaking from command_response:', message?.substring(0, 50));
+                speak(message, voiceLanguage);
             } else {
-                addChatMessage('Error: ' + (data.error || 'Unknown error'), 'ai');
+                const errorMsg = 'Error: ' + (data.error || 'Unknown error');
+                addChatMessage(errorMsg, 'ai');
+                speak(errorMsg, voiceLanguage);
             }
         });
 
@@ -149,12 +161,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         // Handle voice command responses with talkback
         newSocket.on('voice_response', (data: any) => {
             console.log('🎤 Voice response received:', data);
+            console.log('🔊 voiceLanguage:', voiceLanguage);
+            console.log('🔊 data.success:', data.success);
+            console.log('🔊 data.response:', data.response?.substring(0, 100));
             
             if (data.success && data.response) {
                 addChatMessage(data.response, 'ai');
                 
                 // Speak the response back to user (talkback)
+                console.log('🔊 About to call speak() with:', { text: data.response.substring(0, 50), lang: voiceLanguage });
                 speak(data.response, voiceLanguage);
+                console.log('✅ speak() called successfully');
                 
                 addSystemLog('success', `Command processed: ${data.response.substring(0, 50)}...`);
             } else if (data.error) {
@@ -163,6 +180,29 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 speak(errorMsg, voiceLanguage);
                 addSystemLog('error', errorMsg);
             }
+        });
+
+        // Vosk offline recognition handlers
+        newSocket.on('vosk_ready', (data: any) => {
+            console.log('🔒 Vosk offline recognition ready:', data);
+            addSystemLog('success', `Offline recognition enabled (${data.language})`);
+        });
+
+        newSocket.on('vosk_transcript', (data: any) => {
+            console.log('🔒 Vosk transcript:', data);
+            if (data.isFinal) {
+                setInterimTranscript('');
+                // Process as voice command
+                newSocket.emit('voice_command', { text: data.text, language: voiceLanguage });
+            } else {
+                setInterimTranscript(data.text);
+                interimTranscriptRef.current = data.text;
+            }
+        });
+
+        newSocket.on('vosk_error', (data: any) => {
+            console.error('❌ Vosk error:', data);
+            addSystemLog('error', `Offline recognition error: ${data.error}`);
         });
 
         setSocket(newSocket);
@@ -300,13 +340,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         
                         // Send via socket for voice command processing
                         if (socket && socket.connected) {
-                            console.log('📤 Sending voice command to backend:', final);
+                            console.log('📤 Sending voice_command event to backend:', final);
+                            console.log('📤 Socket connected:', socket.connected);
+                            console.log('📤 Socket ID:', socket.id);
                             socket.emit('voice_command', { 
                                 text: final,
                                 language: voiceLanguage,
                                 timestamp: new Date().toISOString()
                             });
+                            console.log('✅ voice_command emitted successfully');
                         } else {
+                            console.warn('⚠️ Socket not connected, using fallback');
                             // Fallback to regular command
                             sendCommand(final);
                         }
@@ -753,6 +797,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     const toggleVoice = () => {
+        if (recognitionMode === 'vosk') {
+            // Use Vosk offline recognition
+            if (isVoiceActive) {
+                stopVoskRecognition();
+            } else {
+                startVoskRecognition();
+            }
+            return;
+        }
+
+        // Web Speech API (existing code)
         if (!recognition) {
             alert('Voice recognition not supported in this browser');
             return;
@@ -811,30 +866,45 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Text-to-Speech function
     const speak = (text: string, lang: string = 'en-US') => {
         try {
+            console.log('🔊 speak() called with:', { textLength: text.length, lang });
+            
             const synth = window.speechSynthesis;
+            console.log('🔊 speechSynthesis available:', !!synth);
+            console.log('🔊 speechSynthesis speaking:', synth.speaking);
 
             // Cancel any ongoing speech
             synth.cancel();
 
-            const utterance = new SpeechSynthesisUtterance(text);
+            // Wait a bit for cancel to complete
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(text);
 
-            // Map language codes
-            if (lang === 'hi-IN' || lang === 'hindi') {
-                utterance.lang = 'hi-IN';
-            } else if (lang === 'auto') {
-                utterance.lang = navigator.language || 'en-US';
-            } else {
-                utterance.lang = lang;
-            }
+                // Map language codes - default to en-US for 'auto'
+                if (lang === 'hi-IN' || lang === 'hindi') {
+                    utterance.lang = 'hi-IN';
+                } else if (lang === 'auto') {
+                    utterance.lang = 'en-US'; // Use en-US instead of navigator.language
+                } else {
+                    utterance.lang = lang;
+                }
 
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            utterance.volume = 0.8;
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0; // Increased volume to max
 
-            console.log('🔊 Speaking:', text, 'in', utterance.lang);
-            synth.speak(utterance);
+                console.log('🔊 Speaking:', text.substring(0, 50), 'in', utterance.lang);
+                console.log('🔊 Utterance config:', { rate: utterance.rate, pitch: utterance.pitch, volume: utterance.volume });
+                console.log('🔊 Available voices:', synth.getVoices().length);
+                
+                utterance.onstart = () => console.log('✅ TTS started');
+                utterance.onend = () => console.log('✅ TTS ended');
+                utterance.onerror = (e) => console.error('❌ TTS error:', e);
+                
+                synth.speak(utterance);
+                console.log('🔊 synth.speak() called, pending:', synth.pending, 'speaking:', synth.speaking);
+            }, 100);
         } catch (error) {
-            console.error('TTS error:', error);
+            console.error('❌ TTS error:', error);
         }
     };
 
@@ -888,6 +958,94 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         speak(message, voiceLanguage);
     };
 
+    // Toggle between Web Speech API (Google) and Vosk (offline)
+    const toggleRecognitionMode = () => {
+        const newMode = recognitionMode === 'web' ? 'vosk' : 'web';
+        
+        // Stop current recognition
+        if (isVoiceActive) {
+            toggleVoice();
+        }
+        
+        setRecognitionMode(newMode);
+        const modeName = newMode === 'web' ? 'Online (Google)' : 'Offline (Private)';
+        console.log(`🔄 Recognition mode: ${modeName}`);
+        addSystemLog('info', `Switched to ${modeName} recognition`);
+        speak(`Switched to ${modeName} speech recognition`, voiceLanguage);
+    };
+
+    // Start Vosk offline recognition
+    const startVoskRecognition = async () => {
+        if (!socket) {
+            addSystemLog('error', 'Not connected to server');
+            return;
+        }
+
+        try {
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
+            });
+
+            // Create MediaRecorder for audio capture
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            // Start Vosk session on backend
+            socket.emit('vosk_start_recognition', {
+                language: voiceLanguage,
+                sampleRate: 16000
+            });
+
+            // Send audio chunks to backend
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    // Convert blob to array buffer and send
+                    event.data.arrayBuffer().then(buffer => {
+                        socket.emit('vosk_audio_chunk', {
+                            audio: Array.from(new Uint8Array(buffer))
+                        });
+                    });
+                }
+            };
+
+            mediaRecorder.start(100); // Capture in 100ms chunks for real-time processing
+            setIsVoiceActive(true);
+            setIsRecognitionStarted(true);
+            console.log('🔒 Vosk offline recognition started');
+            
+        } catch (error) {
+            console.error('❌ Microphone access denied:', error);
+            addSystemLog('error', 'Microphone access denied');
+        }
+    };
+
+    // Stop Vosk offline recognition
+    const stopVoskRecognition = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+
+        if (socket) {
+            socket.emit('vosk_stop_recognition');
+        }
+
+        setIsVoiceActive(false);
+        setIsRecognitionStarted(false);
+        setInterimTranscript('');
+        console.log('🛑 Vosk offline recognition stopped');
+    };
+
     const closeDetailView = () => {
         setSelectedView(null);
     };
@@ -911,6 +1069,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         toggleWakeWord,
         requireWakeWord,
         wakeWordDetected,
+        recognitionMode,
+        toggleRecognitionMode,
         speak,
         selectedView,
         setSelectedView,

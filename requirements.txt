@@ -184,6 +184,12 @@ mcp>=1.1.0
 pydantic>=2.0.0
 
 # =========================================
+# ADVANCED FEATURES & PERFORMANCE
+# =========================================
+diskcache>=5.6.3  # Semantic response caching
+redis>=5.0.0  # Alternative caching backend (optional)
+
+# =========================================
 # UTILITIES
 # =========================================
 colorama==0.4.6

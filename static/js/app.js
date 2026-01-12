@@ -510,19 +510,240 @@ function showAbout() {
     assistant.showModal('About YourDaddy Assistant', content);
 }
 
-function showSettings() {
-    const content = `
-        <p>Settings panel coming soon! Features will include:</p>
-        <ul>
-            <li>🎤 Voice recognition settings</li>
-            <li>🎨 Theme customization</li>
-            <li>🔧 Automation preferences</li>
-            <li>📊 Usage analytics</li>
-            <li>🔒 Privacy controls</li>
-        </ul>
-        <p>For now, you can modify settings in the configuration files.</p>
-    `;
-    assistant.showModal('Settings', content);
+async function showSettings() {
+    // Show loading state
+    assistant.showModal('Settings', '<div class="loading-spinner">Loading settings...</div>');
+    
+    try {
+        // Fetch available models and current preference
+        const [modelsResponse, preferenceResponse] = await Promise.all([
+            fetch('/api/models/available'),
+            fetch('/api/models/preference')
+        ]);
+        
+        const modelsData = await modelsResponse.json();
+        const preferenceData = await preferenceResponse.json();
+        
+        const currentModel = preferenceData.preference?.preferred_model || 'gemini-2.0-flash-exp';
+        const autoRoute = preferenceData.preference?.auto_route !== false;
+        
+        const content = `
+            <div class="settings-panel">
+                <h3>🤖 AI Model Selection</h3>
+                
+                <div class="settings-section">
+                    <label class="settings-label">
+                        <input type="checkbox" id="auto-route" ${autoRoute ? 'checked' : ''}>
+                        <span>Enable Intelligent Model Routing</span>
+                    </label>
+                    <p class="settings-help">Automatically select the best model based on your query</p>
+                </div>
+                
+                <div class="settings-section">
+                    <label class="settings-label">Preferred Model:</label>
+                    <div id="model-providers" class="model-providers">
+                        ${Object.entries(modelsData.by_provider || {}).map(([provider, models]) => `
+                            <div class="provider-section">
+                                <h4 class="provider-name">${getProviderIcon(provider)} ${provider}</h4>
+                                <div class="models-grid">
+                                    ${models.map(model => `
+                                        <div class="model-card ${currentModel === model.id ? 'selected' : ''}" 
+                                             onclick="selectModel('${model.id}')">
+                                            <div class="model-header">
+                                                <span class="model-name">${model.name}</span>
+                                                <span class="model-tier tier-${model.tier}">${model.tier}</span>
+                                            </div>
+                                            <p class="model-description">${model.description || ''}</p>
+                                            <div class="model-specs">
+                                                <span class="spec-item">💰 $${model.cost_per_1k_tokens}/1K tokens</span>
+                                                <span class="spec-item">⚡ ${model.avg_latency_ms}ms</span>
+                                                <span class="spec-item">📊 ${model.max_tokens} tokens</span>
+                                            </div>
+                                            <div class="model-capabilities">
+                                                ${model.capabilities.map(cap => 
+                                                    `<span class="capability-badge">${cap}</span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="settings-actions">
+                    <button onclick="saveModelSettings()" class="btn-primary">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                    <button onclick="compareModels()" class="btn-secondary">
+                        <i class="fas fa-balance-scale"></i> Compare Models
+                    </button>
+                    <button onclick="viewModelStats()" class="btn-secondary">
+                        <i class="fas fa-chart-bar"></i> View Statistics
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        assistant.showModal('Settings', content);
+        
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+        assistant.showModal('Settings', `
+            <p class="error-message">❌ Failed to load settings. Please try again.</p>
+            <p>Error: ${error.message}</p>
+        `);
+    }
+}
+
+function getProviderIcon(provider) {
+    const icons = {
+        'Google': '🔵',
+        'OpenAI': '🟢',
+        'Anthropic': '🟣'
+    };
+    return icons[provider] || '⚪';
+}
+
+let selectedModelId = null;
+
+function selectModel(modelId) {
+    selectedModelId = modelId;
+    
+    // Update UI
+    document.querySelectorAll('.model-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    event.target.closest('.model-card').classList.add('selected');
+}
+
+async function saveModelSettings() {
+    if (!selectedModelId) {
+        alert('Please select a model first');
+        return;
+    }
+    
+    const autoRoute = document.getElementById('auto-route').checked;
+    
+    try {
+        const response = await fetch('/api/models/preference', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                preferred_model: selectedModelId,
+                auto_route: autoRoute
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            assistant.addMessage(`✅ Settings saved! Now using ${selectedModelId}`, 'success');
+            assistant.closeModal();
+        } else {
+            alert('Failed to save settings: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error saving settings: ' + error.message);
+    }
+}
+
+async function compareModels() {
+    try {
+        const selectedCards = Array.from(document.querySelectorAll('.model-card.selected'));
+        const modelIds = selectedCards.length > 0 
+            ? selectedCards.map(card => card.onclick.toString().match(/'([^']+)'/)[1])
+            : ['gemini-2.0-flash-exp', 'gpt-3.5-turbo', 'gpt-4-turbo'];
+        
+        const response = await fetch('/api/models/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model_ids: modelIds })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const comparisonHtml = `
+                <h3>Model Comparison</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Provider</th>
+                            <th>Tier</th>
+                            <th>Cost/1K</th>
+                            <th>Speed</th>
+                            <th>Max Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.comparison.map(model => `
+                            <tr>
+                                <td><strong>${model.name}</strong></td>
+                                <td>${model.provider || 'N/A'}</td>
+                                <td><span class="tier-${model.tier}">${model.tier}</span></td>
+                                <td>$${model.cost_per_1k_tokens}</td>
+                                <td>${model.avg_latency_ms}ms</td>
+                                <td>${model.max_tokens}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            assistant.showModal('Model Comparison', comparisonHtml);
+        }
+    } catch (error) {
+        alert('Error comparing models: ' + error.message);
+    }
+}
+
+async function viewModelStats() {
+    try {
+        const response = await fetch('/api/models/stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.stats.routing;
+            const statsHtml = `
+                <h3>📊 Model Usage Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total_queries || 0}</div>
+                        <div class="stat-label">Total Queries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">$${(stats.total_cost_usd || 0).toFixed(4)}</div>
+                        <div class="stat-label">Total Cost</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${(stats.estimated_savings?.savings_percentage || 0).toFixed(1)}%</div>
+                        <div class="stat-label">Cost Savings</div>
+                    </div>
+                </div>
+                
+                <h4>Tier Distribution</h4>
+                <div class="tier-distribution">
+                    ${Object.entries(stats.tier_distribution || {}).map(([tier, data]) => `
+                        <div class="tier-bar">
+                            <span class="tier-label">${tier}</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill tier-${tier}" style="width: ${data.percentage}%"></div>
+                            </div>
+                            <span class="tier-percentage">${data.percentage}% (${data.count})</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            assistant.showModal('Usage Statistics', statsHtml);
+        }
+    } catch (error) {
+        alert('Error loading statistics: ' + error.message);
+    }
 }
 
 function showHelp() {
