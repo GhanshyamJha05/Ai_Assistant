@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, Lock, Palette, Globe, Database, Brain, Zap, DollarSign, Clock, Mic, Volume2, Shield, Download, Upload, RotateCcw, Save, Check, X } from 'lucide-react';
+import { Bell, Lock, Palette, Globe, Database, Brain, Zap, DollarSign, Clock, Mic, Volume2, Shield, Download, Upload, RotateCcw, Save, Check, X, Cpu, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface Model {
@@ -63,9 +63,12 @@ const SettingsDetail = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [showModelModal, setShowModelModal] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [showLocalAIModal, setShowLocalAIModal] = useState<boolean>(false);
   const [editCategory, setEditCategory] = useState<string>('');
   const [editData, setEditData] = useState<any>({});
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [localAIStatus, setLocalAIStatus] = useState<any>(null);
+  const [localAILoading, setLocalAILoading] = useState<boolean>(false);
 
   useEffect(() => {
     console.log('Modal state changed:', showModelModal);
@@ -73,7 +76,18 @@ const SettingsDetail = () => {
 
   useEffect(() => {
     loadAllSettings();
+    loadLocalAIStatus();
   }, []);
+
+  const loadLocalAIStatus = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/local_ai/status');
+      const data = await res.json();
+      setLocalAIStatus(data);
+    } catch (error) {
+      console.error('Failed to load local AI status:', error);
+    }
+  };
 
   const loadAllSettings = async () => {
     try {
@@ -246,6 +260,29 @@ const SettingsDetail = () => {
         { label: 'Auto Routing', value: settings?.ai?.autoRoute ? 'Enabled' : 'Disabled' },
       ],
       action: () => setShowModelModal(true)
+    },
+    {
+      title: 'Local AI (Private & Fast)',
+      icon: Cpu,
+      color: '#10B981',
+      category: 'local_ai',
+      settings: [
+        { 
+          label: 'Status', 
+          value: localAIStatus?.initialized ? '🟢 Ready' : localAIStatus?.available ? '🟡 Not Loaded' : '🔴 Not Installed' 
+        },
+        { 
+          label: 'Model', 
+          value: localAIStatus?.model_info?.name || 'No model loaded' 
+        },
+        { 
+          label: 'Speed', 
+          value: localAIStatus?.stats?.avg_tokens_per_sec 
+            ? `${Math.round(localAIStatus.stats.avg_tokens_per_sec)} tok/s` 
+            : 'N/A' 
+        },
+      ],
+      action: () => setShowLocalAIModal(true)
     },
     {
       title: 'Appearance',
@@ -644,6 +681,226 @@ const SettingsDetail = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Local AI Chat Modal */}
+      {showLocalAIModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <motion.div
+            className="bg-[#1F2228] border border-[#2A2D35] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="bg-gradient-to-r from-[#10B981]/20 to-[#3B82F6]/20 border-b border-[#2A2D35] p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-[#10B981]/20 rounded-xl">
+                    <Cpu className="w-6 h-6 text-[#10B981]" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Local AI Chat</h3>
+                    <p className="text-[#9CA3AF] text-sm">100% Private • Fast • Offline</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowLocalAIModal(false)}
+                  className="p-2 hover:bg-[#2A2D35] rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#9CA3AF]" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Status Section */}
+              <div className="mb-6 p-4 bg-[#2A2D35] rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-[#9CA3AF] text-sm mb-1">Status</p>
+                    <p className="text-white font-semibold">
+                      {localAIStatus?.initialized ? '🟢 Ready' : localAIStatus?.available ? '🟡 Not Loaded' : '🔴 Not Installed'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#9CA3AF] text-sm mb-1">Model</p>
+                    <p className="text-white font-semibold text-sm">
+                      {localAIStatus?.model_info?.name?.substring(0, 20) || 'None'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#9CA3AF] text-sm mb-1">Speed</p>
+                    <p className="text-white font-semibold">
+                      {localAIStatus?.stats?.avg_tokens_per_sec 
+                        ? `${Math.round(localAIStatus.stats.avg_tokens_per_sec)} tok/s` 
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#9CA3AF] text-sm mb-1">Queries</p>
+                    <p className="text-white font-semibold">
+                      {localAIStatus?.stats?.total_queries || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat Interface */}
+              {localAIStatus?.initialized ? (
+                <LocalAIChatInterface onClose={() => setShowLocalAIModal(false)} />
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mb-6">
+                    <Cpu className="w-16 h-16 text-[#9CA3AF] mx-auto mb-4" />
+                    <h4 className="text-xl font-semibold text-white mb-2">Local AI Not Ready</h4>
+                    <p className="text-[#9CA3AF] mb-6">
+                      {!localAIStatus?.available 
+                        ? 'Local AI is not installed. Install llama-cpp-python to continue.' 
+                        : 'No model loaded. Download TinyLlama or Qwen2 model.'}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-[#2A2D35] rounded-lg p-6 text-left max-w-2xl mx-auto">
+                    <h5 className="text-white font-semibold mb-3">📥 Quick Setup Instructions:</h5>
+                    <ol className="space-y-2 text-[#9CA3AF] text-sm">
+                      <li>1. Install dependencies: <code className="bg-[#1F2228] px-2 py-1 rounded text-[#10B981]">pip install llama-cpp-python</code></li>
+                      <li>2. Download model: <code className="bg-[#1F2228] px-2 py-1 rounded text-[#10B981]">huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models</code></li>
+                      <li>3. Restart backend and refresh this page</li>
+                    </ol>
+                    <p className="mt-4 text-xs text-[#6B7280]">
+                      📚 Full guide: <span className="text-[#3B82F6]">docs/LOCAL_AI_QUICKSTART.md</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Local AI Chat Component
+const LocalAIChatInterface = ({ onClose }: { onClose: () => void }) => {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<{role: string, content: string, timestamp: string}[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!message.trim() || loading) return;
+
+    const userMessage = message;
+    setMessage('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage, timestamp: new Date().toISOString() }]);
+    setLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/local_ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage, max_tokens: 512 })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: data.response, 
+          timestamp: data.timestamp 
+        }]);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'error', 
+          content: `Error: ${data.error}`, 
+          timestamp: new Date().toISOString() 
+        }]);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: 'error', 
+        content: `Failed to send message: ${error}`, 
+        timestamp: new Date().toISOString() 
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearChat = async () => {
+    try {
+      await fetch('http://localhost:5000/api/local_ai/reset', { method: 'POST' });
+      setMessages([]);
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-[500px]">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+        {messages.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageSquare className="w-12 h-12 text-[#9CA3AF] mx-auto mb-3" />
+            <p className="text-[#9CA3AF]">Start a conversation with your local AI</p>
+            <p className="text-[#6B7280] text-sm mt-2">100% private • runs on your machine</p>
+          </div>
+        ) : (
+          messages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] p-4 rounded-lg ${
+                msg.role === 'user' 
+                  ? 'bg-[#3B82F6] text-white' 
+                  : msg.role === 'error'
+                  ? 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30'
+                  : 'bg-[#2A2D35] text-white'
+              }`}>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-xs mt-2 opacity-60">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-[#2A2D35] p-4 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#3B82F6] border-t-transparent"></div>
+                <span className="text-[#9CA3AF]">Thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Type your message..."
+          className="flex-1 px-4 py-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6]"
+          disabled={loading}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={!message.trim() || loading}
+          className="px-6 py-3 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send
+        </button>
+        <button
+          onClick={clearChat}
+          className="px-4 py-3 bg-[#2A2D35] text-[#9CA3AF] rounded-lg hover:bg-[#3A3D45] transition-colors"
+          title="Clear chat"
+        >
+          <RotateCcw className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 };

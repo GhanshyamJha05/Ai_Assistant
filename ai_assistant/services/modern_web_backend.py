@@ -3,7 +3,7 @@
 Modern Flask backend to serve the React frontend and provide real-time APIs
 for YourDaddy Assistant's features.
 """
-
+print("Server Started ");
 # Initialize new session (must be first import)
 import utils.session_init
 from utils.session_activity_logger import (
@@ -153,31 +153,42 @@ except ImportError as e:
     LLM_PROVIDER_AVAILABLE = False
     print(f"LLM providers not available: {e}")
 
-# Import NEW ADVANCED FEATURES
+# Import NEW ADVANCED FEATURES (lazy initialization)
 try:
     from ai_assistant.core.enhanced_integration import get_enhanced_ai
-    enhanced_ai = get_enhanced_ai()
+    enhanced_ai = None  # Lazy load on first use
     ENHANCED_AI_AVAILABLE = True
-    print("✅ Enhanced AI loaded - All advanced features active!")
-    print("   • Semantic response cache")
-    print("   • Intelligent model routing")
-    print("   • Streaming responses")
-    print("   • Emotion detection")
-    print("   • Visual verification")
+    print("⚡ Enhanced AI available (will load on first use)")
 except ImportError as e:
     ENHANCED_AI_AVAILABLE = False
     enhanced_ai = None
     print(f"⚠️ Enhanced AI not available: {e}")
 
+def _get_enhanced_ai_lazy():
+    """Lazy load enhanced AI on first use"""
+    global enhanced_ai
+    if enhanced_ai is None and ENHANCED_AI_AVAILABLE:
+        enhanced_ai = get_enhanced_ai()
+        logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
+    return enhanced_ai
+
 try:
     from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
-    usage_analyzer = UsagePatternAnalyzer()
+    usage_analyzer = None  # Lazy load on first use
     USAGE_ANALYZER_AVAILABLE = True
-    print("✅ Usage pattern analyzer loaded")
+    print("⚡ Usage pattern analyzer available (will load on first use)")
 except ImportError as e:
     USAGE_ANALYZER_AVAILABLE = False
     usage_analyzer = None
     print(f"⚠️ Usage analyzer not available: {e}")
+
+def _get_usage_analyzer_lazy():
+    """Lazy load usage analyzer on first use"""
+    global usage_analyzer
+    if usage_analyzer is None and USAGE_ANALYZER_AVAILABLE:
+        usage_analyzer = UsagePatternAnalyzer()
+        logger.info("✅ Usage pattern analyzer initialized")
+    return usage_analyzer
 
 # System monitoring
 try:
@@ -200,6 +211,14 @@ try:
     VOICE_AVAILABLE = True
 except ImportError:
     VOICE_AVAILABLE = False
+
+# Import local AI manager
+try:
+    from ai_assistant.local_ai_manager import LocalAIManager
+    LOCAL_AI_AVAILABLE = True
+except ImportError:
+    LOCAL_AI_AVAILABLE = False
+    logger.warning("⚠️ Local AI not available. Install: pip install llama-cpp-python")
 
 # Load environment variables
 load_dotenv()
@@ -365,6 +384,54 @@ logger.info(f"  - Voice Features: {ENABLE_VOICE}")
 logger.info(f"  - Multimodal AI: {ENABLE_MULTIMODAL}")
 logger.info(f"  - Conversational AI: {ENABLE_CONVERSATIONAL_AI}")
 logger.info(f"  - System Monitoring: {ENABLE_SYSTEM_MONITORING}")
+
+# =============================================================================
+# GLOBAL: Local AI Manager
+# =============================================================================
+
+local_ai_manager = None
+local_ai_initialized = False
+
+def initialize_local_ai():
+    """Initialize local AI model in background"""
+    global local_ai_manager, local_ai_initialized
+    
+    if not LOCAL_AI_AVAILABLE:
+        logger.warning("⚠️ Local AI not available")
+        return
+    
+    try:
+        logger.info("🤖 Initializing Local AI Manager...")
+        local_ai_manager = LocalAIManager()
+        
+        # Check for downloaded models
+        model_path = Path("model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf")
+        alt_model_path = Path("model/local_models/qwen2-0_5b-instruct-q4_k_m.gguf")
+        
+        if model_path.exists():
+            logger.info(f"📥 Loading model: {model_path.name}")
+            if local_ai_manager.load_model(str(model_path), threads=4):
+                local_ai_initialized = True
+                logger.info("✅ Local AI ready!")
+            else:
+                logger.error("❌ Failed to load TinyLlama model")
+        elif alt_model_path.exists():
+            logger.info(f"📥 Loading model: {alt_model_path.name}")
+            if local_ai_manager.load_model(str(alt_model_path), threads=4):
+                local_ai_initialized = True
+                logger.info("✅ Local AI ready!")
+            else:
+                logger.error("❌ Failed to load Qwen2 model")
+        else:
+            logger.warning("⚠️ No local models found. Download with:")
+            logger.warning("  huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models")
+    
+    except Exception as e:
+        logger.error(f"❌ Local AI initialization failed: {e}")
+
+# Initialize local AI in background thread
+if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:
+    threading.Thread(target=initialize_local_ai, daemon=True).start()
 
 # =============================================================================
 
@@ -3720,6 +3787,241 @@ def api_get_providers():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================
+# LOCAL AI API ENDPOINTS
+# ============================================================
+
+@app.route('/api/local_ai/status', methods=['GET'])
+@limiter.limit("30 per minute")
+def local_ai_status():
+    """Get local AI status and info"""
+    try:
+        if not LOCAL_AI_AVAILABLE:
+            return jsonify({
+                'success': True,
+                'available': False,
+                'message': 'Local AI not installed. Run: pip install llama-cpp-python'
+            })
+        
+        status = {
+            'success': True,
+            'available': True,
+            'initialized': local_ai_initialized,
+            'model_loaded': local_ai_manager is not None and local_ai_manager.current_model is not None
+        }
+        
+        if local_ai_initialized and local_ai_manager:
+            status['model_info'] = {
+                'name': local_ai_manager.model_config.name if local_ai_manager.model_config else None,
+                'context_length': local_ai_manager.model_config.context_length if local_ai_manager.model_config else None,
+                'threads': local_ai_manager.model_config.threads if local_ai_manager.model_config else None
+            }
+            status['stats'] = local_ai_manager.get_stats()
+        else:
+            status['message'] = 'No model loaded. Download TinyLlama or Qwen2 model.'
+        
+        return jsonify(status)
+    
+    except Exception as e:
+        logger.error(f"Local AI status error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/local_ai/chat', methods=['POST'])
+@limiter.limit("20 per minute")
+def local_ai_chat():
+    """Chat with local AI model"""
+    try:
+        if not local_ai_initialized or not local_ai_manager:
+            return jsonify({
+                'success': False,
+                'error': 'Local AI not initialized. Check /api/local_ai/status'
+            }), 503
+        
+        data = request.json
+        message = data.get('message', '')
+        max_tokens = data.get('max_tokens', 512)
+        temperature = data.get('temperature', 0.7)
+        use_history = data.get('use_history', True)
+        
+        if not message:
+            return jsonify({'success': False, 'error': 'No message provided'}), 400
+        
+        # Log request
+        log_api_request(
+            endpoint='/api/local_ai/chat',
+            method='POST',
+            user_id='default',
+            request_data={'message_length': len(message)}
+        )
+        
+        # Generate response
+        start_time = time.time()
+        
+        if use_history:
+            response = local_ai_manager.chat(message, max_tokens=max_tokens)
+        else:
+            response = local_ai_manager.generate(
+                message,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=False
+            )
+        
+        elapsed = time.time() - start_time
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'stats': {
+                'elapsed_time': round(elapsed, 2),
+                'avg_tokens_per_sec': local_ai_manager.stats.get('avg_tokens_per_sec', 0),
+                'total_queries': local_ai_manager.stats.get('total_queries', 0)
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Local AI chat error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/local_ai/reset', methods=['POST'])
+@limiter.limit("10 per minute")
+def local_ai_reset():
+    """Reset local AI conversation history"""
+    try:
+        if not local_ai_initialized or not local_ai_manager:
+            return jsonify({
+                'success': False,
+                'error': 'Local AI not initialized'
+            }), 503
+        
+        local_ai_manager.clear_history()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Conversation history cleared'
+        })
+    
+    except Exception as e:
+        logger.error(f"Local AI reset error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/local_ai/stats', methods=['GET'])
+@limiter.limit("30 per minute")
+def local_ai_stats():
+    """Get local AI performance statistics"""
+    try:
+        if not local_ai_initialized or not local_ai_manager:
+            return jsonify({
+                'success': False,
+                'error': 'Local AI not initialized'
+            }), 503
+        
+        stats = local_ai_manager.get_stats()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Local AI stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/local_ai/load_model', methods=['POST'])
+@limiter.limit("5 per minute")
+def local_ai_load_model():
+    """Load a specific local model"""
+    global local_ai_manager, local_ai_initialized
+    
+    try:
+        if not LOCAL_AI_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'Local AI not available. Install llama-cpp-python'
+            }), 503
+        
+        data = request.json
+        model_name = data.get('model_name', 'tinyllama')
+        threads = data.get('threads', 4)
+        
+        if not local_ai_manager:
+            local_ai_manager = LocalAIManager()
+        
+        # Map model names to file paths
+        model_paths = {
+            'tinyllama': 'model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+            'qwen2': 'model/local_models/qwen2-0_5b-instruct-q4_k_m.gguf'
+        }
+        
+        model_path = model_paths.get(model_name)
+        if not model_path:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown model: {model_name}. Choose from: {list(model_paths.keys())}'
+            }), 400
+        
+        if not Path(model_path).exists():
+            return jsonify({
+                'success': False,
+                'error': f'Model file not found: {model_path}',
+                'download_instructions': 'Run: huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models'
+            }), 404
+        
+        # Load model
+        if local_ai_manager.load_model(str(model_path), threads=threads):
+            local_ai_initialized = True
+            return jsonify({
+                'success': True,
+                'message': f'Model {model_name} loaded successfully',
+                'model_info': {
+                    'name': local_ai_manager.model_config.name,
+                    'path': local_ai_manager.model_config.path,
+                    'threads': local_ai_manager.model_config.threads
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to load model'
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Local AI load model error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/local_ai/unload', methods=['POST'])
+@limiter.limit("10 per minute")
+def local_ai_unload():
+    """Unload local AI model from memory"""
+    global local_ai_initialized
+    
+    try:
+        if local_ai_manager:
+            local_ai_manager.unload_model()
+            local_ai_initialized = False
+            
+            return jsonify({
+                'success': True,
+                'message': 'Model unloaded from memory'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No model loaded'
+            }), 400
+    
+    except Exception as e:
+        logger.error(f"Local AI unload error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
 # FILE OPERATIONS API ENDPOINTS
 # ============================================================
 
@@ -4372,18 +4674,23 @@ if NOISE_REDUCTION_AVAILABLE:
     except Exception as e:
         logger.error(f"Failed to initialize noise reduction: {e}")
 
-# Register voice API blueprint if available
-if VOICE_API_AVAILABLE:
+# Register voice API blueprint if available (skip if already registered above)
+if VOICE_API_AVAILABLE and 'voice_bp' in globals():
     try:
-        app.register_blueprint(voice_bp, url_prefix='/api/voice')
-        logger.info("✅ Voice API blueprint registered at /api/voice")
-        logger.info(f"   - GET /api/voice/list (12 voices available)")
-        logger.info(f"   - POST /api/voice/preview (voice preview generation)")
-        logger.info(f"   - GET /api/voice/cache/stats (cache monitoring)")
+        # Check if already registered to avoid duplicate error
+        if not any(bp.name == 'voice' for bp in app.blueprints.values()):
+            app.register_blueprint(voice_bp, url_prefix='/api/voice')
+            logger.info("✅ Voice API blueprint registered at /api/voice")
+            logger.info(f"   - GET /api/voice/list (12 voices available)")
+            logger.info(f"   - POST /api/voice/preview (voice preview generation)")
+            logger.info(f"   - GET /api/voice/cache/stats (cache monitoring)")
+        else:
+            logger.info("✅ Voice API blueprint already registered (skipping duplicate)")
     except Exception as e:
         logger.error(f"Failed to register voice API blueprint: {e}")
 else:
-    logger.warning("⚠️ Voice API blueprint not available")
+    if not VOICE_API_AVAILABLE:
+        logger.warning("⚠️ Voice API blueprint not available")
 
 # Register voice WebSocket handlers
 if VOICE_WEBSOCKET_AVAILABLE:

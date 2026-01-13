@@ -98,12 +98,12 @@ class YourDaddyAssistant:
         }
     
     def setup_logging(self):
-        """Setup logging system with new session"""
+        """Setup logging system with existing session"""
         from utils.logging_config import get_logger, SessionManager
         from utils.session_activity_logger import session_activity_logger
         
-        # Start new session
-        session_id = SessionManager.start_new_session()
+        # Use existing session (already started by session_init.py)
+        session_id = SessionManager.get_current_session()
         self.session_id = session_id
         
         # Initialize session-based logger

@@ -24,7 +24,7 @@ def create_blueprint(assistant):
     bp = Blueprint('auth', __name__, url_prefix='/api/auth')
     
     # Import validation functions from parent module
-    from ai_assistant.services.modern_web_backend import validate_input
+    from ai_assistant.utils.backend_utils import validate_input
     
     @bp.route('/register', methods=['POST'])
     def register():

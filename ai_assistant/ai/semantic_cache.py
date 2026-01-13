@@ -68,16 +68,15 @@ class SemanticResponseCache:
             # Fallback to in-memory dict
             self.cache = {}
         
-        # Initialize embeddings model
+        # Initialize embeddings model (completely lazy - load on first use)
+        self.embedder = None
+        self._embedder_loading = False
+        self._embedder_attempted = False  # Track if we've tried to load
+        
         if EMBEDDINGS_AVAILABLE:
-            try:
-                self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-                logger.info("✅ Semantic cache initialized with embeddings")
-            except Exception as e:
-                logger.warning(f"Failed to load embeddings model: {e}")
-                self.embedder = None
+            logger.info("⚡ Semantic cache initialized (embeddings will load on first query)")
         else:
-            self.embedder = None
+            logger.info("⚡ Semantic cache initialized in exact-match mode (sentence-transformers not available)")
         
         # Statistics
         self.stats = {
@@ -88,6 +87,29 @@ class SemanticResponseCache:
         
         # Load stats if exists
         self._load_stats()
+    
+    def _ensure_embedder_loaded(self):
+        """Lazy load embedder on first use"""
+        if self.embedder is not None or self._embedder_attempted or not EMBEDDINGS_AVAILABLE:
+            return
+        
+        self._embedder_attempted = True
+        
+        # Check if model is cached locally
+        cache_dir = Path.home() / '.cache/huggingface/sentence-transformers/sentence-transformers_all-MiniLM-L6-v2'
+        model_exists_locally = cache_dir.exists()
+        
+        if model_exists_locally:
+            try:
+                logger.info("🔄 Loading embeddings model from local cache...")
+                self.embedder = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                logger.info("✅ Embeddings model loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load embeddings model: {e}")
+                self.embedder = None
+        else:
+            logger.info("⚠️ Embeddings model not cached. Download recommended.")
+            logger.info("   python -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')\"")
     
     def _load_stats(self):
         """Load cache statistics"""
@@ -108,8 +130,42 @@ class SemanticResponseCache:
         except:
             pass
     
+    def _load_embedder_if_needed(self):
+        """Lazy load embedder on first use (background download if needed)"""
+        if self.embedder is not None or self._embedder_loading:
+            return
+        
+        if not EMBEDDINGS_AVAILABLE:
+            return
+        
+        self._embedder_loading = True
+        try:
+            import threading
+            
+            def _download_model():
+                try:
+                    from sentence_transformers import SentenceTransformer
+                    self.embedder = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
+                    logger.info("✅ Embeddings model loaded successfully (background download)")
+                    self._embedder_loading = False
+                except Exception as e:
+                    logger.error(f"Failed to download embeddings model: {e}")
+                    self._embedder_loading = False
+            
+            # Download in background thread to avoid blocking
+            thread = threading.Thread(target=_download_model, daemon=True, name="EmbedderDownloader")
+            thread.start()
+            logger.info("🔄 Downloading embeddings model in background...")
+            
+        except Exception as e:
+            logger.error(f"Failed to start embedder download: {e}")
+            self._embedder_loading = False
+    
     def _get_embedding(self, text: str) -> Optional[np.ndarray]:
         """Get embedding for text"""
+        # Lazy load embedder on first use
+        self._load_embedder_if_needed()
+        
         if self.embedder:
             try:
                 return self.embedder.encode(text, convert_to_numpy=True)

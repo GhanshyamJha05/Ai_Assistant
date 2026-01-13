@@ -130,32 +130,18 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.warning(f"⚠️ Speech Recognition failed: {e}")
         
-        # Vosk (offline, instant) - 100% privacy, no internet required
+        # Vosk (offline, instant) - Use singleton manager to prevent duplicate loading
         if VOSK_AVAILABLE:
-            import os
-            # Load English model
-            en_model_path = Path("model/vosk-model-small-en-us-0.15")
-            if en_model_path.exists():
-                try:
-                    model = Model(str(en_model_path))
-                    self.vosk_models['en'] = model
-                    logger.info(f"✅ Vosk English model loaded (offline/private)")
-                except Exception as e:
-                    logger.error(f"❌ Failed to load English model: {e}")
-            else:
-                logger.warning(f"⚠️ Vosk English model not found at {en_model_path}")
-            
-            # Load Hindi model (optional)
-            hi_model_path = Path("model/vosk-model-small-hi-0.22")
-            if hi_model_path.exists():
-                try:
-                    model = Model(str(hi_model_path))
-                    self.vosk_models['hi'] = model
-                    logger.info(f"✅ Vosk Hindi model loaded (offline/private)")
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to load Hindi model: {e}")
-            else:
-                logger.info("ℹ️ Vosk Hindi model not needed (optional)")
+            try:
+                from ai_assistant.voice.vosk_model_manager import get_vosk_manager
+                self.vosk_manager = get_vosk_manager()
+                # Models will load on-demand when first used
+                logger.info("✅ Vosk model manager connected (models load on-demand)")
+            except ImportError:
+                # Fallback to old behavior if manager not available
+                logger.warning("⚠️ VoskModelManager not available, using legacy loading")
+                self.vosk_manager = None
+                self._legacy_vosk_init()
         
         # Whisper API
         if WHISPER_API_AVAILABLE and self.whisper_api_key:
@@ -164,6 +150,32 @@ class AdvancedSpeechRecognizer:
                 logger.info("✅ Whisper API configured")
             except Exception as e:
                 logger.warning(f"⚠️ Whisper API setup failed: {e}")
+    
+    def _legacy_vosk_init(self):
+        """Legacy Vosk initialization (fallback if manager unavailable)"""
+        # Load English model
+        en_model_path = Path("model/vosk-model-small-en-us-0.15")
+        if en_model_path.exists():
+            try:
+                model = Model(str(en_model_path))
+                self.vosk_models['en'] = model
+                logger.info(f"✅ Vosk English model loaded (offline/private)")
+            except Exception as e:
+                logger.error(f"❌ Failed to load English model: {e}")
+        else:
+            logger.warning(f"⚠️ Vosk English model not found at {en_model_path}")
+        
+        # Load Hindi model (optional)
+        hi_model_path = Path("model/vosk-model-small-hi-0.22")
+        if hi_model_path.exists():
+            try:
+                model = Model(str(hi_model_path))
+                self.vosk_models['hi'] = model
+                logger.info(f"✅ Vosk Hindi model loaded (offline/private)")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to load Hindi model: {e}")
+        else:
+            logger.info("ℹ️ Vosk Hindi model not needed (optional)")
     
     def reduce_noise(self, audio_data, sr: int = 16000) -> np.ndarray:
         """
@@ -393,11 +405,17 @@ class AdvancedSpeechRecognizer:
         Returns:
             Tuple of (recognized_text, confidence_score)
         """
-        if language not in self.vosk_models:
+        # Get model from manager (lazy loads if needed) or use cached models
+        model = None
+        if hasattr(self, 'vosk_manager') and self.vosk_manager:
+            model = self.vosk_manager.get_model(language)
+        elif language in self.vosk_models:
+            model = self.vosk_models[language]
+        
+        if model is None:
             return None, 0.0
         
         try:
-            model = self.vosk_models[language]
             recognizer = KaldiRecognizer(model, 16000)
             recognizer.AcceptWaveform(audio_data)
             
@@ -409,7 +427,7 @@ class AdvancedSpeechRecognizer:
             result_dict = json.loads(result)
             
             if 'result' in result_dict and result_dict['result']:
-                text = ' '.join([item['conf'] for item in result_dict['result']])
+                text = ' '.join([item['word'] for item in result_dict['result']])
                 return text, 0.75  # Estimated confidence
             
             return None, 0.0

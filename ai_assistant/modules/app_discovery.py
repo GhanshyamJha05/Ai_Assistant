@@ -35,8 +35,9 @@ class AppDiscovery:
         self.load_cache()
         self._init_usage_database()
         
-        # Start background refresh
-        self._start_background_refresh()
+        # DON'T start background refresh at startup - defer until first use
+        # This saves 10-20 seconds at server startup
+        # self._start_background_refresh()  # Disabled for performance
     
     def scan_installed_applications(self) -> Dict[str, str]:
         """
@@ -251,7 +252,11 @@ class AppDiscovery:
             self.apps_database = {}
     
     def _start_background_refresh(self):
-        """Start background thread to refresh app list"""
+        """Start background thread to refresh app list (lazy load)"""
+        if self._is_refreshing or (self._last_refresh_time and 
+            (datetime.now() - self._last_refresh_time).seconds < 300):  # 5 min cache
+            return  # Already refreshing or recently refreshed
+        
         import threading
         thread = threading.Thread(target=self._background_refresh, daemon=True)
         thread.start()
@@ -598,6 +603,10 @@ app_discovery = AppDiscovery()
 def discover_applications() -> str:
     """Main function to discover all applications"""
     try:
+        # Trigger background refresh if not already started
+        if not app_discovery._is_refreshing and app_discovery._last_refresh_time is None:
+            app_discovery._start_background_refresh()
+        
         apps = app_discovery.scan_installed_applications()
         return f"Successfully discovered {len(apps)} applications on your system."
     except Exception as e:
@@ -606,6 +615,10 @@ def discover_applications() -> str:
 def smart_open_application(app_name: str) -> str:
     """Intelligently open any application by name with usage tracking."""
     print(f"🚀 Smart app launcher: Looking for '{app_name}'...")
+    
+    # Trigger background refresh on first app access (lazy load)
+    if not app_discovery._is_refreshing and app_discovery._last_refresh_time is None:
+        app_discovery._start_background_refresh()
     
     # Validate app_name to prevent injection
     if len(app_name) > 200:
@@ -715,6 +728,10 @@ def list_installed_apps() -> str:
 
 def get_apps_for_web() -> List[Dict[str, str]]:
     """Get applications formatted for web API responses"""
+    # Trigger background refresh on first web request (lazy load)
+    if not app_discovery._is_refreshing and app_discovery._last_refresh_time is None:
+        app_discovery._start_background_refresh()
+    
     return app_discovery.get_apps_for_api()
 
 def get_app_usage_stats() -> str:

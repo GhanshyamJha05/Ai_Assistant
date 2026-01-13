@@ -1,6 +1,7 @@
 """
 Real-time Vosk Speech Recognition via WebSocket
 Provides 100% offline/private speech recognition
+Uses VoskModelManager singleton to prevent duplicate model loading
 """
 
 import json
@@ -14,6 +15,13 @@ try:
 except ImportError:
     VOSK_AVAILABLE = False
 
+# Use singleton model manager
+try:
+    from ai_assistant.voice.vosk_model_manager import get_vosk_manager
+    VOSK_MANAGER_AVAILABLE = True
+except ImportError:
+    VOSK_MANAGER_AVAILABLE = False
+
 # Initialize logger
 try:
     from utils.logging_config import get_logger
@@ -24,35 +32,26 @@ except ImportError:
 
 # Global recognizer instances per client
 vosk_recognizers = {}
-vosk_models = {}
 
 def load_vosk_models():
-    """Load Vosk models on startup"""
+    """
+    Load Vosk models using the singleton manager (prevents duplicates).
+    Models are loaded on-demand, not at startup.
+    """
     if not VOSK_AVAILABLE:
         logger.warning("⚠️ Vosk not available - install with: pip install vosk")
         return False
     
-    # Load English model
-    en_model_path = Path("model/vosk-model-small-en-us-0.15")
-    if en_model_path.exists():
-        try:
-            vosk_models['en'] = Model(str(en_model_path))
-            logger.info(f"✅ Vosk English model loaded for WebSocket streaming")
-        except Exception as e:
-            logger.error(f"❌ Failed to load English model: {e}")
-            return False
-    else:
-        logger.error(f"❌ Vosk model not found at {en_model_path}")
+    if not VOSK_MANAGER_AVAILABLE:
+        logger.error("❌ VoskModelManager not available")
         return False
     
-    # Load Hindi model (optional)
-    hi_model_path = Path("model/vosk-model-small-hi-0.22")
-    if hi_model_path.exists():
-        try:
-            vosk_models['hi'] = Model(str(hi_model_path))
-            logger.info(f"✅ Vosk Hindi model loaded for WebSocket streaming")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to load Hindi model: {e}")
+    # Get manager instance (models will load on first use)
+    manager = get_vosk_manager()
+    logger.info("✅ Vosk model manager ready (models load on-demand)")
+    
+    # Optional: Preload English model in background
+    # manager.preload_models(['en'])
     
     return True
 
@@ -62,8 +61,8 @@ def register_vosk_handlers(socketio):
     @socketio.on('vosk_start_recognition')
     def handle_start_vosk(data):
         """Start Vosk recognition session"""
-        if not VOSK_AVAILABLE or not vosk_models:
-            emit('vosk_error', {'error': 'Vosk models not loaded'})
+        if not VOSK_AVAILABLE or not VOSK_MANAGER_AVAILABLE:
+            emit('vosk_error', {'error': 'Vosk not available'})
             return
         
         try:
@@ -72,13 +71,17 @@ def register_vosk_handlers(socketio):
             language = data.get('language', 'en')
             sample_rate = data.get('sampleRate', 16000)
             
-            # Get model for language
+            # Get model from singleton manager
             lang_key = 'hi' if 'hi' in language.lower() else 'en'
-            if lang_key not in vosk_models:
-                lang_key = 'en'  # Fallback to English
+            manager = get_vosk_manager()
+            model = manager.get_model(lang_key)
+            
+            if model is None:
+                emit('vosk_error', {'error': f'Model for {lang_key} not available'})
+                return
             
             # Create recognizer for this client
-            recognizer = KaldiRecognizer(vosk_models[lang_key], sample_rate)
+            recognizer = KaldiRecognizer(model, sample_rate)
             recognizer.SetWords(True)  # Enable word-level timestamps
             vosk_recognizers[client_id] = recognizer
             

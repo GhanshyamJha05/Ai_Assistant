@@ -22,7 +22,7 @@ def create_blueprint(assistant):
     bp = Blueprint('chat', __name__, url_prefix='/api')
     
     # Import validation functions
-    from ai_assistant.services.modern_web_backend import validate_input, sanitize_command
+    from ai_assistant.utils.backend_utils import validate_input, sanitize_command
     
     @bp.route('/chat', methods=['POST'])
     @jwt_required(optional=True)

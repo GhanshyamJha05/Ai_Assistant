@@ -12,12 +12,16 @@ def create_blueprint(assistant):
     """Create and configure the system blueprint"""
     bp = Blueprint('system', __name__, url_prefix='/api')
     
-    # Import feature flags
-    from ai_assistant.services.modern_web_backend import (
-        AUTOMATION_AVAILABLE, MULTIMODAL_AVAILABLE,
-        CONVERSATIONAL_AI_AVAILABLE, VOICE_AVAILABLE,
-        PSUTIL_AVAILABLE
-    )
+    # Get feature flags from assistant or set defaults
+    AUTOMATION_AVAILABLE = getattr(assistant, 'automation_available', False)
+    MULTIMODAL_AVAILABLE = getattr(assistant, 'multimodal_available', False)
+    CONVERSATIONAL_AI_AVAILABLE = getattr(assistant, 'conversational_ai_available', False)
+    VOICE_AVAILABLE = getattr(assistant, 'voice_available', False)
+    PSUTIL_AVAILABLE = True
+    try:
+        import psutil
+    except ImportError:
+        PSUTIL_AVAILABLE = False
     
     @bp.route('/status')
     def status():

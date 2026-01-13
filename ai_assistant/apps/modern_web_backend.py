@@ -1,25 +1,16 @@
 """
-Backward Compatibility Alias for modern_web_backend.py
+DISABLED - Backward Compatibility Alias
 
-This file was deprecated in favor of ai_assistant.services.modern_web_backend.
-It provides import aliases for backward compatibility.
+This file has been DISABLED to prevent duplicate initialization.
+DO NOT RE-ENABLE - it causes the entire backend to load twice.
 
-DEPRECATED: Import from ai_assistant.services.modern_web_backend instead.
-This file will be removed in a future version.
+Import directly from: ai_assistant.services.modern_web_backend
 """
 
-import warnings
+# CRITICAL: Do NOT uncomment the line below - it causes duplicate initialization
+# from ai_assistant.services.modern_web_backend import *
 
-# Emit deprecation warning
-warnings.warn(
-    "ai_assistant.apps.modern_web_backend is deprecated. "
-    "Import from ai_assistant.services.modern_web_backend instead. "
-    "This compatibility alias will be removed in a future version.",
-    DeprecationWarning,
-    stacklevel=2
+raise ImportError(
+    "ai_assistant.apps.modern_web_backend has been disabled. "
+    "Import from ai_assistant.services.modern_web_backend instead."
 )
-
-# Import and re-export all public objects from the new location
-from ai_assistant.services.modern_web_backend import *
-
-__all__ = ['app', 'socketio', 'ModernAssistant', 'assistant']

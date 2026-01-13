@@ -2,7 +2,7 @@
 Session Initialization Module
 ============================
 
-This module initializes a new logging session every time the assistant starts.
+This module initializes a new logging session ONCE per process.
 Import this module at the beginning of your main application files.
 """
 
@@ -12,26 +12,52 @@ import sys
 import os
 from datetime import datetime
 
-# Start new session immediately when this module is imported
-session_id = SessionManager.start_new_session()
+# SINGLETON PATTERN: Only initialize once per process
+_session_initialized = False
+session_id = None
 
-# Create a startup logger
-startup_logger = get_logger('session_startup', log_category='system')
+def _initialize_session():
+    """Initialize session only once"""
+    global _session_initialized, session_id
+    
+    if _session_initialized:
+        return session_id
+    
+    _session_initialized = True
+    session_id = SessionManager.start_new_session()
+    return session_id
 
-# Log session initialization
-startup_logger.info(f"🎯 NEW ASSISTANT SESSION INITIALIZED")
-startup_logger.info(f"Session ID: {session_id}")
-startup_logger.info(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-startup_logger.info(f"Platform: {sys.platform}")
-startup_logger.info(f"Python Version: {sys.version.split()[0]}")
-startup_logger.info(f"Working Directory: {os.getcwd()}")
+# Start new session immediately when this module is imported (but only once)
+session_id = _initialize_session()
 
-# Log startup activity
-session_activity_logger.log_system_command(
-    'session_initialization',
-    command_type='system_startup',
-    success=True
-)
+# Only log on first initialization
+if session_id:
+    # Create a startup logger
+    startup_logger = get_logger('session_startup', log_category='system')
+
+    # Log session initialization
+    startup_logger.info(f"🎯 NEW ASSISTANT SESSION INITIALIZED")
+    startup_logger.info(f"Session ID: {session_id}")
+    startup_logger.info(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    startup_logger.info(f"Platform: {sys.platform}")
+    startup_logger.info(f"Python Version: {sys.version.split()[0]}")
+    startup_logger.info(f"Working Directory: {os.getcwd()}")
+
+    # Log startup activity
+    session_activity_logger.log_system_command(
+        'session_initialization',
+        command_type='system_startup',
+        success=True
+    )
+
+    # Print session start info to console
+    print(f"")
+    print(f"🚀 YourDaddy Assistant - New Session Started")
+    print(f"📅 Session ID: {session_id}")
+    print(f"🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
+    print(f"📊 Activity tracking: logs/activities/session_summary_{session_id}.json")
+    print(f"")
 
 # Export session information for other modules
 CURRENT_SESSION_ID = session_id
@@ -47,6 +73,10 @@ def get_session_info():
 
 def log_module_initialization(module_name: str, details: dict = None):
     """Log when a module is initialized"""
+    if not _session_initialized:
+        return
+        
+    startup_logger = get_logger('session_startup', log_category='system')
     startup_logger.info(f"📦 Module initialized: {module_name}")
     
     session_activity_logger.log_system_command(
@@ -57,12 +87,3 @@ def log_module_initialization(module_name: str, details: dict = None):
     
     if details:
         startup_logger.info(f"Module details: {details}")
-
-# Print session start info to console
-print(f"")
-print(f"🚀 YourDaddy Assistant - New Session Started")
-print(f"📅 Session ID: {session_id}")
-print(f"🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-print(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
-print(f"📊 Activity tracking: logs/activities/session_summary_{session_id}.json")
-print(f"")

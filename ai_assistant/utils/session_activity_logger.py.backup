@@ -1,34 +1,50 @@
 """
-Session Activity Logger for YourDaddy Assistant
-=============================================
+Session Activity Logger - Import Redirect
+=========================================
 
-This module handles session-specific activity logging with categorized tracking.
-Each session gets its own activity log files organized by categories.
+This module redirects to the main session_activity_logger in utils/
+to prevent duplicate instances.
 """
 
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, Any, Optional
-from utils.logging_config import get_logger, SessionManager
+# Import from main utils to ensure singleton behavior
+from utils.session_activity_logger import (
+    SessionActivityLogger,
+    session_activity_logger,
+    get_session_activity_logger,
+    log_voice_command,
+    log_file_operation,
+    log_system_command,
+    log_api_request,
+    log_user_interaction,
+    log_music_control,
+    log_email_operation,
+    log_calendar_operation,
+    log_web_scraping,
+    log_multimodal_ai,
+    log_automation,
+    end_session
+)
 
-class SessionActivityLogger:
+__all__ = [
+    'SessionActivityLogger',
+    'session_activity_logger',
+    'get_session_activity_logger',
+    'log_voice_command',
+    'log_file_operation',
+    'log_system_command',
+    'log_api_request',
+    'log_user_interaction',
+    'log_music_control',
+    'log_email_operation',
+    'log_calendar_operation',
+    'log_web_scraping',
+    'log_multimodal_ai',
+    'log_automation',
+    'end_session'
+]
     """Logs all user activities in session-specific files"""
     
     def __init__(self):
-        # Wait for session to be initialized by session_init module
-        # Don't create a new one here
-        self.session_id = SessionManager.get_current_session() if SessionManager._current_session else None
-        if not self.session_id:
-            # If no session exists yet, we'll initialize on first use
-            self._deferred_init = True
-            return
-        
-        self._deferred_init = False
-        self._initialize_logger()
-    
-    def _initialize_logger(self):
-        """Initialize logger components (called after session is ready)"""
         self.session_id = SessionManager.get_current_session()
         self.current_date = SessionManager.get_current_date()
         self.activities_dir = Path('logs') / self.current_date / 'activities'
@@ -66,19 +82,14 @@ class SessionActivityLogger:
         with open(summary_file, 'w') as f:
             json.dump(self.session_summary, f, indent=2)
         
-        # Log session start once (not in all category loggers to avoid spam)
-        logger = self.loggers.get('system_commands')
-        if logger:
+        # Log session start in all category loggers
+        for category, logger in self.loggers.items():
             logger.info(f"🚀 NEW SESSION STARTED - {self.session_id}")
     
     def log_voice_command(self, command: str, language: str = None, 
                          confidence: float = None, response: str = None, 
                          execution_time_ms: float = None):
         """Log voice command activity"""
-        if hasattr(self, '_deferred_init') and self._deferred_init:
-            self._initialize_logger()
-            self._deferred_init = False
-        
         activity = {
             'timestamp': datetime.now().isoformat(),
             'session_id': self.session_id,
@@ -293,28 +304,8 @@ class SessionActivityLogger:
             logger.info(f"🏁 SESSION ENDED - {self.session_id} - Duration: {self.session_summary.get('duration_seconds', 0):.1f}s")
 
 
-# Global session activity logger instance (singleton - lazy loaded)
-_session_activity_logger_instance = None
-
-def get_session_activity_logger():
-    """Get or create singleton session activity logger"""
-    global _session_activity_logger_instance
-    if _session_activity_logger_instance is None:
-        _session_activity_logger_instance = SessionActivityLogger()
-        # Initialize deferred logger if session is ready
-        if hasattr(_session_activity_logger_instance, '_deferred_init') and _session_activity_logger_instance._deferred_init:
-            if SessionManager._current_session is not None:
-                _session_activity_logger_instance._initialize_logger()
-                _session_activity_logger_instance._deferred_init = False
-    return _session_activity_logger_instance
-
-# Lazy property - only creates logger when first accessed
-class _LazyLogger:
-    def __getattr__(self, name):
-        logger = get_session_activity_logger()
-        return getattr(logger, name)
-
-session_activity_logger = _LazyLogger()
+# Global session activity logger instance
+session_activity_logger = SessionActivityLogger()
 
 # Convenience functions for easy logging
 def log_voice_command(command: str, **kwargs):

@@ -69,9 +69,7 @@ class SessionManager:
     
     @classmethod
     def get_current_session(cls):
-        """Get current session ID"""
-        if cls._current_session is None:
-            cls.start_new_session()
+        """Get current session ID (returns None if no session started)"""
         return cls._current_session
     
     @classmethod
@@ -347,6 +345,9 @@ def get_logger(name: str, log_category: str = 'modules',
     # Create session-specific logger name
     if use_session_files:
         session_id = SessionManager.get_current_session()
+        # If no session yet, use placeholder (session_init.py will create one later)
+        if session_id is None:
+            session_id = 'PRESESSION'
         logger_key = f"{name}_{session_id}"
     else:
         logger_key = name

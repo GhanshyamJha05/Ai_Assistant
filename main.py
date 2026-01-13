@@ -59,7 +59,8 @@ def main():
         print("\n" + "=" * 60)
         print("YourDaddy AI Assistant")
         print("=" * 60)
-
+    except Exception as e:
+        logger.error(f"Initialization error: {e}")
     
     parser = argparse.ArgumentParser(description="AI Assistant - Your intelligent companion")
     parser.add_argument("--interface", choices=["cli", "web", "desktop"], default="web",
