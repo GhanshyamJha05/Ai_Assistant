@@ -26,6 +26,7 @@
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [Quick Start](#-quick-start-2-minutes)
+- [Mobile Access](#-mobile--cross-platform-access) **NEW!**
 - [Architecture](#-architecture)
 - [Installation](#-detailed-installation)
 - [Configuration](#-configuration)
@@ -143,6 +144,24 @@
 - **JWT Tokens**: Secure session management
 - **Local Processing**: Offline modes protect privacy
 
+### 📱 Mobile & Cross-Platform Support **NEW!**
+- **Progressive Web App (PWA)**: Install on iPhone/Android like a native app
+- **Mobile-Optimized Interface**: Touch-friendly, responsive design
+- **Offline Mode**: Service worker caching for offline access
+- **Voice on Mobile**: Browser-based voice commands on smartphones
+- **Push Notifications**: Get AI alerts on your phone
+- **Cloud Deployment Ready**: Deploy to Railway, Render, Heroku, etc.
+- **Ngrok Integration**: Instant internet access for testing
+- **QR Code Setup**: Scan and connect in seconds
+- **Camera Integration**: Send photos from phone to AI
+- **Cross-Device Sync**: Access from computer, phone, tablet
+
+**📲 Quick Mobile Access:**
+```bash
+python setup_mobile.py  # One-click mobile setup
+```
+See [MOBILE_PLATFORM_SUPPORT.md](MOBILE_PLATFORM_SUPPORT.md) for complete mobile guide.
+
 ---
 
 ## 🚀 Quick Start (2 Minutes)
@@ -199,6 +218,70 @@ python main.py --interface cli
 ```
 
 **Expected**: Intelligent AI responses (not templates!)
+
+---
+
+## 📱 Mobile & Cross-Platform Access
+
+### 🚀 Use Your AI on Your Phone in 2 Minutes!
+
+Your AI assistant is now mobile-ready! Access it from your smartphone as a Progressive Web App (PWA) or through your browser.
+
+#### **Quick Setup:**
+```bash
+# One-command mobile setup
+python setup_mobile.py
+```
+
+This will:
+1. ✅ Install mobile dependencies
+2. ✅ Generate PWA icons
+3. ✅ Start mobile-optimized server
+4. ✅ Show QR code to scan with your phone
+
+#### **Three Access Methods:**
+
+**1️⃣ Progressive Web App (PWA)** ⭐ **RECOMMENDED**
+- Install on home screen like a real app
+- Works on iPhone AND Android
+- Offline support
+- Push notifications
+- Full-screen experience
+
+```bash
+python quick_mobile_start.py  # Scan QR code with phone
+# Then: Add to Home Screen in browser
+```
+
+**2️⃣ Local Network Access**
+- Access via browser: `http://YOUR_IP:5000`
+- Same WiFi network required
+- Fast and private
+
+**3️⃣ Internet Access (Anywhere)**
+```bash
+# Using Ngrok (instant internet access)
+python mobile_server.py --ngrok
+
+# Or deploy to cloud (Railway, Render, Heroku)
+# See DEPLOYMENT_GUIDE.md
+```
+
+#### **Mobile Features:**
+- ✅ Voice commands on phone
+- ✅ Text chat interface
+- ✅ Camera integration for AI vision
+- ✅ File uploads from phone
+- ✅ Offline mode with caching
+- ✅ Push notifications
+- ✅ Works on iOS, Android, any browser
+
+#### **📚 Complete Mobile Documentation:**
+- **[MOBILE_PLATFORM_SUPPORT.md](MOBILE_PLATFORM_SUPPORT.md)** - Complete mobile guide
+- **[MOBILE_QUICK_START.md](MOBILE_QUICK_START.md)** - Quick start guide
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Cloud deployment options
+
+**Need help?** Run `python setup_mobile.py` for guided setup wizard!
 
 ---
 

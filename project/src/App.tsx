@@ -17,6 +17,8 @@ import ChatDetail from './components/DetailViews/ChatDetail';
 import VoiceDetail from './components/DetailViews/VoiceDetail';
 import SettingsDetail from './components/DetailViews/SettingsDetail';
 import AILearningDetail from './components/DetailViews/AILearningDetail';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 function AppContent() {
   const { selectedView, closeDetailView } = useDashboard();
@@ -65,6 +67,9 @@ function AppContent() {
 
   return (
       <div className="h-screen bg-[#0A0E12] text-white overflow-hidden flex flex-col">
+        {/* Offline Indicator */}
+        <OfflineIndicator />
+        
         <motion.div
           className="flex-1 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col"
           variants={containerVariants}
@@ -114,6 +119,9 @@ function AppContent() {
             {detailContent.content}
           </DetailView>
         )}
+        
+        {/* PWA Install Prompt */}
+        <PWAInstallPrompt />
       </div>
   );
 }
