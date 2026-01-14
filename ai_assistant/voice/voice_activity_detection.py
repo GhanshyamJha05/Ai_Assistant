@@ -28,7 +28,8 @@ try:
     ADVANCED_AUDIO_AVAILABLE = True
 except ImportError:
     ADVANCED_AUDIO_AVAILABLE = False
-    logging.warning("Advanced audio processing libraries not available. Some VAD features disabled.")
+    # logging.warning("Advanced audio processing libraries not available. Some VAD features disabled.")
+    pass
 
 class VADSensitivity(Enum):
     """Voice Activity Detection sensitivity levels"""

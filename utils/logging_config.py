@@ -64,7 +64,7 @@ class SessionManager:
         with open(session_file, 'w') as f:
             json.dump(session_info, f, indent=2)
         
-        print(f"📅 New session started: {date_folder}/{cls._current_session}")
+        # print(f"📅 New session started: {date_folder}/{cls._current_session}")
         return cls._current_session
     
     @classmethod
@@ -127,7 +127,7 @@ class LoggingConfig:
     
     # Logging levels
     DEFAULT_LEVEL = logging.INFO
-    CONSOLE_LEVEL = logging.INFO
+    CONSOLE_LEVEL = logging.WARNING
     FILE_LEVEL = logging.DEBUG
     ERROR_LEVEL = logging.ERROR
     
@@ -152,6 +152,19 @@ class LoggingConfig:
                 f.write(cls._generate_readme())
         
         cls._initialized = True
+        
+        # Configure root logger to prevent stderr leakage
+        root_logger = logging.getLogger()
+        root_logger.setLevel(cls.DEFAULT_LEVEL)
+        
+        # Remove existing handlers to avoid duplication
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+            
+        # Add console handler to root logger with configured level
+        console_handler = cls.get_console_handler()
+        console_handler.setFormatter(cls.get_formatter('simple'))
+        root_logger.addHandler(console_handler)
     
     @classmethod
     def _generate_readme(cls) -> str:

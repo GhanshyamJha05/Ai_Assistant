@@ -164,15 +164,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('🔊 voiceLanguage:', voiceLanguage);
             console.log('🔊 data.success:', data.success);
             console.log('🔊 data.response:', data.response?.substring(0, 100));
-            
+
             if (data.success && data.response) {
                 addChatMessage(data.response, 'ai');
-                
+
                 // Speak the response back to user (talkback)
                 console.log('🔊 About to call speak() with:', { text: data.response.substring(0, 50), lang: voiceLanguage });
                 speak(data.response, voiceLanguage);
                 console.log('✅ speak() called successfully');
-                
+
                 addSystemLog('success', `Command processed: ${data.response.substring(0, 50)}...`);
             } else if (data.error) {
                 const errorMsg = data.response || 'Sorry, I encountered an error processing that command.';
@@ -237,7 +237,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.log('   Continuous:', recog.continuous);
                 console.log('   Interim Results:', recog.interimResults);
                 console.log('   Max Alternatives:', recog.maxAlternatives);
-                
+
                 // Only set active if user didn't manually stop (use ref to avoid stale state)
                 if (!userStoppedRef.current) {
                     setIsVoiceActive(true);
@@ -265,7 +265,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     resultsLength: event.results.length,
                     isFinal: event.results[event.resultIndex]?.isFinal
                 });
-                
+
                 let interim = '';
                 let final = '';
 
@@ -273,7 +273,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     const transcript = event.results[i][0].transcript;
                     const confidence = event.results[i][0].confidence;
                     console.log(`  Result ${i}: "${transcript}" (confidence: ${confidence?.toFixed(2) || 'N/A'}, final: ${event.results[i].isFinal})`);
-                    
+
                     if (event.results[i].isFinal) {
                         final += transcript;
                     } else {
@@ -333,17 +333,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                     // Process command directly (no wake word required or wake word detected)
                     const shouldProcess = !alwaysActive || !requireWakeWord || isProcessingCommand;
-                    
+
                     if (shouldProcess) {
                         console.log('🎯 Processing voice command:', final);
                         addVoiceCommand(final);
-                        
+
                         // Send via socket for voice command processing
                         if (socket && socket.connected) {
                             console.log('📤 Sending voice_command event to backend:', final);
                             console.log('📤 Socket connected:', socket.connected);
                             console.log('📤 Socket ID:', socket.id);
-                            socket.emit('voice_command', { 
+                            socket.emit('voice_command', {
                                 text: final,
                                 language: voiceLanguage,
                                 timestamp: new Date().toISOString()
@@ -377,7 +377,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Temporary errors - just log, continuous mode will handle it
                 if (event.error === 'no-speech') {
-                    console.log('⚠️ No speech detected, continuous mode will continue...');
+                    // console.log('⚠️ No speech detected, continuous mode will continue...');
                     return;
                 }
 
@@ -430,7 +430,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 // 2. Voice is still supposed to be active
                 // 3. Not in always-active mode (which handles its own lifecycle)
                 if (!userStoppedRef.current && isVoiceActiveRef.current && !alwaysActive) {
-                    console.log('🔄 Recognition ended unexpectedly, restarting in 300ms...');
+                    console.log('🔄 Recognition ended unexpectedly, restarting in 1000ms...');
                     setTimeout(() => {
                         if (!userStoppedRef.current && isVoiceActiveRef.current && recog) {
                             try {
@@ -444,7 +444,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 }
                             }
                         }
-                    }, 300);
+                    }, 1000);
                 } else {
                     console.log('🛑 Not restarting - userStopped:', userStoppedRef.current, 'active:', isVoiceActiveRef.current, 'alwaysActive:', alwaysActive);
                     if (!alwaysActive) {
@@ -463,12 +463,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Audio Level Monitoring Functions
     const startAudioLevelMonitoring = async () => {
         console.log('🔧 Starting audio level monitoring...');
-        
+
         // First, try using simulated levels to avoid microphone conflicts
         // Web Speech API already has microphone access, requesting again can cause issues
         console.log('💡 Using simulated audio levels to avoid conflicts with Speech Recognition');
         simulateAudioLevel();
-        
+
         /* Disabled real audio monitoring to prevent conflicts with Web Speech API
         try {
             // Request microphone access separately for audio visualization
@@ -548,13 +548,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setAudioLevel(prev => {
                 const smoothingFactor = 0.3;
                 const newLevel = prev * (1 - smoothingFactor) + normalizedLevel * smoothingFactor;
-                
+
                 // Log every 30 frames (~0.5 seconds) for debugging
                 if (frameCount % 30 === 0) {
                     console.log('📊 Audio level:', newLevel.toFixed(1), '(RMS:', rms.toFixed(3), ')');
                 }
                 frameCount++;
-                
+
                 return newLevel;
             });
 
@@ -570,28 +570,28 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         // Simulate realistic audio level when real monitoring unavailable
         let isSpeaking = false;
         let speakingStartTime = 0;
-        
+
         const simulate = () => {
             if (!isVoiceActiveRef.current) {
                 return;
             }
 
             const now = Date.now();
-            
+
             // Check if there's actual speech (transcript is being generated)
             const hasTranscript = interimTranscriptRef.current.length > 0;
-            
+
             // Random speaking bursts every 2-4 seconds when no transcript
             if (!hasTranscript && !isSpeaking && Math.random() > 0.98) {
                 isSpeaking = true;
                 speakingStartTime = now;
             }
-            
+
             // Speaking duration: 1-3 seconds
             if (isSpeaking && (now - speakingStartTime) > (1000 + Math.random() * 2000)) {
                 isSpeaking = false;
             }
-            
+
             let level;
             if (hasTranscript || isSpeaking) {
                 // Simulate speech with varying amplitude
@@ -607,7 +607,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 const frequency = 0.005; // Slower oscillation
                 level = baseLevel + Math.sin(now * frequency) * variation;
             }
-            
+
             setAudioLevel(Math.max(0, Math.min(100, level)));
 
             animationFrameRef.current = requestAnimationFrame(simulate);
@@ -700,7 +700,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setChatMessages((prev) => [
             ...prev,
             {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 type,
                 text,
                 time,
@@ -718,7 +718,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         setVoiceCommands((prev) => [
             {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 command,
                 time,
             },
@@ -737,7 +737,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         setSystemLogs((prev) => [
             {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 type,
                 message,
                 time,
@@ -785,13 +785,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const setVoiceLanguage = (lang: string) => {
         console.log(`🌍 Changing language to: ${lang}`);
         setVoiceLanguageState(lang);
-        
+
         // Simply update the language property - recognition will use it on next start
         if (recognition) {
             recognition.lang = lang;
             console.log(`✅ Language updated to: ${lang}`);
         }
-        
+
         // Note: We don't restart recognition here to avoid restart loops
         // The new language will be used when user starts/restarts recognition manually
     };
@@ -837,7 +837,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             // Clear the stop flags (sync both state and refs)
             setUserStoppedVoice(false);
             userStoppedRef.current = false;
-            
+
             // Check if recognition is already running
             if (isRecognitionStarted) {
                 console.warn('⚠️ Recognition already started, not starting again');
@@ -845,7 +845,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 isVoiceActiveRef.current = true;
                 return;
             }
-            
+
             try {
                 recognition.start();
                 // State will be set by onstart handler
@@ -867,7 +867,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const speak = (text: string, lang: string = 'en-US') => {
         try {
             console.log('🔊 speak() called with:', { textLength: text.length, lang });
-            
+
             const synth = window.speechSynthesis;
             console.log('🔊 speechSynthesis available:', !!synth);
             console.log('🔊 speechSynthesis speaking:', synth.speaking);
@@ -895,11 +895,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.log('🔊 Speaking:', text.substring(0, 50), 'in', utterance.lang);
                 console.log('🔊 Utterance config:', { rate: utterance.rate, pitch: utterance.pitch, volume: utterance.volume });
                 console.log('🔊 Available voices:', synth.getVoices().length);
-                
+
                 utterance.onstart = () => console.log('✅ TTS started');
                 utterance.onend = () => console.log('✅ TTS ended');
                 utterance.onerror = (e) => console.error('❌ TTS error:', e);
-                
+
                 synth.speak(utterance);
                 console.log('🔊 synth.speak() called, pending:', synth.pending, 'speaking:', synth.speaking);
             }, 100);
@@ -923,7 +923,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (!isVoiceActive && recognition) {
                 try {
                     recognition.start();
-                    const message = requireWakeWord 
+                    const message = requireWakeWord
                         ? 'Always active mode enabled. Waiting for wake word.'
                         : 'Always active mode enabled. Just speak your command.';
                     speak(message, voiceLanguage);
@@ -951,7 +951,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         const newState = !requireWakeWord;
         setRequireWakeWord(newState);
         console.log('🔄 Wake word requirement:', newState ? 'ON' : 'OFF');
-        
+
         const message = newState
             ? 'Wake word enabled. Say "Hey Assistant" before commands.'
             : 'Wake word disabled. Just speak your commands directly.';
@@ -961,12 +961,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Toggle between Web Speech API (Google) and Vosk (offline)
     const toggleRecognitionMode = () => {
         const newMode = recognitionMode === 'web' ? 'vosk' : 'web';
-        
+
         // Stop current recognition
         if (isVoiceActive) {
             toggleVoice();
         }
-        
+
         setRecognitionMode(newMode);
         const modeName = newMode === 'web' ? 'Online (Google)' : 'Offline (Private)';
         console.log(`🔄 Recognition mode: ${modeName}`);
@@ -983,7 +983,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         try {
             // Get microphone access
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     sampleRate: 16000,
                     channelCount: 1,
@@ -1022,7 +1022,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setIsVoiceActive(true);
             setIsRecognitionStarted(true);
             console.log('🔒 Vosk offline recognition started');
-            
+
         } catch (error) {
             console.error('❌ Microphone access denied:', error);
             addSystemLog('error', 'Microphone access denied');

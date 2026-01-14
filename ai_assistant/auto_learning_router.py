@@ -62,7 +62,7 @@ class LearningDataRouter:
             self.command_predictor = CommandSuccessPredictor()
             self.context_generator = ContextAwareResponseGenerator()
             self.smart_commands = SmartCommandPredictor()
-            self.knowledge_graph = PersonalKnowledgeGraph()
+            self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/personal_knowledge.db")
             self.query_cache = QuerySimilarityCache()
             print("✅ Learning systems initialized")
         except Exception as e:
@@ -290,7 +290,7 @@ class LearningDataRouter:
         stats['systems_active'] = sum(1 for s in systems if s is not None)
         return stats
 
-S
+
 def integrate_with_chat_system():
     """
     Example of how to integrate the router into BOTH chat and voice systems

@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any, Tuple
 from pathlib import Path
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,6 @@ class SemanticResponseCache:
         # Import sentence_transformers here to avoid slow startup
         try:
             from sentence_transformers import SentenceTransformer
-            import numpy as np
         except ImportError:
             logger.warning("Failed to import sentence_transformers")
             return
@@ -188,7 +188,6 @@ class SemanticResponseCache:
     def _compute_similarity(self, query_embedding, cached_embedding) -> float:
         """Compute cosine similarity between embeddings"""
         try:
-            import numpy as np
             dot_product = np.dot(query_embedding, cached_embedding)
             norm_product = np.linalg.norm(query_embedding) * np.linalg.norm(cached_embedding)
             return float(dot_product / norm_product)

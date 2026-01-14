@@ -3,7 +3,10 @@
 Modern Flask backend to serve the React frontend and provide real-time APIs
 for YourDaddy Assistant's features.
 """
-print("Server Started ");
+# print("Server Started ");
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
+
 # Initialize new session (must be first import)
 import utils.session_init
 from utils.session_activity_logger import (
