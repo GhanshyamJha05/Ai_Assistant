@@ -774,6 +774,42 @@ def enhanced_chat():
         print(f"Enhanced chat template error: {e}")
         return f"<h1>Enhanced Chat Template Error</h1><p>Error: {e}</p><p><a href='/'>Go back to main page</a></p>"
 
+@app.route('/download')
+def download_page():
+    """Serve Windows app download page"""
+    from flask import render_template
+    try:
+        return render_template('download.html')
+    except Exception as e:
+        logger.error(f"Download page error: {e}")
+        return f"<h1>Download Page Error</h1><p>Error: {e}</p>"
+
+@app.route('/download/windows-app')
+def download_windows_app():
+    """Download the Windows desktop app"""
+    from flask import send_file
+    import os
+    
+    zip_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                            'dist', 'AI-Assistant-Windows.zip')
+    
+    if os.path.exists(zip_path):
+        logger.info(f"Serving Windows app from: {zip_path}")
+        return send_file(
+            zip_path,
+            as_attachment=True,
+            download_name='AI-Assistant-Windows.zip',
+            mimetype='application/zip'
+        )
+    else:
+        logger.error(f"Windows app not found at: {zip_path}")
+        return f"""
+        <h1>Download Not Available</h1>
+        <p>The Windows app package has not been built yet.</p>
+        <p>Please run <code>build_for_website.bat</code> first to create the distributable package.</p>
+        <p><a href='/download'>Go back</a></p>
+        """, 404
+
 @app.route('/test')
 def test_page():
     """Simple test page"""

@@ -19,9 +19,14 @@ import SettingsDetail from './components/DetailViews/SettingsDetail';
 import AILearningDetail from './components/DetailViews/AILearningDetail';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 function AppContent() {
   const { selectedView, closeDetailView } = useDashboard();
+  const [activeTab, setActiveTab] = useState<'main' | 'options' | 'stats'>('main');
+  const [showOptions, setShowOptions] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const getDetailContent = () => {
     switch (selectedView) {
@@ -76,9 +81,86 @@ function AppContent() {
           initial="hidden"
           animate="visible"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 md:gap-4 flex-1 overflow-hidden min-h-0">
+          {/* Mobile Tabs - Show on small screens */}
+          <div className="lg:hidden flex gap-2 mb-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('main')}
+              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                activeTab === 'main'
+                  ? 'bg-[#3B82F6] text-white'
+                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+              }`}
+            >
+              Voice Control
+            </button>
+            <button
+              onClick={() => setActiveTab('options')}
+              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                activeTab === 'options'
+                  ? 'bg-[#3B82F6] text-white'
+                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+              }`}
+            >
+              Options
+            </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                activeTab === 'stats'
+                  ? 'bg-[#3B82F6] text-white'
+                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+              }`}
+            >
+              History & Stats
+            </button>
+          </div>
+
+          {/* Mobile Layout - Stack vertically */}
+          <div className="lg:hidden flex-1 overflow-y-auto space-y-3">
+            {/* Main Voice Control - Always visible on 'main' tab */}
+            {activeTab === 'main' && (
+              <motion.div
+                className="flex flex-col gap-2 min-h-0"
+                variants={columnVariants}
+              >
+                <StatusBar />
+                <div className="flex-1 flex items-center justify-center min-h-[300px] overflow-visible py-4">
+                  <VoiceButton />
+                </div>
+                <CommandInput />
+                <TaskStatus />
+              </motion.div>
+            )}
+
+            {/* Options Tab */}
+            {activeTab === 'options' && (
+              <motion.div
+                className="flex flex-col gap-3"
+                variants={columnVariants}
+              >
+                <QuickOptions />
+                <CameraFeed />
+                <AILearningDashboard />
+              </motion.div>
+            )}
+
+            {/* Stats Tab */}
+            {activeTab === 'stats' && (
+              <motion.div
+                className="flex flex-col gap-3"
+                variants={columnVariants}
+              >
+                <ChatVoiceHistory />
+                <SystemStats />
+                <SystemLogs />
+              </motion.div>
+            )}
+          </div>
+
+          {/* Desktop Layout - 3 columns on large screens */}
+          <div className="hidden lg:grid grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
             <motion.div
-              className="lg:col-span-3 flex flex-col gap-2 sm:gap-3 overflow-y-auto min-h-0"
+              className="col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0"
               variants={columnVariants}
             >
               <QuickOptions />
@@ -87,7 +169,7 @@ function AppContent() {
             </motion.div>
 
             <motion.div
-              className="lg:col-span-6 flex flex-col gap-1 sm:gap-1.5 overflow-hidden min-h-0"
+              className="col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0"
               variants={columnVariants}
             >
               <StatusBar />
@@ -99,7 +181,7 @@ function AppContent() {
             </motion.div>
 
             <motion.div
-              className="lg:col-span-3 flex flex-col gap-2 sm:gap-3 overflow-hidden min-h-0"
+              className="col-span-3 flex flex-col gap-3 overflow-hidden min-h-0"
               variants={columnVariants}
             >
               <ChatVoiceHistory />

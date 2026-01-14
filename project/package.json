@@ -4,11 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "build:pwa": "npm run build && npm run copy:sw",
+    "copy:sw": "cp public/service-worker.js dist/service-worker.js && cp public/manifest.json dist/manifest.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

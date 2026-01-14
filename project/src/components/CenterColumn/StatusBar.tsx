@@ -78,7 +78,7 @@ const StatusBar = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 flex items-center justify-between flex-shrink-0"
+      className="bg-[#16181D] border border-[#1F2228] rounded-lg px-3 sm:px-4 md:px-4 py-2 sm:py-2 flex items-center justify-between flex-shrink-0"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
@@ -88,15 +88,15 @@ const StatusBar = () => {
           className="relative"
           whileHover={{ scale: 1.1 }}
         >
-          <Bell className="w-3 h-3 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#EF4444] rounded-full text-[7px] sm:text-[8px] flex items-center justify-center text-white font-bold">
+          <Bell className="w-4 h-4 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#EF4444] rounded-full text-[8px] flex items-center justify-center text-white font-bold">
             3
           </span>
         </motion.div>
 
         <div className="flex items-center gap-1 sm:gap-1.5">
-          <Wifi className={`w-3 h-3 sm:w-4 sm:h-4 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
-          <span className="text-[9px] sm:text-[10px] text-[#9CA3AF]">{isConnected ? 'Connected' : 'Disconnected'}</span>
+          <Wifi className={`w-4 h-4 sm:w-4 sm:h-4 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
+          <span className="text-[10px] sm:text-[10px] text-[#9CA3AF] hidden sm:inline">{isConnected ? 'Connected' : 'Disconnected'}</span>
         </div>
       </div>
 

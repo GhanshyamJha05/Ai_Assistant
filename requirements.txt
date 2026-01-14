@@ -1,6 +1,6 @@
 # YourDaddy Assistant - Unified Requirements
 # =========================================
-# This file contains all Python packages required for the assistant
+# Python 3.11+ Compatible
 # Install with: pip install -r requirements.txt
 
 # =========================================
@@ -21,14 +21,7 @@ Flask-Limiter==3.8.0
 python-socketio==5.8.0
 eventlet==0.33.3
 Werkzeug==3.1.3
-websockets==11.0.0
-
-# =========================================
-# WINDOWS DESKTOP APP
-# =========================================
-pywebview>=4.4.1
-pyinstaller>=6.0.0
-pillow>=10.0.0
+websockets>=11.0.0
 
 # =========================================
 # SECURITY & ENCRYPTION
@@ -39,6 +32,8 @@ secrets-manager==0.4
 keyring==25.5.0
 python-dotenv==1.0.1
 certifi==2025.10.5
+pycryptodome>=3.23.0
+pycryptodome>=3.23.0
 
 # =========================================
 # CORE AI/ML FRAMEWORK
@@ -50,6 +45,7 @@ autogen-ext==0.7.5
 # =========================================
 # GOOGLE AI/GEMINI INTEGRATION
 # =========================================
+google-genai>=1.57.0
 google-generativeai==0.8.5
 google-ai-generativelanguage==0.6.15
 google-api-core==2.28.1
@@ -80,24 +76,32 @@ pyttsx3==2.99
 gTTS==2.5.3
 edge-tts==6.1.12
 pygame>=2.5.2
-PyAudio==0.2.14
 pydub==0.25.1
 soundfile==0.12.1
 librosa==0.10.2
 vosk==0.3.45
+noisereduce>=3.0.0
+pocketsphinx>=5.0.0
+sounddevice>=0.5.0
+# webrtcvad>=2.0.10  # Requires C++ build tools - optional
+# TTS>=0.22.0  # Coqui TTS - large package, optional
+# PyAudio==0.2.14  # Commented - often fails on Python 3.11+, use sounddevice as alternative
 
 # =========================================
 # MACHINE LEARNING & AI
 # =========================================
-scikit-learn==1.3.0
-tensorflow==2.15.1
+scikit-learn>=1.4.0
+tensorflow>=2.16.0
+tf-keras>=2.16.0
 torch==2.3.1
 torchvision==0.18.1
 transformers==4.44.2
 sentence-transformers==3.0.1
-numpy==1.26.4
+numpy<2.0.0
 
-# Vector Search & RAG
+# =========================================
+# VECTOR SEARCH & RAG
+# =========================================
 faiss-cpu>=1.7.4
 chromadb>=0.4.22
 langchain>=0.1.0
@@ -146,7 +150,7 @@ urllib3==2.5.0
 # =========================================
 # DOCUMENT PROCESSING
 # =========================================
-PyPDF2==3.0.1
+PyPDF2>=3.>.1
 pdfplumber==0.11.4
 
 # =========================================
@@ -188,13 +192,16 @@ anyio==4.11.0
 # MODEL CONTEXT PROTOCOL (MCP)
 # =========================================
 mcp>=1.1.0
-pydantic>=2.0.0
 
 # =========================================
 # ADVANCED FEATURES & PERFORMANCE
 # =========================================
-diskcache>=5.6.3  # Semantic response caching
-redis>=5.0.0  # Alternative caching backend (optional)
+diskcache>=5.6.3
+redis>=5.0.0
+
+# Encryption
+cryptography==45.0.0
+pycryptodome>=3.19.0
 
 # =========================================
 # UTILITIES
@@ -208,7 +215,7 @@ qrcode==7.4.0
 # =========================================
 # PROTOCOL BUFFERS & GRPC
 # =========================================
-protobuf==5.29.5
+protobuf>=5.26.1,<6.0
 grpcio==1.76.0
 grpcio-status==1.71.2
 
@@ -218,11 +225,11 @@ grpcio-status==1.71.2
 typing_extensions==4.15.0
 annotated-types==0.7.0
 
-# =========================================
+# ========>=3.8.0==========================
 # NETWORK & VISUALIZATION
 # =========================================
 networkx==3.1
-matplotlib==3.7.2
+matplotlib>=3.7.2
 
 # =========================================
 # ENCODING & CHARSET
@@ -231,10 +238,18 @@ charset-normalizer==3.4.4
 idna==3.11
 
 # =========================================
-# DEVELOPMENT & PACKAGING (Optional)
+# DESKTOP APP & PACKAGING
 # =========================================
+pywebview>=4.4.1
+pythonnet>=3.0.0
 pyinstaller==6.16.0
 pyinstaller-hooks-contrib==2025.9
+
+# =========================================
+# LOCAL AI (OPTIONAL - for offline LLM)
+# =========================================
+# llama-cpp-python>=0.2.32  # Requires C++ build tools and CMake - install separately if needed
+huggingface-hub>=0.20.0
 
 # =========================================
 # NOTES & PLATFORM COMPATIBILITY
@@ -243,13 +258,19 @@ pyinstaller-hooks-contrib==2025.9
 # - tkinter, sqlite3, json, os, sys, time, threading, asyncio
 # 
 # Windows-specific packages:
-# - pywin32, pywinauto, win10toast, comtypes
+# - pywin32, pywinauto, win10toast, comtypes, pycaw
 # - May not install on Linux/macOS
 #
 # Audio dependencies (system-level):
 # - Windows: Usually works out of the box
 # - Linux: sudo apt-get install portaudio19-dev python3-pyaudio
 # - macOS: brew install portaudio
+#
+# Python 3.11+ compatibility notes:
+# - PyAudio commented out (often fails) - use sounddevice instead
+# - TensorFlow upgraded to 2.16+ for protobuf 5.x support
+# - scikit-learn upgraded to 1.4+ for Python 3.11+ support
+# - protobuf uses flexible version range for compatibility
 #
 # Optional dependencies:
 # - Some AI packages require CUDA for GPU acceleration

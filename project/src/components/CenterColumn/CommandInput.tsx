@@ -29,24 +29,24 @@ const CommandInput = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <div className="bg-[#16181D] border border-[#1F2228] rounded-lg p-0.5 sm:p-1 flex items-center gap-1.5 sm:gap-2 focus-within:border-[#3B82F6]/50 transition-colors">
+      <div className="bg-[#16181D] border border-[#1F2228] rounded-lg p-1 sm:p-1 flex items-center gap-2 sm:gap-2 focus-within:border-[#3B82F6]/50 transition-colors">
         <input
           type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type a command or ask anything..."
-          className="flex-1 bg-transparent text-white placeholder-[#6B7280] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder-[#6B7280] px-3 sm:px-3 py-2 sm:py-2 text-sm sm:text-sm focus:outline-none"
         />
         <motion.button
           onClick={() => handleSubmit()}
           disabled={!command.trim()}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-[#3B82F6] text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md flex items-center gap-1.5 font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="bg-[#3B82F6] text-white px-4 sm:px-4 py-2 sm:py-2 rounded-md flex items-center gap-1.5 font-medium text-sm sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all touch-manipulation"
         >
-          <Send className="w-3 h-3 sm:w-4 sm:h-4" />
-          Send
+          <Send className="w-4 h-4 sm:w-4 sm:h-4" />
+          <span className="hidden xs:inline">Send</span>
         </motion.button>
       </div>
     </motion.div>

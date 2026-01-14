@@ -33,15 +33,15 @@ const ChatVoiceHistory = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
-      <div className="grid grid-cols-2 divide-x divide-[#1F2228]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[#1F2228]">
         <div 
-          className="p-2 sm:p-3 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
+          className="p-3 sm:p-3 cursor-pointer hover:bg-[#1F2228]/30 transition-all active:bg-[#1F2228]/50" 
           onClick={() => setSelectedView('chat')}
         >
-          <h3 className="text-xs sm:text-sm font-medium text-white mb-2">Chat History</h3>
+          <h3 className="text-sm sm:text-sm font-medium text-white mb-2">Chat History</h3>
           <div
             ref={chatScrollRef}
-            className="space-y-2 max-h-[120px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
+            className="space-y-2 max-h-[150px] sm:max-h-[120px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
           >
             {chatMessages.length === 0 ? (
               <p className="text-xs text-[#6B7280] text-center py-4">No messages yet</p>
@@ -66,13 +66,13 @@ const ChatVoiceHistory = () => {
         </div>
 
         <div 
-          className="p-4 cursor-pointer hover:bg-[#1F2228]/30 transition-all" 
+          className="p-3 sm:p-4 cursor-pointer hover:bg-[#1F2228]/30 transition-all active:bg-[#1F2228]/50" 
           onClick={() => setSelectedView('voice')}
         >
-          <h3 className="text-sm font-medium text-white mb-3">Voice History</h3>
+          <h3 className="text-sm font-medium text-white mb-2 sm:mb-3">Voice History</h3>
           <div
             ref={voiceScrollRef}
-            className="space-y-2.5 max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
+            className="space-y-2 sm:space-y-2.5 max-h-[150px] sm:max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#3B82F6] scrollbar-track-[#1F2228]"
           >
             {voiceCommands.length === 0 ? (
               <p className="text-xs text-[#6B7280] text-center py-4">No voice commands yet</p>

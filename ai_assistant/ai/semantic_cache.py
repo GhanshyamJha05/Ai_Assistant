@@ -26,10 +26,13 @@ except ImportError:
     DISKCACHE_AVAILABLE = False
     logger.warning("diskcache not available - using in-memory cache")
 
+# Defer sentence-transformers import to avoid slow startup (93s TensorFlow load)
+# Will import on first use in _ensure_embedder_loaded()
 try:
-    from sentence_transformers import SentenceTransformer
-    import numpy as np
-    EMBEDDINGS_AVAILABLE = True
+    import importlib.util
+    EMBEDDINGS_AVAILABLE = importlib.util.find_spec("sentence_transformers") is not None
+    if not EMBEDDINGS_AVAILABLE:
+        logger.warning("sentence-transformers not available - using exact match only")
 except ImportError:
     EMBEDDINGS_AVAILABLE = False
     logger.warning("sentence-transformers not available - using exact match only")
@@ -94,6 +97,14 @@ class SemanticResponseCache:
             return
         
         self._embedder_attempted = True
+        
+        # Import sentence_transformers here to avoid slow startup
+        try:
+            from sentence_transformers import SentenceTransformer
+            import numpy as np
+        except ImportError:
+            logger.warning("Failed to import sentence_transformers")
+            return
         
         # Check if model is cached locally
         cache_dir = Path.home() / '.cache/huggingface/sentence-transformers/sentence-transformers_all-MiniLM-L6-v2'
@@ -161,7 +172,7 @@ class SemanticResponseCache:
             logger.error(f"Failed to start embedder download: {e}")
             self._embedder_loading = False
     
-    def _get_embedding(self, text: str) -> Optional[np.ndarray]:
+    def _get_embedding(self, text: str):
         """Get embedding for text"""
         # Lazy load embedder on first use
         self._load_embedder_if_needed()
@@ -174,10 +185,10 @@ class SemanticResponseCache:
                 return None
         return None
     
-    def _compute_similarity(self, query_embedding: np.ndarray, 
-                          cached_embedding: np.ndarray) -> float:
+    def _compute_similarity(self, query_embedding, cached_embedding) -> float:
         """Compute cosine similarity between embeddings"""
         try:
+            import numpy as np
             dot_product = np.dot(query_embedding, cached_embedding)
             norm_product = np.linalg.norm(query_embedding) * np.linalg.norm(cached_embedding)
             return float(dot_product / norm_product)
