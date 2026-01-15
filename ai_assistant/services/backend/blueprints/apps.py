@@ -29,32 +29,36 @@ def create_blueprint(assistant):
         smart_open_application = lambda x: f"Would open: {x}"
     
     try:
-        from ai_assistant.modules.app_discovery import get_installed_apps, refresh_app_list
+        # Try absolute import first (standard)
+        from ai_assistant.modules.app_discovery import get_apps_for_web as get_installed_apps
+        from ai_assistant.modules.app_discovery import refresh_app_database as refresh_app_list
         APP_DISCOVERY_AVAILABLE = True
     except ImportError:
-        APP_DISCOVERY_AVAILABLE = False
-        get_installed_apps = lambda: []
-        refresh_app_list = lambda: []
+        try:
+            # Try alternate import relative to ai_assistant package
+            from modules.app_discovery import get_apps_for_web as get_installed_apps
+            from modules.app_discovery import refresh_app_database as refresh_app_list
+            APP_DISCOVERY_AVAILABLE = True
+        except ImportError as e:
+            logger.error(f"Failed to import app discovery: {e}")
+            APP_DISCOVERY_AVAILABLE = False
+            get_installed_apps = lambda: []
+            refresh_app_list = lambda: []
     
     @bp.route('', methods=['GET'])
     def list_apps():
         """List all installed applications"""
         try:
             if not APP_DISCOVERY_AVAILABLE:
-                return jsonify({
-                    "apps": [],
-                    "message": "App discovery not available"
-                })
+                # Return empty array to keep frontend happy
+                return jsonify([])
             
             apps = get_installed_apps()
-            return jsonify({
-                "apps": apps,
-                "count": len(apps),
-                "timestamp": datetime.now().isoformat()
-            })
+            # Return array directly
+            return jsonify(apps)
         except Exception as e:
             logger.error(f"List apps error: {e}")
-            return jsonify({"error": str(e)}), 500
+            return jsonify([]), 500
     
     @bp.route('/refresh', methods=['POST'])
     def refresh_apps():

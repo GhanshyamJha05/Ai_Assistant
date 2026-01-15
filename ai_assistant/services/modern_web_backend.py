@@ -68,9 +68,19 @@ ai_assistant_dir = os.path.dirname(current_dir)
 if ai_assistant_dir not in sys.path:
     sys.path.append(ai_assistant_dir)
 
+# Import Multi-Agent System
+try:
+    from ai_assistant.core.chain_of_actions_manager import get_chain_manager, ChainOfActionsManager
+    from ai_assistant.core.progress_tracker import get_progress_tracker
+    MULTI_AGENT_AVAILABLE = True
+except ImportError as e:
+    MULTI_AGENT_AVAILABLE = False
+    logger.warning(f"Multi-Agent System not available: {e}")
+
 # Import automation tools
 try:
-    from automation_tools_new import (
+    # Try importing from ai_assistant package first
+    from ai_assistant.automation_tools_new import (
         write_a_note, open_application, search_google, search_youtube,
         close_application, speak, set_system_volume, get_app_path_from_name,
         setup_memory, save_to_memory, get_memory, search_memory,
@@ -84,12 +94,25 @@ try:
         get_weather_info, get_latest_news, get_stock_price,
         detect_taskbar_apps, can_see_taskbar
     )
+    # Import app discovery scheduler functions
+    from ai_assistant.modules.app_discovery import (
+        start_auto_refresh_after_startup, start_periodic_refresh
+    )
     AUTOMATION_AVAILABLE = True
-    print("Automation tools loaded successfully")
+    print("✅ Automation tools loaded successfully")
 except ImportError as e:
-    print(f"Automation tools not available: {e}")
-    AUTOMATION_AVAILABLE = False
-    # Fallback functions will be defined below
+    print(f"⚠️ Automation tools import failed: {e}")
+    # Try fallback import from modules directly
+    try:
+        from ai_assistant.modules.app_discovery import (
+            get_apps_for_web, refresh_app_database, 
+            start_auto_refresh_after_startup, start_periodic_refresh
+        )
+        AUTOMATION_AVAILABLE = True
+        print("✅ App discovery loaded from modules")
+    except ImportError as e2:
+        print(f"❌ App discovery also failed: {e2}")
+        AUTOMATION_AVAILABLE = False
 
 # Import Learning Router for automatic AI training
 try:
@@ -2363,8 +2386,11 @@ def api_apps():
     try:
         if AUTOMATION_AVAILABLE:
             apps = get_apps_for_web()
+            # Ensure it's always a list
+            if not isinstance(apps, list):
+                apps = []
         else:
-            # Fallback app list
+            # Fallback app list - MUST be an array, not object
             apps = [
                 {"name": "Chrome", "path": "chrome.exe", "category": "Browser", "usage": 89, "description": "Google Chrome web browser"},
                 {"name": "Mail", "path": "mail.exe", "category": "Communication", "usage": 76, "description": "Email application"},
@@ -2381,10 +2407,12 @@ def api_apps():
                 {"name": "Task Manager", "path": "taskmgr.exe", "category": "System Tools", "usage": 35, "description": "Process manager"}
             ]
         
+        # Always return array directly
         return jsonify(apps)
     except Exception as e:
         logger.error(f"Failed to get apps: {e}")
-        return jsonify({"error": "Failed to retrieve applications"}), 500
+        # Return empty array on error, not error object
+        return jsonify([]), 500
 
 @app.route('/api/apps/refresh', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -4900,6 +4928,112 @@ except Exception as e:
 
 
 # ============================================================
+# MULTI-AGENT ACTION CHAIN ROUTES
+# ============================================================
+
+@app.route('/api/chains/create', methods=['POST'])
+@jwt_required()
+def create_chain():
+    """Create a new action chain from command"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    data = request.get_json()
+    command = data.get("command")
+    
+    if not command:
+        return jsonify({"error": "Command is required"}), 400
+        
+    try:
+        import asyncio
+        manager = get_chain_manager()
+        
+        # Execute asynchronously
+        # For now, just create and run in background thread for simple response
+        # In production, use proper async handling or task queue
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Helper to run async in thread
+        def run_chain():
+            async def _run():
+                await manager.execute_command(command, on_progress=_broadcast_chain_progress)
+            asyncio.run(_run())
+            
+        thread = threading.Thread(target=run_chain)
+        thread.start()
+        
+        return jsonify({
+            "status": "started", 
+            "message": "Chain execution started",
+            "command": command
+        })
+        
+    except Exception as e:
+        logger.error(f"Chain creation error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/chains/<chain_id>', methods=['GET'])
+@jwt_required()
+def get_chain_status(chain_id):
+    """Get status of an action chain"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        manager = get_chain_manager()
+        chain = manager.get_chain(chain_id)
+        
+        if not chain:
+            return jsonify({"error": "Chain not found"}), 404
+            
+        return jsonify(chain.to_dict())
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/chains/history', methods=['GET'])
+@jwt_required()
+def get_chain_history():
+    """Get history of action chains"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        tracker = get_progress_tracker()
+        history = tracker.get_recent_chains(limit=20)
+        return jsonify({"chains": history})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# WebSocket Broadcaster for Chain Progress
+def _broadcast_chain_progress(progress):
+    """Broadcast chain progress via WebSocket"""
+    try:
+        socketio.emit(
+            'chain_progress',
+            progress.to_dict(),
+            namespace='/'
+        )
+    except Exception as e:
+        logger.error(f"WebSocket broadcast error: {e}")
+
+
+@socketio.on('subscribe_chain')
+def handle_chain_subscribe(data):
+    """Subscribe to chain updates"""
+    chain_id = data.get('chain_id')
+    # In a full implementation, we would join a room specific to this chain
+    # For now, progress is broadcast globally or we could filter
+    emit('subscribed', {'chain_id': chain_id})
+
+
+# ============================================================
 # UNIFIED DASHBOARD ROUTES
 # ============================================================
 
@@ -4936,6 +5070,13 @@ if __name__ == '__main__':
         print(f"âš ï¸  Default credentials: username='admin', password='{os.getenv('ADMIN_PASSWORD', 'changeme123')}'")
         print("âš ï¸  CHANGE THE PASSWORD in .env file before production!")
         print("")
+        
+        # Start app discovery schedulers (non-blocking)
+        if AUTOMATION_AVAILABLE:
+            # Start delayed refresh 30 seconds after server starts
+            start_auto_refresh_after_startup(delay_seconds=30)
+            # Start weekly periodic refresh
+            start_periodic_refresh(interval_hours=168)  # 168 hours = 1 week
         
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:

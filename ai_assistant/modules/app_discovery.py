@@ -93,7 +93,7 @@ class AppDiscovery:
             cmd = 'powershell -NoProfile -NonInteractive -Command "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json"'
             
             # Run command with timeout to prevent hanging
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=15)
             
             if result.returncode == 0 and result.stdout.strip():
                 try:
@@ -342,6 +342,22 @@ class AppDiscovery:
         thread = threading.Thread(target=self._background_refresh, daemon=True)
         thread.start()
     
+    def start_delayed_refresh(self, delay_seconds: int = 30):
+        """Start background refresh after a delay (for post-startup refresh)"""
+        import threading
+        import time
+        
+        def delayed_refresh():
+            print(f"⏰ Scheduled app refresh will start in {delay_seconds} seconds...")
+            time.sleep(delay_seconds)
+            if not self._is_refreshing:
+                print("🔄 Starting scheduled background app refresh...")
+                self._background_refresh()
+        
+        thread = threading.Thread(target=delayed_refresh, daemon=True)
+        thread.start()
+        print(f"✅ Delayed app refresh scheduled ({delay_seconds}s after startup)")
+    
     def _background_refresh(self):
         """Background refresh of app database"""
         try:
@@ -356,6 +372,23 @@ class AppDiscovery:
             self._last_refresh_time = datetime.now()
             
             print(f"✅ Background refresh complete! Found {len(new_apps)} apps")
+            
+            # Notify frontend via WebSocket if available
+            try:
+                from flask import current_app
+                if current_app and hasattr(current_app, 'extensions'):
+                    socketio = current_app.extensions.get('socketio')
+                    if socketio:
+                        socketio.emit('apps_discovered', {
+                            'count': len(new_apps),
+                            'timestamp': datetime.now().isoformat(),
+                            'message': f'Discovered {len(new_apps)} applications'
+                        })
+                        print("📡 Sent apps_discovered event to frontend")
+            except (RuntimeError, ImportError) as e:
+                # Not running in Flask context or socketio not available
+                print(f"ℹ️ WebSocket notification skipped: {e}")
+                
         except Exception as e:
             print(f"⚠️ Background refresh failed: {e}")
         finally:
@@ -646,18 +679,43 @@ class AppDiscovery:
         """Categorize application by name"""
         app_lower = app_name.lower()
         
-        if any(word in app_lower for word in ['chrome', 'firefox', 'edge', 'browser']):
+        # Browsers
+        if any(word in app_lower for word in ['chrome', 'firefox', 'edge', 'browser', 'brave', 'opera', 'safari']):
             return "Browser"
-        elif any(word in app_lower for word in ['notepad', 'word', 'excel', 'powerpoint', 'office', 'sticky', 'onenote']):
+        
+        # Productivity
+        elif any(word in app_lower for word in ['notepad', 'word', 'excel', 'powerpoint', 'office', 'sticky', 'onenote', 'notion', 'evernote', 'pdf', 'reader']):
             return "Productivity"
-        elif any(word in app_lower for word in ['code', 'visual', 'studio', 'terminal', 'cmd', 'powershell']):
+        
+        # Development
+        elif any(word in app_lower for word in ['code', 'visual', 'studio', 'terminal', 'cmd', 'powershell', 'git', 'python', 'node', 'docker', 'postman', 'insomnia', 'database', 'sql', 'mongodb']):
             return "Development"
-        elif any(word in app_lower for word in ['vlc', 'media', 'music', 'video', 'spotify']):
+        
+        # Media
+        elif any(word in app_lower for word in ['vlc', 'media', 'music', 'video', 'spotify', 'youtube', 'netflix', 'player', 'winamp', 'audacity']):
             return "Media"
-        elif any(word in app_lower for word in ['mail', 'discord', 'slack', 'teams']):
+        
+        # Communication
+        elif any(word in app_lower for word in ['mail', 'discord', 'slack', 'teams', 'zoom', 'skype', 'telegram', 'whatsapp', 'messenger']):
             return "Communication"
-        elif any(word in app_lower for word in ['calculator', 'notepad', 'paint', 'control', 'task']):
+        
+        # Graphics & Design
+        elif any(word in app_lower for word in ['paint', 'photoshop', 'gimp', 'inkscape', 'illustrator', 'blender', 'figma', 'canva', '3d']):
+            return "Graphics"
+        
+        # Games
+        elif any(word in app_lower for word in ['game', 'steam', 'epic', 'xbox', 'play', 'minecraft', 'roblox']):
+            return "Games"
+        
+        # Utilities
+        elif any(word in app_lower for word in ['calculator', 'notepad', 'control', 'task', 'manager', 'settings', 'cleaner', 'winrar', '7zip', 'zip']):
             return "System Tools"
+        
+        # Security
+        elif any(word in app_lower for word in ['antivirus', 'defender', 'malware', 'security', 'vpn']):
+            return "Security"
+        
+        # Default
         else:
             return "Other"
     
@@ -760,16 +818,22 @@ def smart_open_application(app_name: str) -> str:
                  return f"✅ Launching {app_name} via Windows Search"
 
             # Fallback: Direct Launch (if PyAutoGUI failed)
-            if app_path.startswith('explorer.exe shell:appsFolder'):
+            print(f"  🔧 Attempting direct launch: {app_path}")
+            if 'shell:AppsFolder' in app_path or 'shell:appsFolder' in app_path:
                 import subprocess
-                subprocess.Popen(app_path, shell=True)
+                # Use cmd /c start for proper shell protocol handling
+                print(f"  📱 Launching UWP/Store app via cmd...")
+                subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
             elif app_path.endswith(':'):
                 import subprocess
+                print(f"  🔗 Launching protocol handler...")
                 subprocess.Popen(['cmd', '/c', 'start', app_path], shell=False)
             elif app_path.lower().endswith('.lnk'):
                 import subprocess
+                print(f"  🔗 Launching shortcut file...")
                 subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
             else:
+                print(f"  📂 Launching executable via os.startfile...")
                 os.startfile(app_path)
             
             # Track successful launch
@@ -778,6 +842,8 @@ def smart_open_application(app_name: str) -> str:
         except Exception as e:
             # If everything fails
             print(f"  ❌ Launch failed: {e}")
+            print(f"  Debug: app_path = {app_path}")
+            app_discovery.track_app_launch(app_name, app_path, success=False)
             return f"❌ Found {app_name} but failed to launch: {e}"
     else:
         # If not found, try Windows Search first (User Requested Fallback)
@@ -832,11 +898,16 @@ def list_installed_apps() -> str:
 
 def get_apps_for_web() -> List[Dict[str, str]]:
     """Get applications formatted for web API responses"""
-    # Trigger background refresh on first web request (lazy load)
-    if not app_discovery._is_refreshing and app_discovery._last_refresh_time is None:
-        app_discovery._start_background_refresh()
+    # Return cached data immediately (non-blocking)
+    # Auto-refresh happens in background after server startup
+    apps = app_discovery.get_apps_for_api()
     
-    return app_discovery.get_apps_for_api()
+    if len(apps) == 0:
+        print("ℹ️ No apps in cache - user can click refresh or wait for auto-refresh")
+    else:
+        print(f"📦 Returning {len(apps)} cached apps to API")
+    
+    return apps
 
 def get_app_usage_stats() -> str:
     """Get application usage statistics."""
@@ -859,6 +930,29 @@ def get_app_usage_stats() -> str:
 # EXPORT ALIASES for backend compatibility
 get_installed_apps = get_apps_for_web
 refresh_app_list = refresh_app_database
+
+def start_periodic_refresh(interval_hours: int = 168):  # 168 hours = 1 week
+    """Start periodic background refresh (runs in separate thread)"""
+    import threading
+    import time
+    
+    def periodic_refresh_loop():
+        while True:
+            try:
+                time.sleep(interval_hours * 3600)  # Convert hours to seconds
+                if not app_discovery._is_refreshing:
+                    print(f"📅 Weekly scheduled refresh starting...")
+                    app_discovery._background_refresh()
+            except Exception as e:
+                print(f"⚠️ Periodic refresh error: {e}")
+    
+    thread = threading.Thread(target=periodic_refresh_loop, daemon=True)
+    thread.start()
+    print(f"✅ Periodic app refresh enabled (every {interval_hours} hours)")
+
+def start_auto_refresh_after_startup(delay_seconds: int = 30):
+    """Convenience function to start delayed refresh after server startup"""
+    app_discovery.start_delayed_refresh(delay_seconds)
 
 def search_apps_by_name(query: str) -> str:
     """Search for applications by name."""

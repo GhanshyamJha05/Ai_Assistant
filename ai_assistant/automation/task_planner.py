@@ -213,7 +213,7 @@ class TaskPlanner:
         Args:
             llm_provider: "gemini" or "openai"
         """
-        self.llm = LLMFactory.create_llm(llm_provider)
+        self.llm = LLMFactory.create(llm_provider)
         self.validator = PlanValidator()
         logger.info(f"✅ TaskPlanner initialized with {llm_provider}")
     
@@ -258,7 +258,9 @@ class TaskPlanner:
         
         # Get response from LLM
         try:
-            response = self.llm.generate(prompt)
+            # Construct message for generate_response
+            messages = [{"role": "user", "content": prompt}]
+            response = self.llm.generate_response(messages)
             logger.debug(f"LLM Response: {response}")
             
             # Parse response into actions
@@ -347,7 +349,15 @@ class TaskPlanner:
                 
                 # Convert type string to ActionType enum
                 try:
-                    action_type = ActionType(action_data['type'])
+                    type_str = action_data['type'].lower()
+                    # Handle common variations
+                    if type_str == 'browser_navigate':
+                        action_type = ActionType.BROWSER_NAVIGATE
+                    elif type_str == 'browser_click':
+                        action_type = ActionType.BROWSER_CLICK
+                    # ... add generic lookup
+                    else:
+                        action_type = ActionType(type_str)
                 except ValueError:
                     logger.warning(f"Unknown action type: {action_data['type']}, skipping")
                     continue

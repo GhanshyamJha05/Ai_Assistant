@@ -1,36 +1,50 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import io, { Socket } from 'socket.io-client';
 
-interface Message {
+export interface Message {
     id: number;
     type: 'user' | 'ai';
     text: string;
     time: string;
 }
 
-interface VoiceCommand {
+export interface VoiceCommand {
     id: number;
     command: string;
     time: string;
 }
 
-interface SystemStats {
+export interface SystemStats {
     cpu: number;
     memory: number;
     network: string;
 }
 
-interface LearningStats {
+export interface LearningStats {
     database: string;
     systems: string;
     conversations: string;
 }
 
-interface SystemLog {
+export interface SystemLog {
     id: number;
     type: 'info' | 'success' | 'warning' | 'error';
     message: string;
     time: string;
+}
+
+export interface ConversationSession {
+    id: string;
+    startTime: string;
+    endTime?: string;
+    messageCount: number;
+    userMessageCount: number;
+    aiMessageCount: number;
+    voiceCount: number;
+    duration?: string;
+    preview?: string;
+    messages: Message[];
+    voiceCommands: VoiceCommand[];
 }
 
 type ViewType = 'dashboard' | 'apps' | 'chat' | 'voice' | 'settings' | 'ai-learning' | 'database' | 'systems' | 'conversations' | null;
@@ -60,6 +74,10 @@ interface DashboardContextType {
     selectedView: ViewType;
     setSelectedView: (view: ViewType) => void;
     closeDetailView: () => void;
+    currentSession: ConversationSession | null;
+    conversationHistory: ConversationSession[];
+    loadSession?: (sessionId: string) => void;
+    deleteSession?: (sessionId: string) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -110,6 +128,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
     const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
     const [selectedView, setSelectedView] = useState<ViewType>(null); // Selected detail view
+    
+    // Session tracking state
+    const [currentSession, setCurrentSession] = useState<ConversationSession | null>(null);
+    const [conversationHistory, setConversationHistory] = useState<ConversationSession[]>([]);
+    const sessionStartTimeRef = useRef<Date>(new Date());
 
     // Audio analysis refs
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -1050,6 +1073,119 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setSelectedView(null);
     };
 
+    // Session management functions
+    const loadSession = (sessionId: string) => {
+        const session = conversationHistory.find(s => s.id === sessionId);
+        if (session) {
+            // Save current session to history if it has messages
+            if (currentSession && (chatMessages.length > 0 || voiceCommands.length > 0)) {
+                saveCurrentSessionToHistory();
+            }
+            
+            // Load the selected session
+            setChatMessages(session.messages);
+            setVoiceCommands(session.voiceCommands);
+            setCurrentSession(session);
+        }
+    };
+
+    const deleteSession = (sessionId: string) => {
+        setConversationHistory(prev => prev.filter(s => s.id !== sessionId));
+        
+        // Also remove from localStorage
+        const stored = localStorage.getItem('conversationHistory');
+        if (stored) {
+            const history = JSON.parse(stored);
+            const filtered = history.filter((s: ConversationSession) => s.id !== sessionId);
+            localStorage.setItem('conversationHistory', JSON.stringify(filtered));
+        }
+    };
+
+    const saveCurrentSessionToHistory = () => {
+        if (!currentSession) return;
+        
+        const endTime = new Date();
+        const duration = calculateDuration(sessionStartTimeRef.current, endTime);
+        const preview = chatMessages.length > 0 ? chatMessages[0].text : voiceCommands.length > 0 ? voiceCommands[0].command : '';
+        
+        const sessionToSave: ConversationSession = {
+            ...currentSession,
+            endTime: endTime.toLocaleTimeString(),
+            duration,
+            preview: preview.substring(0, 100),
+            messages: [...chatMessages],
+            voiceCommands: [...voiceCommands],
+            messageCount: chatMessages.length + voiceCommands.length,
+            userMessageCount: chatMessages.filter(m => m.type === 'user').length + voiceCommands.length,
+            aiMessageCount: chatMessages.filter(m => m.type === 'ai').length,
+            voiceCount: voiceCommands.length,
+        };
+        
+        setConversationHistory(prev => {
+            const updated = [sessionToSave, ...prev];
+            // Save to localStorage
+            localStorage.setItem('conversationHistory', JSON.stringify(updated.slice(0, 50))); // Keep last 50
+            return updated;
+        });
+    };
+
+    const calculateDuration = (start: Date, end: Date): string => {
+        const diff = end.getTime() - start.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
+    };
+
+    // Initialize current session on mount
+    useEffect(() => {
+        const sessionId = `session_${Date.now()}`;
+        const startTime = new Date();
+        sessionStartTimeRef.current = startTime;
+        
+        setCurrentSession({
+            id: sessionId,
+            startTime: startTime.toLocaleTimeString(),
+            messageCount: 0,
+            userMessageCount: 0,
+            aiMessageCount: 0,
+            voiceCount: 0,
+            messages: [],
+            voiceCommands: [],
+        });
+
+        // Load history from localStorage
+        const stored = localStorage.getItem('conversationHistory');
+        if (stored) {
+            try {
+                setConversationHistory(JSON.parse(stored));
+            } catch (e) {
+                console.error('Failed to load conversation history:', e);
+            }
+        }
+
+        // Save current session before unload
+        return () => {
+            if (chatMessages.length > 0 || voiceCommands.length > 0) {
+                saveCurrentSessionToHistory();
+            }
+        };
+    }, []);
+
+    // Update current session when messages change
+    useEffect(() => {
+        if (currentSession) {
+            setCurrentSession(prev => prev ? {
+                ...prev,
+                messageCount: chatMessages.length + voiceCommands.length,
+                userMessageCount: chatMessages.filter(m => m.type === 'user').length + voiceCommands.length,
+                aiMessageCount: chatMessages.filter(m => m.type === 'ai').length,
+                voiceCount: voiceCommands.length,
+                messages: chatMessages,
+                voiceCommands: voiceCommands,
+            } : null);
+        }
+    }, [chatMessages, voiceCommands]);
+
     const value: DashboardContextType = {
         socket,
         chatMessages,
@@ -1075,6 +1211,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         selectedView,
         setSelectedView,
         closeDetailView,
+        currentSession,
+        conversationHistory,
+        loadSession,
+        deleteSession,
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

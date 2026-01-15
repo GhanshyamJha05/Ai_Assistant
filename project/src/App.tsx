@@ -7,9 +7,7 @@ import StatusBar from './components/CenterColumn/StatusBar';
 import VoiceButton from './components/CenterColumn/VoiceButton';
 import CommandInput from './components/CenterColumn/CommandInput';
 import TaskStatus from './components/CenterColumn/TaskStatus';
-import ChatVoiceHistory from './components/RightColumn/ChatVoiceHistory';
-import SystemStats from './components/RightColumn/SystemStats';
-import SystemLogs from './components/RightColumn/SystemLogs';
+import ConversationTracker from './components/RightColumn/ConversationTracker';
 import DetailView from './components/DetailView';
 import DashboardDetail from './components/DetailViews/DashboardDetail';
 import AppsDetail from './components/DetailViews/AppsDetail';
@@ -111,7 +109,7 @@ function AppContent() {
                   : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
               }`}
             >
-              History & Stats
+              Conversation
             </button>
           </div>
 
@@ -147,12 +145,10 @@ function AppContent() {
             {/* Stats Tab */}
             {activeTab === 'stats' && (
               <motion.div
-                className="flex flex-col gap-3"
+                className="flex flex-col gap-3 flex-1 min-h-0"
                 variants={columnVariants}
               >
-                <ChatVoiceHistory />
-                <SystemStats />
-                <SystemLogs />
+                <ConversationTracker />
               </motion.div>
             )}
           </div>
@@ -184,9 +180,7 @@ function AppContent() {
               className="col-span-3 flex flex-col gap-3 overflow-hidden min-h-0"
               variants={columnVariants}
             >
-              <ChatVoiceHistory />
-              <SystemStats />
-              <SystemLogs />
+              <ConversationTracker />
             </motion.div>
           </div>
         </motion.div>

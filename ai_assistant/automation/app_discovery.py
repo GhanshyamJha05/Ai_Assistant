@@ -92,7 +92,7 @@ class AppDiscovery:
             cmd = 'powershell -NoProfile -NonInteractive -Command "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json"'
             
             # Run command with timeout to prevent hanging
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=15)
             
             if result.returncode == 0 and result.stdout.strip():
                 try:
@@ -733,9 +733,10 @@ def smart_open_application(app_name: str) -> str:
                  return f"✅ Launching {app_name} via Windows Search"
 
             # Fallback: Direct Launch (if PyAutoGUI failed)
-            if app_path.startswith('explorer.exe shell:appsFolder'):
+            if 'shell:AppsFolder' in app_path or 'shell:appsFolder' in app_path:
                 import subprocess
-                subprocess.Popen(app_path, shell=True)
+                # Use cmd /c start for proper shell protocol handling
+                subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
             elif app_path.endswith(':'):
                 import subprocess
                 subprocess.Popen(['cmd', '/c', 'start', app_path], shell=False)
