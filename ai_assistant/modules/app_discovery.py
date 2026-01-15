@@ -7,8 +7,16 @@ and provides intelligent app launching based on voice commands.
 import os
 import winreg
 import json
+import webbrowser
+import time
 import subprocess
 import glob
+import json
+try:
+    import pyautogui
+    PYAUTOGUI_AVAILABLE = True
+except ImportError:
+    PYAUTOGUI_AVAILABLE = False
 from pathlib import Path
 import time
 import sqlite3
@@ -60,6 +68,10 @@ class AppDiscovery:
         # Method 3: Essential Windows Store apps
         print("  📱 Scanning essential Windows Store apps...")
         apps.update(self._scan_essential_store_apps())
+
+        # Method 4: PowerShell Get-StartApps (Modern App Discovery)
+        print("  ⚡ Scanning with PowerShell Get-StartApps...")
+        apps.update(self._scan_powershell_apps())
         
         # DISABLED: Raw Program Files scanning (finds unregistered apps)
         # DISABLED: Manual AppData scanning (finds portable apps)
@@ -72,6 +84,75 @@ class AppDiscovery:
         print(f"✅ Discovery complete! Found {len(apps)} registered applications.")
         return apps
     
+    def _scan_powershell_apps(self) -> Dict[str, str]:
+        """Scan apps using PowerShell Get-StartApps command (Reliably finds Store/UWP apps)"""
+        apps = {}
+        try:
+            # Use PowerShell to get list of apps
+            # We use a custom object selection to get clean JSON output
+            cmd = 'powershell -NoProfile -NonInteractive -Command "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json"'
+            
+            # Run command with timeout to prevent hanging
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=30)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    data = json.loads(result.stdout)
+                    
+                    # Handle single item vs list
+                    if isinstance(data, dict):
+                        data = [data]
+                        
+                    for item in data:
+                        if 'Name' in item and 'AppID' in item:
+                            name = item['Name']
+                            app_id = item['AppID']
+                            
+                            # Construct launch path using shell:AppsFolder
+                            # This works for ANY Store app / UWP app
+                            launch_path = f"explorer.exe shell:AppsFolder\\{app_id}"
+                            
+                            # Store in apps dict
+                            if name:
+                                apps[name.lower()] = launch_path
+                                
+                except json.JSONDecodeError:
+                    print(f"Failed to parse PowerShell output")
+        except Exception as e:
+            print(f"PowerShell scan failed: {e}")
+            
+        return apps
+    
+            
+        return apps
+    
+    def _open_via_windows_search(self, app_name: str) -> bool:
+        """
+        Fallback method: Open app by typing its name in Windows Search.
+        This mimics user behavior: Win Key -> Type Name -> Enter
+        """
+        if not PYAUTOGUI_AVAILABLE:
+            print("  ⚠️ pyautogui not available for Windows Search fallback.")
+            return False
+            
+        print(f"  🔍 Attempting to open '{app_name}' via Windows Search...")
+        try:
+            # 1. Press Windows Key to open Start Menu
+            pyautogui.press('win')
+            time.sleep(0.5) # Wait for animation
+            
+            # 2. Type the application name
+            pyautogui.write(app_name, interval=0.05)
+            time.sleep(1.0) # Wait for search results to populate
+            
+            # 3. Press Enter to launch the top result
+            pyautogui.press('enter')
+            print(f"  ✅ Executed Windows Search launch for '{app_name}'")
+            return True
+        except Exception as e:
+            print(f"  ❌ Windows Search launch failed: {e}")
+            return False
+
     def _scan_registry_programs(self) -> Dict[str, str]:
         """Scan Windows Registry for installed programs"""
         apps = {}
@@ -411,6 +492,20 @@ class AppDiscovery:
         normalized_query = app_name_lower.replace('.', ' ').replace('_', ' ').replace('-', ' ')
         
         # Get usage statistics for ranking boost
+        # Optimization: Don't fetch if no matches found yet
+        
+        # 0. DIRECT LOOKUP CHECK (Fastest)
+        if normalized_query in self.apps_database:
+             return self.apps_database[normalized_query]
+        
+        # 1. Direct Lookup (Legacy/Mapped names)
+        # Check standard app names that might not be normalized
+        if app_name_lower in self.apps_database:
+            return self.apps_database[app_name_lower]
+        if app_name in self.apps_database:
+            return self.apps_database[app_name]
+
+        # Get usage statistics for ranking boost
         most_used = {name.lower(): count for name, count in self.get_most_used_apps(100)}
         
         matches = []
@@ -526,9 +621,10 @@ class AppDiscovery:
         """Get applications formatted for API responses"""
         apps_list = []
         
+        # Performance Optimization: Query usage stats ONCE before the loop
+        most_used = dict(self.get_most_used_apps(200)) # Increased limit to catch more
+        
         for app_name, app_path in self.apps_database.items():
-            # Get usage data
-            most_used = dict(self.get_most_used_apps(100))
             usage_count = most_used.get(app_name, 0)
             
             # Categorize app
@@ -655,36 +751,44 @@ def smart_open_application(app_name: str) -> str:
                 return f"❌ Failed to open {app_name}: {e}"
         
         try:
+            # USER REQUEST: Priority 1 is Windows Search (Win+Type+Enter)
+            # This is more reliable than direct path launching for some Store apps
+            print(f"  ⌨️ Triggering Windows Search for '{app_name}' (Priority Method)...")
+            if app_discovery._open_via_windows_search(app_name):
+                 # Log the launch but don't mark as success/fail yet since we blindly typed
+                 app_discovery.track_app_launch(app_name, app_path, success=True)
+                 return f"✅ Launching {app_name} via Windows Search"
+
+            # Fallback: Direct Launch (if PyAutoGUI failed)
             if app_path.startswith('explorer.exe shell:appsFolder'):
-                # Windows Store app - use subprocess for security
                 import subprocess
                 subprocess.Popen(app_path, shell=True)
             elif app_path.endswith(':'):
-                # Protocol handler (e.g., microsoft.windows.camera:, ms-photos:)
                 import subprocess
                 subprocess.Popen(['cmd', '/c', 'start', app_path], shell=False)
             elif app_path.lower().endswith('.lnk'):
-                # Shortcut file - launch directly to preserve PWA arguments
                 import subprocess
-                # Use start command to properly handle .lnk files with all their properties
                 subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
             else:
-                # Regular executable - use os.startfile (safe)
                 os.startfile(app_path)
             
             # Track successful launch
             app_discovery.track_app_launch(app_name, app_path, success=True)
-            return f"✅ Successfully opened {app_name}"
+            return f"✅ Successfully opened {app_name} (Direct)"
         except Exception as e:
-            # Track failed launch
-            app_discovery.track_app_launch(app_name, app_path, success=False)
+            # If everything fails
+            print(f"  ❌ Launch failed: {e}")
             return f"❌ Found {app_name} but failed to launch: {e}"
     else:
+        # If not found, try Windows Search first (User Requested Fallback)
+        if app_discovery._open_via_windows_search(app_name):
+            return f"I couldn't find {app_name} in my list, but I'm opening it via Windows Search."
+
         # If not found, try web fallbacks
         web_fallbacks = {
             'youtube music': 'https://music.youtube.com',
             'spotify': 'https://open.spotify.com',
-            'whatsapp': 'https://web.whatsapp.com',
+            # 'whatsapp': 'https://web.whatsapp.com', # REMOVED: User prefers system launch failure over web fallback
             'discord': 'https://discord.com/app',
             'slack': 'https://app.slack.com',
             'zoom': 'https://zoom.us/join',
@@ -751,6 +855,10 @@ def get_app_usage_stats() -> str:
         report += f"{i}. {app_name.title()} (Last: {last_time})\n"
     
     return report
+
+# EXPORT ALIASES for backend compatibility
+get_installed_apps = get_apps_for_web
+refresh_app_list = refresh_app_database
 
 def search_apps_by_name(query: str) -> str:
     """Search for applications by name."""

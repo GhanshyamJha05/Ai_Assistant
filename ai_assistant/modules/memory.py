@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Import encryption support
 try:
-    from core.encrypted_database import create_encrypted_memory_db
+    from ai_assistant.core.encrypted_database import create_encrypted_memory_db
     ENCRYPTION_AVAILABLE = True
 except ImportError:
     ENCRYPTION_AVAILABLE = False

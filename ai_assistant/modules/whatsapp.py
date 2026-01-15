@@ -48,11 +48,14 @@ def send_whatsapp_message(contact_name: str, message: str) -> str:
     
     try:
         # Construct URL
-        # Using whatsapp:// protocol opens the desktop app if installed, otherwise might fail or ask to open.
-        # Using https://web.whatsapp.com/send?phone=... works for web.
-        # Let's try the universal link which redirects.
-        url = f"https://web.whatsapp.com/send?phone={phone_number}&text={message}"
+        # UPDATED: Prefer Desktop App (whatsapp://) protocol first
+        # fallback to web URL if strictly needed, but user requested desktop priority.
         
+        # 1. Try Desktop Protocol
+        url = f"whatsapp://send?phone={phone_number}&text={message}"
+        
+        print(f"  🔗 Opening protocol: {url}")
+        # webbrowser.open handles protocols correctly on Windows if app is installed
         webbrowser.open(url)
         
         if PYAUTOGUI_AVAILABLE:
