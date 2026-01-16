@@ -49,39 +49,35 @@ class AppDiscovery:
     
     def scan_installed_applications(self) -> Dict[str, str]:
         """
-        Scan only officially registered applications:
-        - Windows Registry (Apps & Features in Settings)
-        - Start Menu shortcuts (All Apps in Start Menu)
-        - Essential Windows Store apps (Camera, etc.)
+        Scan ONLY apps visible in Windows Start Menu and Settings > Apps.
+        This matches what users see and can launch via Windows Search.
+        
+        Discovery Methods:
+        1. Start Menu shortcuts (All Apps in Start Menu)
+        2. PowerShell Get-StartApps (Modern Windows apps in Settings)
+        
+        WHY THIS APPROACH:
+        - Only shows apps users can actually launch via Start Menu
+        - Matches Windows Search behavior (our universal launcher)
+        - Avoids hidden/system/unregistered apps that confuse users
+        - Faster scanning (no deep registry/filesystem crawling)
         """
-        print("🔍 Scanning Windows registered applications...")
+        print("🔍 Scanning Windows Start Menu and Settings apps...")
         apps = {}
         
-        # Method 1: Windows Registry - Apps shown in Settings > Apps & Features
-        print("  📋 Scanning Windows Registry (Apps & Features)...")
-        apps.update(self._scan_registry_programs())
-        
-        # Method 2: Start Menu shortcuts - All Apps in Start Menu
+        # Method 1: Start Menu shortcuts - All Apps in Start Menu
         print("  📂 Scanning Start Menu (All Apps)...")
         apps.update(self._scan_start_menu())
         
-        # Method 3: Essential Windows Store apps
-        print("  📱 Scanning essential Windows Store apps...")
-        apps.update(self._scan_essential_store_apps())
-
-        # Method 4: PowerShell Get-StartApps (Modern App Discovery)
-        print("  ⚡ Scanning with PowerShell Get-StartApps...")
+        # Method 2: PowerShell Get-StartApps (Modern App Discovery from Settings)
+        print("  ⚡ Scanning PowerShell Get-StartApps (Settings > Apps)...")
         apps.update(self._scan_powershell_apps())
-        
-        # DISABLED: Raw Program Files scanning (finds unregistered apps)
-        # DISABLED: Manual AppData scanning (finds portable apps)
-        # DISABLED: Hardcoded system utilities
         
         # Save to cache
         self.apps_database = apps
         self.save_cache()
         
-        print(f"✅ Discovery complete! Found {len(apps)} registered applications.")
+        print(f"✅ Discovery complete! Found {len(apps)} Start Menu apps.")
         return apps
     
     def _scan_powershell_apps(self) -> Dict[str, str]:
@@ -93,7 +89,7 @@ class AppDiscovery:
             cmd = 'powershell -NoProfile -NonInteractive -Command "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json"'
             
             # Run command with timeout to prevent hanging
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=15)
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=10)
             
             if result.returncode == 0 and result.stdout.strip():
                 try:
@@ -128,85 +124,54 @@ class AppDiscovery:
     
     def _open_via_windows_search(self, app_name: str) -> bool:
         """
-        Fallback method: Open app by typing its name in Windows Search.
-        This mimics user behavior: Win Key -> Type Name -> Enter
+        UNIVERSAL APP LAUNCHER: Open any app via Windows Search.
+        This mimics natural user behavior: Win Key -> Type Name -> Enter
+        
+        Works for ALL app types:
+        - Desktop apps (.exe)
+        - Windows Store/UWP apps
+        - PWAs (Progressive Web Apps)
+        - System utilities
+        - Anything visible in Start Menu
+        
+        This is the ONLY launch method we use - simple, reliable, universal.
         """
         if not PYAUTOGUI_AVAILABLE:
-            print("  ⚠️ pyautogui not available for Windows Search fallback.")
+            print("  ⚠️ pyautogui not installed. Install it: pip install pyautogui")
             return False
             
-        print(f"  🔍 Attempting to open '{app_name}' via Windows Search...")
+        print(f"  🔍 Windows Search: '{app_name}'")
         try:
-            # 1. Press Windows Key to open Start Menu
+            # Close any existing Start Menu first
+            pyautogui.press('esc')
+            time.sleep(0.2)
+            
+            # Open Start Menu
             pyautogui.press('win')
-            time.sleep(0.5) # Wait for animation
+            time.sleep(0.6)  # Wait for Start Menu animation
             
-            # 2. Type the application name
+            # Type app name
             pyautogui.write(app_name, interval=0.05)
-            time.sleep(1.0) # Wait for search results to populate
+            time.sleep(1.2)  # Wait for search indexing
             
-            # 3. Press Enter to launch the top result
+            # Launch top result
             pyautogui.press('enter')
-            print(f"  ✅ Executed Windows Search launch for '{app_name}'")
+            time.sleep(0.3)
+            
+            # Close Start Menu if still open
+            pyautogui.press('esc')
+            
+            print(f"  ✅ Launched '{app_name}' via Windows Search")
             return True
         except Exception as e:
-            print(f"  ❌ Windows Search launch failed: {e}")
+            print(f"  ❌ Windows Search failed: {e}")
             return False
 
-    def _scan_registry_programs(self) -> Dict[str, str]:
-        """Scan Windows Registry for installed programs"""
-        apps = {}
-        registry_paths = [
-            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-            r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-        ]
-        
-        for reg_path in registry_paths:
-            try:
-                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
-                    for i in range(winreg.QueryInfoKey(key)[0]):
-                        try:
-                            subkey_name = winreg.EnumKey(key, i)
-                            with winreg.OpenKey(key, subkey_name) as subkey:
-                                try:
-                                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
-                                    install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]
-                                    
-                                    if display_name and install_location:
-                                        # Look for executable files in install location
-                                        exe_files = glob.glob(os.path.join(install_location, "*.exe"))
-                                        if exe_files:
-                                            # Select first valid executable
-                                            apps[display_name.lower()] = exe_files[0]
-                                except FileNotFoundError:
-                                    continue
-                        except OSError:
-                            continue
-            except Exception as e:
-                print(f"Registry scan error: {e}")
-        
-        return apps
+    # REMOVED: Registry scanning - not needed for Start Menu only approach
+    # We only show apps that appear in Start Menu and Settings, which users can launch via Windows Search
     
-    def _scan_essential_store_apps(self) -> Dict[str, str]:
-        """Scan for essential Windows Store apps that users commonly need"""
-        apps = {}
-        # List of common Windows Store apps with their protocol handlers
-        essential_apps = {
-            'camera': 'microsoft.windows.camera:',
-            'mail': 'outlookmail:',
-            'calendar': 'outlookcal:',
-            'photos': 'ms-photos:',
-            'calculator': 'calculator:',
-            'maps': 'bingmaps:',
-            'store': 'ms-windows-store:',
-            'settings': 'ms-settings:',
-        }
-        
-        for app_name, protocol in essential_apps.items():
-            # Use the protocol handler as the "path" - Windows will handle it correctly
-            apps[app_name] = protocol
-        
-        return apps
+    # REMOVED: Essential store apps method - PowerShell Get-StartApps finds these automatically
+    # No need for hardcoded protocol handlers when using Windows Search as universal launcher
     
     def _scan_start_menu(self) -> Dict[str, str]:
         """Scan Start Menu shortcuts"""
@@ -809,42 +774,21 @@ def smart_open_application(app_name: str) -> str:
                 return f"❌ Failed to open {app_name}: {e}"
         
         try:
-            # USER REQUEST: Priority 1 is Windows Search (Win+Type+Enter)
-            # This is more reliable than direct path launching for some Store apps
-            print(f"  ⌨️ Triggering Windows Search for '{app_name}' (Priority Method)...")
+            # UNIVERSAL METHOD: Windows Search (Win+Type+Enter)
+            # This is the most reliable way to launch ANY app - exactly how users do it manually
+            # Works for: Store apps, Desktop apps, PWAs, System apps, everything!
+            print(f"  🔍 Launching '{app_name}' via Windows Search (Universal Method)...")
             if app_discovery._open_via_windows_search(app_name):
-                 # Log the launch but don't mark as success/fail yet since we blindly typed
-                 app_discovery.track_app_launch(app_name, app_path, success=True)
-                 return f"✅ Launching {app_name} via Windows Search"
-
-            # Fallback: Direct Launch (if PyAutoGUI failed)
-            print(f"  🔧 Attempting direct launch: {app_path}")
-            if 'shell:AppsFolder' in app_path or 'shell:appsFolder' in app_path:
-                import subprocess
-                # Use cmd /c start for proper shell protocol handling
-                print(f"  📱 Launching UWP/Store app via cmd...")
-                subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
-            elif app_path.endswith(':'):
-                import subprocess
-                print(f"  🔗 Launching protocol handler...")
-                subprocess.Popen(['cmd', '/c', 'start', app_path], shell=False)
-            elif app_path.lower().endswith('.lnk'):
-                import subprocess
-                print(f"  🔗 Launching shortcut file...")
-                subprocess.Popen(['cmd', '/c', 'start', '', app_path], shell=False)
+                app_discovery.track_app_launch(app_name, app_path, success=True)
+                return f"✅ Launching {app_name} via Windows Search"
             else:
-                print(f"  📂 Launching executable via os.startfile...")
-                os.startfile(app_path)
-            
-            # Track successful launch
-            app_discovery.track_app_launch(app_name, app_path, success=True)
-            return f"✅ Successfully opened {app_name} (Direct)"
+                # If Windows Search failed (pyautogui not available), return error
+                app_discovery.track_app_launch(app_name, app_path, success=False)
+                return f"❌ Windows Search unavailable - install pyautogui: pip install pyautogui"
         except Exception as e:
-            # If everything fails
             print(f"  ❌ Launch failed: {e}")
-            print(f"  Debug: app_path = {app_path}")
             app_discovery.track_app_launch(app_name, app_path, success=False)
-            return f"❌ Found {app_name} but failed to launch: {e}"
+            return f"❌ Failed to launch {app_name}: {e}"
     else:
         # If not found, try Windows Search first (User Requested Fallback)
         if app_discovery._open_via_windows_search(app_name):

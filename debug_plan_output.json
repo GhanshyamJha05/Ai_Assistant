@@ -1,0 +1,16 @@
+{
+  "command": "open notepad and write hello world",
+  "chain_id": "chain_033b42730f37",
+  "success": true,
+  "actions": [
+    {
+      "action_id": "action_4c95b0e1",
+      "description": "Open Notepad application",
+      "result": {
+        "success": true,
+        "output": "Opened notepad"
+      },
+      "duration": 2.945173
+    }
+  ]
+}

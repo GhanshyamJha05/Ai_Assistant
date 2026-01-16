@@ -90,12 +90,59 @@ class AppAutomation:
         
         # Fallback: use subprocess
         try:
-            subprocess.Popen(app_name, shell=True)
+            # Handle common app names
+            if 'notepad' in app_name.lower():
+                subprocess.Popen("notepad.exe")
+            elif 'calc' in app_name.lower():
+                subprocess.Popen("calc.exe")
+            elif 'cmd' in app_name.lower():
+                subprocess.Popen("start cmd.exe", shell=True)
+            else:
+                subprocess.Popen(app_name, shell=True)
+                
             time.sleep(2)  # Give app time to open
             logger.info(f"✅ Opened: {app_name}")
             return True
         except Exception as e:
             logger.error(f"❌ Failed to open app: {e}")
+            return False
+            
+    def type_text(self, text: str, interval: float = 0.05) -> bool:
+        """Type text using keyboard simulation"""
+        if not WINDOWS_AUTO_AVAILABLE:
+            return False
+        try:
+            logger.info(f"⌨️ Typing: {text}")
+            pyautogui.write(text, interval=interval)
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to type text: {e}")
+            return False
+            
+    def press_key(self, key_name: str) -> bool:
+        """Press a keyboard key"""
+        if not WINDOWS_AUTO_AVAILABLE:
+            return False
+        try:
+            logger.info(f"⌨️ Pressing key: {key_name}")
+            pyautogui.press(key_name)
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to press key: {e}")
+            return False
+
+    def click(self, x: int = None, y: int = None) -> bool:
+        """Click mouse (at current position or specific coords)"""
+        if not WINDOWS_AUTO_AVAILABLE:
+            return False
+        try:
+            if x is not None and y is not None:
+                pyautogui.click(x, y)
+            else:
+                pyautogui.click()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to click: {e}")
             return False
     
     def close_app(self, app_name: str) -> bool:

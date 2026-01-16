@@ -13,7 +13,11 @@ Features:
 """
 
 import numpy as np
-import webrtcvad
+try:
+    import webrtcvad
+    WEBRTCVAD_AVAILABLE = True
+except ImportError:
+    WEBRTCVAD_AVAILABLE = False
 import threading
 import queue
 import time
@@ -108,6 +112,12 @@ class VoiceActivityDetector:
     
     def _init_webrtc_vad(self):
         """Initialize WebRTC VAD"""
+        if not WEBRTCVAD_AVAILABLE:
+            self.webrtc_vad = None
+            self.webrtc_available = False
+            self.logger.warning("WebRTC VAD not available due to missing library. Falling back to energy/spectral.")
+            return
+
         try:
             self.webrtc_vad = webrtcvad.Vad(self.config.sensitivity.value)
             self.webrtc_available = True

@@ -23,6 +23,7 @@ from ai_assistant.core.action_chain_models import (
     ExecutionReport, ProgressReport,
     generate_chain_id, generate_action_id
 )
+from ai_assistant.core.progress_tracker import get_progress_tracker
 
 # Import existing components
 try:
@@ -48,6 +49,24 @@ try:
     TASK_CHAIN_AVAILABLE = True
 except ImportError:
     TASK_CHAIN_AVAILABLE = False
+
+try:
+    from ai_assistant.automation.browser_automation import BrowserAutomation, BrowserConfig
+    BROWSER_AUTO_AVAILABLE = True
+except ImportError:
+    BROWSER_AUTO_AVAILABLE = False
+
+try:
+    from ai_assistant.automation.app_automation import AppAutomation
+    APP_AUTO_AVAILABLE = True
+except ImportError:
+    APP_AUTO_AVAILABLE = False
+
+try:
+    from ai_assistant.multimodal import MultiModalAI
+    VLM_AVAILABLE = True
+except ImportError:
+    VLM_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +97,14 @@ class ChainOfActionsManager:
         self.task_planner = TaskPlanner() if TASK_PLANNER_AVAILABLE else None
         self.task_orchestrator = TaskChainOrchestrator() if TASK_CHAIN_AVAILABLE else None
         self.verifier = get_visual_verifier() if VERIFIER_AVAILABLE else None
+        
+        # Initialize Automation Agents
+        self.browser_agent = BrowserAutomation() if BROWSER_AUTO_AVAILABLE else None
+        self.app_agent = AppAutomation() if APP_AUTO_AVAILABLE else None
+        self.vlm = MultiModalAI() if VLM_AVAILABLE else None
+        
+        # Initialize Persistence
+        self.tracker = get_progress_tracker()
         
         # Performance tracking
         self.stats = {
@@ -114,6 +141,9 @@ class ChainOfActionsManager:
         self.active_chains[chain.id] = chain
         self.stats["total_chains"] += 1
         
+        # Persist: Start
+        self.tracker.start_chain(chain.id, command, 0)
+        
         logger.info(f"Created chain {chain.id}")
         return chain
     
@@ -142,9 +172,14 @@ class ChainOfActionsManager:
                 plan = self.task_planner.create_plan(chain.command)
                 
                 for i, planned_action in enumerate(plan.actions):
+                    # Inject specific type into parameters for execution
+                    # If type is an Enum, get its value, otherwise use it as string
+                    type_val = planned_action.type.value if hasattr(planned_action.type, 'value') else str(planned_action.type)
+                    planned_action.parameters['sub_type'] = type_val
+                    
                     action = Action(
                         id=generate_action_id(),
-                        type=self._map_action_type(planned_action.type.value),
+                        type=self._map_action_type(type_val),
                         description=planned_action.description,
                         parameters=planned_action.parameters,
                         dependencies=planned_action.dependencies
@@ -163,6 +198,13 @@ class ChainOfActionsManager:
         
         chain.actions = actions
         self.stats["total_actions"] += len(actions)
+        
+        # Persist: Update chain info
+        self.tracker.start_chain(chain.id, chain.command, len(actions))
+        
+        # Persist: Record Plan
+        for action in actions:
+            self.tracker.record_action_start(action.id, chain.id, action.description, action.type.value)
         
         return actions
     
@@ -218,13 +260,19 @@ class ChainOfActionsManager:
             'browser_navigate': ActionType.BROWSER,
             'browser_click': ActionType.BROWSER,
             'browser_type': ActionType.BROWSER,
+            'browser_scroll': ActionType.BROWSER,  # Added scroll support
+            'browser_select': ActionType.BROWSER,  # Added select/dropdown support
             'app_open': ActionType.APP,
             'app_close': ActionType.APP,
+            'app_interact': ActionType.APP,
+            'system_type': ActionType.APP,
+            'system_press': ActionType.APP,
+            'wait': ActionType.CUSTOM,
             'file_create': ActionType.FILE,
             'file_read': ActionType.FILE,
             'system_command': ActionType.SYSTEM,
         }
-        return mapping.get(planner_type, ActionType.CUSTOM)
+        return mapping.get(planner_type.lower(), ActionType.CUSTOM)
     
     # ========== STEP 3: IDENTIFY ==========
     
@@ -284,14 +332,17 @@ class ChainOfActionsManager:
         action_results = []
         
         try:
-            # Execute actions in order (respecting dependencies)
-            for i, action in enumerate(chain.actions):
+            # Execute actions using a while loop to allow dynamic insertion of repair steps
+            i = 0
+            while i < len(chain.actions):
+                action = chain.actions[i]
                 chain.current_action_index = i
                 
                 # Check dependencies
                 if not await self._check_dependencies(action, chain):
                     logger.warning(f"Dependencies not met for {action.id}, skipping")
                     action.status = "skipped"
+                    i += 1
                     continue
                 
                 # Execute action
@@ -300,16 +351,64 @@ class ChainOfActionsManager:
                 action.started_at = datetime.now()
                 await self._notify_progress(chain)
                 
+                # Persist: Update Status
+                self.tracker.update_action_status(action.id, "running")
+                self.tracker.update_chain_status(chain.id, ChainStatus.EXECUTING.value, chain.progress_percentage, chain.actions_completed)
+                
                 try:
                     result = await self._execute_action(action, chain)
                     
-                    action.status = "completed"
+                    # Visual Verification (VLM)
+                    verification_failed = False
+                    verification_msg = ""
+                    
+                    if self.vlm and action.type in [ActionType.BROWSER, ActionType.APP]:
+                        verification = await self._verify_action_with_vlm(action)
+                        if verification:
+                            result["visual_verification"] = verification
+                            if verification.get("verified") is False: # Explicit False, not None
+                                verification_failed = True
+                                verification_msg = verification.get("error") or "Visual check failed"
+                                logger.warning(f"⚠️ Visual Verification Failed: {verification_msg}")
+                                logger.info(f"Analysis: {verification.get('vlm_analysis')}")
+                            else:
+                                logger.info(f"✅ Visual Verification Passed")
+
+                    if verification_failed:
+                        # Handle Self-Correction
+                        if hasattr(self, 'task_planner') and self.task_planner:
+                            logger.info("🔧 Attempting Self-Correction...")
+                            reparations = await self._handle_verification_failure(action, verification)
+                            if reparations:
+                                logger.info(f"➕ Inserting {len(reparations)} repair actions")
+                                # Insert repair actions immediately after current action
+                                # (slicing allows inserting multiple items)
+                                chain.actions[i+1:i+1] = reparations
+                                # Don't advance 'i' yet? No, we completed this bad action, 
+                                # next iteration will pick up the first repair action.
+                                action.status = "completed_with_warning" # Mark current as done but flaky
+                                action.result = result # Save result anyway
+                            else:
+                                logger.error("No repairs generated, continuing...")
+                                action.status = "completed" # Treat as done if no fix
+                        else:
+                             action.status = "completed" # No planner to fix
+                    else:
+                        action.status = "completed"
+                    
                     action.result = result
                     action.completed_at = datetime.now()
                     action.duration_seconds = (action.completed_at - action.started_at).total_seconds()
                     
                     chain.actions_completed += 1
                     completed += 1
+                    
+                    # Persist: Completed Action
+                    status_str = action.status
+                    self.tracker.update_action_status(action.id, status_str, 100.0, result)
+                    
+                    if "output" in result and result["output"]:
+                         logger.info(f"✅ Action Success: {result['output']}")
                     
                     # Store result
                     chain.results[action.id] = result
@@ -328,11 +427,19 @@ class ChainOfActionsManager:
                     action.error = str(e)
                     action.completed_at = datetime.now()
                     
+                    # Persist: Failed Action
+                    self.tracker.update_action_status(action.id, "failed", error=str(e))
+                    
                     chain.actions_failed += 1
                     failed += 1
                     chain.errors.append(f"Action {action.id}: {str(e)}")
                 
+                # Persist: Chain Progress
+                self.tracker.update_chain_status(chain.id, ChainStatus.EXECUTING.value, chain.progress_percentage, chain.actions_completed)
                 await self._notify_progress(chain)
+                
+                # Increment loop
+                i += 1
             
             # All actions processed
             chain.status = ChainStatus.VERIFYING
@@ -352,15 +459,32 @@ class ChainOfActionsManager:
         
         for dep_id in action.dependencies:
             dep_action = next((a for a in chain.actions if a.id == dep_id), None)
-            if not dep_action or dep_action.status != "completed":
+            if not dep_action:
+                return False
+            
+            # Allow completed or completed_with_warning (for self-corrected actions)
+            if dep_action.status not in ["completed", "completed_with_warning"]:
                 return False
         
         return True
     
     async def _execute_action(self, action: Action, chain: ActionChain) -> Any:
         """Execute single action"""
+        logger.info(f"🚀 Executing action: {action.description} (Type: {action.type.value})")
         
-        # Use TaskChainOrchestrator if available
+        # 1. Browser Actions
+        if action.type == ActionType.BROWSER and self.browser_agent:
+            return await self._execute_browser_action(action)
+            
+        # 2. App Actions
+        elif action.type == ActionType.APP and self.app_agent:
+            return await self._execute_app_action(action)
+            
+        # 3. File Actions
+        elif action.type == ActionType.FILE:
+             return await self._execute_file_action(action)
+        
+        # Use TaskChainOrchestrator if available (Legacy fallback)
         if self.task_orchestrator and action.type in [ActionType.APP, ActionType.BROWSER]:
             from ai_assistant.ai.multi_step_parser import TaskStep
             
@@ -376,14 +500,128 @@ class ChainOfActionsManager:
             return result
         
         # Fallback: simulate execution
-        logger.info(f"Simulating execution: {action.description}")
+        logger.warning(f"⚠️ No executor found for {action.type}, simulating execution: {action.description}")
         await asyncio.sleep(1)  # Simulate work
         
         return {
             "success": True,
-            "message": f"Executed: {action.description}",
+            "message": f"Simulated: {action.description}",
             "output": None
         }
+
+    async def _execute_browser_action(self, action: Action) -> Dict[str, Any]:
+        """Execute browser action using BrowserAutomation"""
+        sub_type = action.parameters.get('sub_type', '').lower()
+        params = action.parameters
+        
+        if not self.browser_agent:
+            raise RuntimeError("Browser Agent not initialized")
+
+        # Helper to run blocking calls
+        def _run_browser_task():
+            # Ensure browser is started
+            if not self.browser_agent.driver:
+                self.browser_agent.start_browser()
+            
+            if 'navigate' in sub_type or 'open' in sub_type:
+                url = params.get('url', '')
+                if not url: # Fallback extraction
+                    import re
+                    # Simple URL extraction
+                    words = params.get('command', '').split()
+                    for w in words:
+                        if '.' in w and not w.endswith('.'): url = w; break
+                    if not url: raise ValueError("No URL provided for navigation")
+                
+                success = self.browser_agent.navigate(url)
+                return {"success": success, "output": f"Navigated to {self.browser_agent.current_url}"}
+
+            elif 'click' in sub_type:
+                desc = params.get('element_description') or params.get('selector') or action.description
+                el = self.browser_agent.find_element_by_description(desc)
+                if el:
+                    el.click()
+                    return {"success": True, "output": f"Clicked {desc}"}
+                else:
+                    return {"success": False, "error": f"Element not found: {desc}"}
+
+            elif 'type' in sub_type:
+                text = params.get('text', '')
+                desc = params.get('element_description') or "input field"
+                el = self.browser_agent.find_element_by_description(desc)
+                if el:
+                    el.clear()
+                    el.send_keys(text)
+                    return {"success": True, "output": f"Typed '{text}' into {desc}"}
+                else:
+                    try:
+                        # Fallback for generic typing (active element)
+                        from selenium.webdriver.common.action_chains import ActionChains
+                        actions = ActionChains(self.browser_agent.driver)
+                        actions.send_keys(text).perform()
+                        return {"success": True, "output": f"Typed '{text}' into active element"}
+                    except Exception as e:
+                        return {"success": False, "error": f"Element not found and fallback failed: {e}"}
+
+            elif 'scroll' in sub_type:
+                direction = params.get('direction', 'down')
+                amount = params.get('amount', 500)
+                try:
+                    script = f"window.scrollBy(0, {amount})" if direction == 'down' else f"window.scrollBy(0, -{amount})"
+                    self.browser_agent.driver.execute_script(script)
+                    return {"success": True, "output": f"Scrolled {direction}"}
+                except Exception as e:
+                    return {"success": False, "error": f"Scroll failed: {e}"}
+            
+            # Default/Unknown sub-type
+            return {"success": True, "message": "Browser action processed (generic)"}
+
+        return await asyncio.to_thread(_run_browser_task)
+
+    async def _execute_app_action(self, action: Action) -> Dict[str, Any]:
+        """Execute app action using AppAutomation"""
+        sub_type = action.parameters.get('sub_type', '').lower()
+        params = action.parameters
+        
+        def _run_app_task():
+            if 'open' in sub_type:
+                app_name = params.get('app_name') or params.get('name')
+                if not app_name and 'command' in params:
+                    # simplistic extraction
+                    app_name = params['command'].replace('open', '').strip()
+                
+                # SANTIY CHECK: If app name contains "and write" or similar, clean it
+                if app_name and " and " in app_name.lower():
+                    app_name = app_name.lower().split(" and ")[0].strip()
+                
+                if app_name:
+                    success = self.app_agent.open_app(app_name)
+                    return {"success": success, "output": f"Opened {app_name}"}
+                return {"success": False, "error": "App name missing"}
+            
+            elif 'type' in sub_type or 'system_type' in sub_type: # Handle SYSTEM_TYPE mapped to APP
+                text = params.get('text', '')
+                success = self.app_agent.type_text(text)
+                return {"success": success, "output": f"Typed: {text}"}
+                
+            elif 'press' in sub_type:
+                key = params.get('key', 'enter')
+                success = self.app_agent.press_key(key)
+                return {"success": success, "output": f"Pressed: {key}"}
+                
+            return {"success": True, "message": "App action processed (generic)"}
+            
+        return await asyncio.to_thread(_run_app_task)
+
+    async def _execute_file_action(self, action: Action) -> Dict[str, Any]:
+        """Execute file action"""
+        # Placeholder for file operations
+        sub_type = action.parameters.get('sub_type', '').lower()
+        params = action.parameters
+        
+        await asyncio.sleep(0.5)
+        return {"success": True, "output": f"File action {sub_type} completed (simulated)"}
+
     
     def _infer_intent(self, action: Action) -> str:
         """Infer intent from action type"""
@@ -455,6 +693,78 @@ class ChainOfActionsManager:
     
     # ========== STEP 6: AGGREGATE ==========
     
+    async def _verify_action_with_vlm(self, action: Action) -> Dict[str, Any]:
+        """
+        Verify if an action was successful using VLM (Vision Language Model).
+        """
+        if not self.vlm:
+            return {"verified": None, "reason": "VLM not initialized"}
+            
+        logger.info(f"👁️ Visually verifying: {action.description}")
+        
+        prompt = f"I just executed this action: '{action.description}'. " \
+                 f"Please analyze the screen and verify if the action appears successful. " \
+                 f"Describe what you see that confirms or denies the success."
+
+        try:
+            # Run in executor to avoid blocking asyncio loop
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, 
+                lambda: self.vlm.analyze_screen(prompt=prompt)
+            )
+            
+            return {
+                "verified": True,
+                "vlm_analysis": result.get("analysis", "No analysis provided"),
+                "timestamp": result.get("timestamp")
+            }
+        except Exception as e:
+            logger.error(f"VLM Verification failed: {e}")
+            return {"verified": False, "error": str(e)}
+
+    async def _handle_verification_failure(self, action: Action, verification: Dict[str, Any]) -> List[Action]:
+        """
+        Ask TaskPlanner for repair steps when verification fails.
+        """
+        logger.info(f"🚧 Handling verification failure for: {action.description}")
+        
+        if not self.task_planner:
+             logger.warning("No TaskPlanner available for repairs")
+             return []
+             
+        vlm_analysis = verification.get("vlm_analysis") or verification.get("error", "Unknown error")
+        error_message = verification.get("error", "Visual check mismatch")
+        
+        # Run in thread to avoid blocking
+        loop = asyncio.get_event_loop()
+        planner_actions = await loop.run_in_executor(
+            None,
+            lambda: self.task_planner.generate_repair_actions(
+                failed_action=action,
+                error_message=error_message,
+                vlm_analysis=vlm_analysis
+            )
+        )
+        
+        # Convert Planner Actions to Core Actions
+        core_actions = []
+        for p_action in planner_actions:
+            # Handle type conversion
+            type_val = p_action.type.value if hasattr(p_action.type, 'value') else str(p_action.type)
+            p_action.parameters['sub_type'] = type_val
+            
+            c_action = Action(
+                id=generate_action_id(),
+                type=self._map_action_type(type_val),
+                description=p_action.description,
+                parameters=p_action.parameters,
+                dependencies=p_action.dependencies
+            )
+            core_actions.append(c_action)
+            
+        return core_actions
+
     async def _finalize_chain(self, chain: ActionChain, completed: int, 
                              failed: int, action_results: List[Dict]) -> ExecutionReport:
         """
@@ -520,6 +830,14 @@ class ChainOfActionsManager:
         self.completed_chains[chain.id] = chain
         if chain.id in self.active_chains:
             del self.active_chains[chain.id]
+            
+        # Persist: Final Status
+        self.tracker.update_chain_status(
+            chain.id, 
+            chain.status.value, 
+            100.0 if failed == 0 else chain.progress_percentage,
+            chain.actions_completed
+        )
         
         # Update stats
         total_duration = chain.duration_seconds

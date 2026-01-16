@@ -128,6 +128,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
     const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
     const [selectedView, setSelectedView] = useState<ViewType>(null); // Selected detail view
+    const lastProcessedCommandRef = useRef<{ text: string, time: number } | null>(null); // Deduplication ref
     
     // Session tracking state
     const [currentSession, setCurrentSession] = useState<ConversationSession | null>(null);
@@ -319,6 +320,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setInterimTranscript('');
                     interimTranscriptRef.current = ''; // Clear ref
 
+                    // Deduplication check
+                    const now = Date.now();
+                    if (lastProcessedCommandRef.current && 
+                        lastProcessedCommandRef.current.text === final && 
+                        (now - lastProcessedCommandRef.current.time) < 2000) {
+                            console.log('🚫 Duplicate command ignored:', final);
+                            return;
+                    }
+                    // Initial update for quick response
+                    lastProcessedCommandRef.current = { text: final, time: now };
+
                     // Always-active mode with wake word requirement
                     if (alwaysActive && requireWakeWord && !isProcessingCommand) {
                         const wakeWords = ['hey assistant', 'ok assistant', 'hey daddy', 'ok daddy', 'assistant'];
@@ -480,6 +492,21 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             setRecognition(recog);
             console.log('✅ Voice recognition initialized (not started)');
+
+            return () => {
+                console.log('🧹 Cleaning up SpeechRecognition instance');
+                if (recog) {
+                    recog.onstart = null;
+                    recog.onresult = null;
+                    recog.onerror = null;
+                    recog.onend = null; // Prevent restart loops
+                    try {
+                        recog.abort();
+                    } catch (e) {
+                        console.warn('Error aborting recognition during cleanup:', e);
+                    }
+                }
+            };
         }
     }, [voiceLanguage]); // Only re-initialize when language changes (userStoppedRef used to prevent re-initialization)
 

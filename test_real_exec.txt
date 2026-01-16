@@ -1,0 +1,40 @@
+C:\Users\hp\AppData\Roaming\Python\Python39\site-packages\google\api_core\_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.13). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+⚠️ OCR not available
+==================================================
+Testing Chain of Actions System
+==================================================
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+
+1. Executing Command: 'Open youtube.com'
+
+[PROGRESS] Chain: chain_6786a942be31 | Progress: 0/0 (0.0%)
+Status: planning
+
+[PROGRESS] Chain: chain_6786a942be31 | Progress: 0/1 (0.0%)
+Status: executing
+Current Action: Navigate to the YouTube website
+
+[PROGRESS] Chain: chain_6786a942be31 | Progress: 0/1 (0.0%)
+Status: executing
+Current Action: Navigate to the YouTube website
+2026-01-16 01:41:27 | WARNING  | Unknown intent: open_browser, trying generic execution
+
+[PROGRESS] Chain: chain_6786a942be31 | Progress: 1/1 (100.0%)
+Status: executing
+Current Action: Navigate to the YouTube website
+
+[PROGRESS] Chain: chain_6786a942be31 | Progress: 1/1 (100.0%)
+Status: verifying
+Current Action: Navigate to the YouTube website
+
+==================================================
+Execution Completed in 2.52 seconds
+==================================================
+Chain ID: chain_6786a942be31
+Success: True
+Actions Completed: 1/1
+
+Final Report:
+- [unknown] Navigate to the YouTube website
+  > Output: {'success': False, 'step': 1, 'intent': 'open_browser', 'error': 'Unknown intent: open_browser'}

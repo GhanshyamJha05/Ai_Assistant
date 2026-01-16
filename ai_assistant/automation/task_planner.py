@@ -250,6 +250,52 @@ class TaskPlanner:
         logger.info(f"✅ Created plan with {len(actions)} actions - {message}")
         return plan
     
+    def generate_repair_actions(self, failed_action: Action, error_message: str, vlm_analysis: str) -> List[Action]:
+        """
+        Generate remedial actions to fix a failed step.
+        
+        Args:
+            failed_action: The action that failed
+            error_message: Technical error or VLM verification failure
+            vlm_analysis: Visual description of the screen
+            
+        Returns:
+            List of new Action objects to insert
+        """
+        prompt = f"""You are an Expert AI Repair Agent. An action failed during execution. 
+Your goal is to provide a few specific actions to fix the situation so the original goal can be verified.
+
+**Context:**
+- Failed Action: {failed_action.description} (Type: {failed_action.type.value})
+- Parameters: {json.dumps(failed_action.parameters)}
+- Error/Failure: {error_message}
+- Visual Analysis (What the AI sees): "{vlm_analysis}"
+
+**Instructions:**
+1. Analyze why it failed (e.g., popup blocking, element not found, forgot to save).
+2. Generate 1 to 3 corrective actions.
+3. Return ONLY the JSON list of actions.
+
+**Available Actions:** same as standard plan (BROWSER_CLICK, APP_INTERACT, KEY_PRESS, WAIT, etc.)
+
+**Example:**
+If failed to "Type into search" because "Search bar not active", fix might be:
+[
+  {{"type": "BROWSER_CLICK", "description": "Click search bar to focus", "parameters": {{"element_description": "search input"}}}},
+  {{"type": "BROWSER_TYPE", "description": "Retype query", "parameters": {{"text": "{failed_action.parameters.get('text', '')}"}}}}
+]
+"""
+        messages = [{"role": "user", "content": prompt}]
+        
+        try:
+            response = self.llm.generate_response(messages)
+            actions = self._parse_llm_response(response, f"Fix {failed_action.description}")
+            logger.info(f"🛠️ Generated {len(actions)} repair actions")
+            return actions
+        except Exception as e:
+            logger.error(f"Failed to generate repairs: {e}")
+            return []
+
     def _generate_actions(self, command: str, context: Optional[Dict[str, Any]]) -> List[Action]:
         """Generate actions using LLM"""
         
@@ -287,19 +333,40 @@ class TaskPlanner:
 - BROWSER_NAVIGATE: Navigate to a URL (params: url)
 - BROWSER_CLICK: Click an element (params: element_description, selector)
 - BROWSER_TYPE: Type text into an input (params: text, element_description)
-- BROWSER_SELECT: Select dropdown option (params: option, element_description)
-- BROWSER_SCROLL: Scroll page (params: direction, amount)
 - APP_OPEN: Open an application (params: app_name)
-- APP_CLOSE: Close an application (params: app_name)
+- APP_INTERACT: Interact with app (params: action_description)
+- SYSTEM_TYPE: Type text globally/in active window (params: text)
+- SYSTEM_PRESS: Press key like 'enter', 'win' (params: key)
 - WAIT: Wait for duration (params: seconds)
-- OCR_EXTRACT: Extract text from screen region (params: region)
-- SEND_MESSAGE: Send message via WhatsApp/etc (params: contact, message, platform)
-- TRANSLATE: Translate text (params: text, target_lang)
-- SUMMARIZE: Summarize content (params: content)
+
+**Examples:**
+Command: "Open notepad and write hello world"
+[
+  {{"type": "APP_OPEN", "description": "Open Notepad", "parameters": {{"app_name": "notepad"}}}},
+  {{"type": "WAIT", "description": "Wait for app", "parameters": {{"seconds": 2}}}},
+  {{"type": "SYSTEM_TYPE", "description": "Type text", "parameters": {{"text": "hello world"}}}}
+]
+
+Command: "Search youtube for cats"
+[
+  {{"type": "BROWSER_NAVIGATE", "description": "Go to YouTube", "parameters": {{"url": "youtube.com"}}}},
+  {{"type": "BROWSER_TYPE", "description": "Type search query", "parameters": {{"text": "cats", "element_description": "search box"}}}},
+  {{"type": "BROWSER_CLICK", "description": "Click search", "parameters": {{"element_description": "search button"}}}}
+]
+
+Command: "Open youtube and clear my one week history"
+[
+  {{"type": "BROWSER_NAVIGATE", "description": "Go to YouTube", "parameters": {{"url": "youtube.com"}}}},
+  {{"type": "BROWSER_CLICK", "description": "Click History", "parameters": {{"element_description": "History"}}}},
+  {{"type": "BROWSER_CLICK", "description": "Click Clear History", "parameters": {{"element_description": "Clear all watch history"}}}},
+  {{"type": "WAIT", "description": "Wait for confirmation", "parameters": {{"seconds": 1}}}},
+  {{"type": "BROWSER_CLICK", "description": "Confirm clear", "parameters": {{"element_description": "Clear watch history"}}}}
+]
 
 **Instructions:**
-1. Break down the command into sequential actions
-2. Each action should be atomic and clear
+1. Break down composite commands (like "open X and do Y") into separate actions.
+2. Ensure app names are clean (e.g. "notepad", not "notepad and write...").
+3. Use WAIT between opening apps and typing.
 3. Add dependencies where actions must execute in order
 4. Be specific with element descriptions (e.g., "History button in dropdown menu")
 5. Return ONLY a valid JSON array of actions

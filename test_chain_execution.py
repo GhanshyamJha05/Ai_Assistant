@@ -34,8 +34,10 @@ async def main():
     
     manager = get_chain_manager()
     
-    # Test Command: Something that involves planning but safe execution
-    command = "Research about recent advancements in AI agents and summarize the key findings"
+    # Test Command: Something simple for the Stub/Real implementation
+    # command = "Research about recent advancements in AI agents and summarize the key findings"
+    # command = "Open youtube.com"
+    command = "open notepad and write hello world"
     
     print(f"\n1. Executing Command: '{command}'")
     
@@ -48,6 +50,16 @@ async def main():
             on_progress=progress_callback
         )
         
+        # Save detailed debug info
+        debug_info = {
+            "command": command,
+            "chain_id": result.chain_id if result else None,
+            "success": result.success if result else False,
+            "actions": result.action_results if result else []
+        }
+        with open("debug_plan_output.json", "w") as f:
+            json.dump(debug_info, f, indent=2)
+            
         duration = time.time() - start_time
         
         print("\n==================================================")

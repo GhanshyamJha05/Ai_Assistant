@@ -7,8 +7,8 @@ tool execution, security, and performance optimization modules.
 
 __version__ = "1.0.0"
 
-from .core import *
-from .system import *
+# from .core import *
+# from .system import *
 
 # Security modules
 try:

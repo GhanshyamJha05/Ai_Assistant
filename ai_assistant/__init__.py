@@ -24,42 +24,18 @@ __version__ = "4.0.0"
 __author__ = "AI Assistant"
 
 # Import main packages
-from . import ai
-from . import voice
-from . import integrations
-from . import automation
-from . import interfaces
+# Import main packages
+# from . import ai
+# from . import voice
+# from . import integrations
+# from . import automation
+# from . import interfaces
+# from . import core
 from . import core
 
 # Import utility modules for backward compatibility
-try:
-    from .file_ops import *
-except ImportError:
-    pass
-
-try:
-    from .document_ocr import *
-except ImportError:
-    pass
-
-try:
-    from .web_scraping import *
-except ImportError:
-    pass
-
-# Skip multimodal import at init to avoid blocking on slow Google API imports
-# Import will be done lazily when needed
 # try:
-#     from .multimodal import *
+#     from .file_ops import *
 # except ImportError:
 #     pass
-
-try:
-    from .multilingual import *
-except ImportError:
-    pass
-
-try:
-    from .music import *
-except ImportError:
-    pass
+# ... (rest commented out for optimization)

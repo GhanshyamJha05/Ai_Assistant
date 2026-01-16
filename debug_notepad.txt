@@ -1,0 +1,43 @@
+C:\Users\hp\AppData\Roaming\Python\Python39\site-packages\google\api_core\_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.13). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+  warnings.warn(message, FutureWarning)
+⚠️ OCR not available
+==================================================
+Testing Chain of Actions System
+==================================================
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+
+1. Executing Command: 'open notepad and write hello world'
+
+[PROGRESS] Chain: chain_c7290e57cb25 | Progress: 0/0 (0.0%)
+Status: planning
+
+[PROGRESS] Chain: chain_c7290e57cb25 | Progress: 0/2 (0.0%)
+Status: executing
+Current Action: Open the Notepad application
+
+[PROGRESS] Chain: chain_c7290e57cb25 | Progress: 0/2 (0.0%)
+Status: executing
+Current Action: Open the Notepad application
+🔄 Background app refresh started...
+🔍 Scanning Windows Start Menu and Settings apps...
+  📂 Scanning Start Menu (All Apps)...
+
+[PROGRESS] Chain: chain_c7290e57cb25 | Progress: 1/2 (50.0%)
+Status: executing
+Current Action: Open the Notepad application
+2026-01-16 02:18:33 | WARNING  | Dependencies not met for action_740f8ee6, skipping
+
+[PROGRESS] Chain: chain_c7290e57cb25 | Progress: 1/2 (50.0%)
+Status: verifying
+Current Action: Type 'hello world' into the main text area of Notepad
+
+==================================================
+Execution Completed in 14.60 seconds
+==================================================
+Chain ID: chain_c7290e57cb25
+Success: True
+Actions Completed: 1/2
+
+Final Report:
+- [unknown] Open the Notepad application
+  > Output: {'success': True, 'output': 'Opened Notepad'}

@@ -127,13 +127,87 @@ class AdvancedConversationalAI:
             )
             
             # Add a system prompt for the assistant
-            self.llm_provider.add_system_message(
+            system_prompt = (
                 "You are YourDaddy Assistant, a helpful and friendly AI assistant. "
                 "You can help users with various tasks, answer questions, provide information, "
                 "and have natural conversations. Be concise, helpful, and friendly. "
                 "If the user asks you to perform actions (like opening apps), acknowledge that "
                 "you'll try to help them. For knowledge questions, provide accurate and helpful answers."
             )
+
+            # Try to load user profile to personalize the prompt
+            try:
+                from ai_assistant.database_config import get_db_path
+                db_path = str(get_db_path('personal_knowledge'))
+                
+                if os.path.exists(db_path):
+                    # Use a new connection for profile check
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    try:
+                        # Check table existence first
+                        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='knowledge_nodes'")
+                        if cursor.fetchone():
+                            cursor.execute("SELECT content, metadata FROM knowledge_nodes WHERE node_type='person'")
+                            rows = cursor.fetchall()
+                            user_name = None
+                            user_role = None
+                            user_interests = []
+                            user_style = None
+                            user_skills = []
+                            user_goals = []
+                            user_location = None
+                            
+                            for content, metadata_json in rows:
+                                try:
+                                    metadata = json.loads(metadata_json) if metadata_json else {}
+                                    if metadata.get('is_primary_user'):
+                                        user_name = content
+                                        user_role = metadata.get('role', 'User')
+                                        user_interests = metadata.get('interests', [])
+                                        user_style = metadata.get('communication_style')
+                                        user_skills = metadata.get('skills', [])
+                                        user_goals = metadata.get('goals', [])
+                                        user_location = metadata.get('location')
+                                        break
+                                except:
+                                    pass
+                            
+                            # Fallback to first person if no primary user found
+                            if not user_name and rows:
+                                user_name = rows[0][0]
+                            
+                            if user_name:
+                                print(f"✅ Loaded detailed user profile for: {user_name}")
+                                system_prompt += f"\n\n### USER PROFILE ###\n"
+                                system_prompt += f"You are assisting {user_name}"
+                                if user_role:
+                                    system_prompt += f", who is the {user_role} of this system."
+                                
+                                if user_location:
+                                    system_prompt += f"\nLocation: {user_location}"
+                                
+                                if user_style:
+                                    system_prompt += f"\n\nCOMMUNICATION PREFERENCE:\nThe user prefers {user_style} responses. Adjust your tone and detail level accordingly."
+                                
+                                if user_interests:
+                                    system_prompt += f"\n\nINTERESTS:\n{', '.join(user_interests)}"
+                                
+                                if user_skills:
+                                    system_prompt += f"\n\nTECHNICAL SKILLS:\n{', '.join(user_skills)}\n(You can assume technical competence in these areas)"
+                                
+                                if user_goals:
+                                    system_prompt += f"\n\nUSER GOALS:\n{', '.join(user_goals)}\n(Help the user achieve these goals)"
+                                    
+                                system_prompt += "\n\nAddress the user by name occasionally when appropriate to build rapport."
+                    except Exception as db_err:
+                        print(f"⚠️ Note: Could not read user profile: {db_err}")
+                    finally:
+                        conn.close()
+            except Exception as e:
+                print(f"⚠️ Error loading user profile: {e}")
+
+            self.llm_provider.add_system_message(system_prompt)
             print("✅ LLM provider initialized for real-time AI responses")
         except Exception as e:
             print(f"⚠️ LLM provider initialization failed: {e}")
