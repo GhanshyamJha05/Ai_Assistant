@@ -78,7 +78,7 @@ const StatusBar = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg px-3 sm:px-4 md:px-4 py-2 sm:py-2 flex items-center justify-between flex-shrink-0"
+      className="glass-panel rounded-lg px-3 sm:px-4 md:px-4 py-2 sm:py-2 flex items-center justify-between flex-shrink-0"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}

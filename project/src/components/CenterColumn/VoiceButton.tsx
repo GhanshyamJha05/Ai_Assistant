@@ -8,25 +8,25 @@ const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive
   const points = 100;
   const centerY = 100;
   const amplitude = isActive ? 30 + (audioLevel / 100) * 40 : 20;
-  
+
   // Generate smooth waveform path
   const generateWavePath = () => {
     let path = `M 0 ${centerY}`;
-    
+
     for (let i = 0; i <= points; i++) {
       const x = (i / points) * 200;
       const frequency = 0.05;
       const time = Date.now() * 0.001;
-      
+
       // Multiple sine waves for organic feel
-      const y = centerY + 
+      const y = centerY +
         Math.sin(i * frequency + time * 2) * amplitude * 0.4 +
         Math.sin(i * frequency * 2 + time * 3) * amplitude * 0.3 +
         Math.sin(i * frequency * 0.5 + time) * amplitude * 0.3;
-      
+
       path += ` L ${x} ${y}`;
     }
-    
+
     return path;
   };
 
@@ -34,7 +34,7 @@ const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive
 
   useEffect(() => {
     if (!isActive && audioLevel < 5) return;
-    
+
     const interval = setInterval(() => {
       setPath(generateWavePath());
     }, 50);
@@ -43,44 +43,44 @@ const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive
   }, [isActive, audioLevel]);
 
   return (
-    <svg 
-      width="100%" 
-      height="100%" 
-      viewBox="0 0 200 200" 
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 200 200"
       className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
       preserveAspectRatio="xMidYMid meet"
     >
       {/* Waveform */}
       <motion.path
         d={path}
-        stroke="#00D9FF"
+        stroke="#00f3ff"
         strokeWidth="2"
         fill="none"
         strokeLinecap="round"
         initial={{ opacity: 0 }}
-        animate={{ 
+        animate={{
           opacity: isActive ? [0.6, 1, 0.6] : 0.3,
-          filter: isActive ? 'drop-shadow(0 0 8px #00D9FF)' : 'none'
+          filter: isActive ? 'drop-shadow(0 0 8px #00f3ff)' : 'none'
         }}
-        transition={{ 
+        transition={{
           opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
         }}
       />
-      
+
       {/* Mirror waveform */}
       <motion.path
         d={path}
-        stroke="#00D9FF"
+        stroke="#00f3ff"
         strokeWidth="2"
         fill="none"
         strokeLinecap="round"
         className="origin-center scale-y-[-1]"
         initial={{ opacity: 0 }}
-        animate={{ 
+        animate={{
           opacity: isActive ? [0.4, 0.7, 0.4] : 0.2,
-          filter: isActive ? 'drop-shadow(0 0 6px #00D9FF)' : 'none'
+          filter: isActive ? 'drop-shadow(0 0 6px #00f3ff)' : 'none'
         }}
-        transition={{ 
+        transition={{
           opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }
         }}
       />
@@ -130,7 +130,7 @@ const VoiceButton = () => {
       <div className="relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[240px] lg:max-w-[260px] aspect-square overflow-visible">
         {/* Outer glowing circle */}
         <motion.div
-          className="absolute inset-0 rounded-full border-2 border-[#00D9FF]"
+          className="absolute inset-0 rounded-full border-2 border-[#00f3ff]"
           style={{
             boxShadow: isListening ? '0 0 40px rgba(0, 217, 255, 0.4), inset 0 0 40px rgba(0, 217, 255, 0.1)' : '0 0 20px rgba(0, 217, 255, 0.2)',
           }}
@@ -151,11 +151,11 @@ const VoiceButton = () => {
         {/* Center microphone button */}
         <motion.button
           onClick={toggleVoice}
-          className="absolute inset-0 m-auto w-[28%] h-[28%] rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00D9FF]/30 flex items-center justify-center cursor-pointer group z-10"
+          className="absolute inset-0 m-auto w-[28%] h-[28%] rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00f3ff]/30 flex items-center justify-center cursor-pointer group z-10"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           animate={{
-            boxShadow: isListening 
+            boxShadow: isListening
               ? ['0 0 20px rgba(0, 217, 255, 0.5)', '0 0 30px rgba(0, 217, 255, 0.7)', '0 0 20px rgba(0, 217, 255, 0.5)']
               : '0 0 10px rgba(0, 217, 255, 0.2)',
           }}
@@ -178,10 +178,10 @@ const VoiceButton = () => {
                 ease: 'easeInOut',
               }}
             >
-              <Mic className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00D9FF]" strokeWidth={2} />
+              <Mic className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00f3ff]" strokeWidth={2} />
             </motion.div>
           ) : (
-            <MicOff className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00D9FF]/60 group-hover:text-[#00D9FF] transition-colors" strokeWidth={2} />
+            <MicOff className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00f3ff]/60 group-hover:text-[#00f3ff] transition-colors" strokeWidth={2} />
           )}
         </motion.button>
 
@@ -189,7 +189,7 @@ const VoiceButton = () => {
         {isListening && (
           <>
             <motion.div
-              className="absolute inset-0 rounded-full border-2 border-[#00D9FF]/40"
+              className="absolute inset-0 rounded-full border-2 border-[#00f3ff]/40"
               animate={{
                 scale: [1, 1.15, 1.15],
                 opacity: [0.6, 0, 0],
@@ -201,7 +201,7 @@ const VoiceButton = () => {
               }}
             />
             <motion.div
-              className="absolute inset-0 rounded-full border-2 border-[#00D9FF]/40"
+              className="absolute inset-0 rounded-full border-2 border-[#00f3ff]/40"
               animate={{
                 scale: [1, 1.15, 1.15],
                 opacity: [0.6, 0, 0],
@@ -229,7 +229,7 @@ const VoiceButton = () => {
           ease: 'easeInOut',
         }}
       >
-        <p className="text-[#00D9FF] text-sm sm:text-base md:text-lg font-light tracking-wide">
+        <p className="text-[#00f3ff] text-sm sm:text-base md:text-lg font-light tracking-wide">
           {isListening ? 'Listening...' : 'Tap to speak'}
         </p>
         {isListening && interimTranscript && (
@@ -247,11 +247,10 @@ const VoiceButton = () => {
       <div className="flex gap-2 sm:gap-3 items-center flex-wrap justify-center">
         <motion.button
           onClick={toggleAlwaysActive}
-          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${
-            alwaysActive
-              ? 'bg-[#00D9FF]/20 text-[#00D9FF] border border-[#00D9FF]/40'
-              : 'bg-[#1a1f2e] text-[#00D9FF]/50 border border-[#00D9FF]/20 hover:border-[#00D9FF]/40'
-          }`}
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${alwaysActive
+              ? 'bg-[#00f3ff]/20 text-[#00f3ff] border border-[#00f3ff]/40'
+              : 'bg-[#1a1f2e] text-[#00f3ff]/50 border border-[#00f3ff]/20 hover:border-[#00f3ff]/40'
+            }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -261,11 +260,10 @@ const VoiceButton = () => {
 
         <motion.button
           onClick={toggleRecognitionMode}
-          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${
-            recognitionMode === 'vosk'
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${recognitionMode === 'vosk'
               ? 'bg-green-500/20 text-green-400 border border-green-400/40'
-              : 'bg-[#1a1f2e] text-[#00D9FF]/50 border border-[#00D9FF]/20 hover:border-[#00D9FF]/40'
-          }`}
+              : 'bg-[#1a1f2e] text-[#00f3ff]/50 border border-[#00f3ff]/20 hover:border-[#00f3ff]/40'
+            }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title={recognitionMode === 'vosk' ? 'Offline (Private)' : 'Online (Google)'}
@@ -275,10 +273,10 @@ const VoiceButton = () => {
 
         <button
           onClick={() => setShowLangSelector(!showLangSelector)}
-          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1a1f2e] border border-[#00D9FF]/20 rounded-lg hover:border-[#00D9FF]/40 transition-all"
+          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1a1f2e] border border-[#00f3ff]/20 rounded-lg hover:border-[#00f3ff]/40 transition-all"
         >
-          <Globe className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#00D9FF]/60 inline mr-1" />
-          <span className="text-[10px] sm:text-xs text-[#00D9FF]/60">
+          <Globe className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#00f3ff]/60 inline mr-1" />
+          <span className="text-[10px] sm:text-xs text-[#00f3ff]/60">
             {languages.find(l => l.code === selectedLang)?.flag}
           </span>
         </button>
@@ -291,20 +289,19 @@ const VoiceButton = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-[400px] bg-[#1a1f2e] border border-[#00D9FF]/30 rounded-lg overflow-hidden shadow-xl z-50"
+            className="absolute top-[400px] bg-[#1a1f2e] border border-[#00f3ff]/30 rounded-lg overflow-hidden shadow-xl z-50"
           >
             {languages.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => handleLanguageChange(lang.code)}
-                className={`w-full px-4 py-2 flex items-center gap-3 hover:bg-[#00D9FF]/10 transition-colors ${
-                  selectedLang === lang.code ? 'bg-[#00D9FF]/10' : ''
-                }`}
+                className={`w-full px-4 py-2 flex items-center gap-3 hover:bg-[#00f3ff]/10 transition-colors ${selectedLang === lang.code ? 'bg-[#00f3ff]/10' : ''
+                  }`}
               >
                 <span className="text-lg">{lang.flag}</span>
                 <span className="text-sm text-white/80">{lang.name}</span>
                 {selectedLang === lang.code && (
-                  <span className="ml-auto text-[#00D9FF]">✓</span>
+                  <span className="ml-auto text-[#00f3ff]">✓</span>
                 )}
               </button>
             ))}

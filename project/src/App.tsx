@@ -69,136 +69,133 @@ function AppContent() {
   };
 
   return (
-      <div className="h-screen bg-[#0A0E12] text-white overflow-hidden flex flex-col">
-        {/* Offline Indicator */}
-        <OfflineIndicator />
-        
-        <motion.div
-          className="flex-1 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {/* Mobile Tabs - Show on small screens */}
-          <div className="lg:hidden flex gap-2 mb-2 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('main')}
-              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                activeTab === 'main'
-                  ? 'bg-[#3B82F6] text-white'
-                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+    <div className="h-screen bg-deep-space text-gray-100 overflow-hidden flex flex-col">
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+
+      <motion.div
+        className="flex-1 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Mobile Tabs - Show on small screens */}
+        <div className="lg:hidden flex gap-2 mb-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('main')}
+            className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${activeTab === 'main'
+                ? 'bg-[#3B82F6] text-white'
+                : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
               }`}
-            >
-              Voice Control
-            </button>
-            <button
-              onClick={() => setActiveTab('options')}
-              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                activeTab === 'options'
-                  ? 'bg-[#3B82F6] text-white'
-                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+          >
+            Voice Control
+          </button>
+          <button
+            onClick={() => setActiveTab('options')}
+            className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${activeTab === 'options'
+                ? 'bg-[#3B82F6] text-white'
+                : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
               }`}
-            >
-              Options
-            </button>
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                activeTab === 'stats'
-                  ? 'bg-[#3B82F6] text-white'
-                  : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
+          >
+            Options
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${activeTab === 'stats'
+                ? 'bg-[#3B82F6] text-white'
+                : 'bg-[#16181D] text-[#9CA3AF] border border-[#1F2228]'
               }`}
-            >
-              Conversation
-            </button>
-          </div>
+          >
+            Conversation
+          </button>
+        </div>
 
-          {/* Mobile Layout - Stack vertically */}
-          <div className="lg:hidden flex-1 overflow-y-auto space-y-3">
-            {/* Main Voice Control - Always visible on 'main' tab */}
-            {activeTab === 'main' && (
-              <motion.div
-                className="flex flex-col gap-2 min-h-0"
-                variants={columnVariants}
-              >
-                <StatusBar />
-                <div className="flex-1 flex items-center justify-center min-h-[300px] overflow-visible py-4">
-                  <VoiceButton />
-                </div>
-                <CommandInput />
-                <TaskStatus />
-              </motion.div>
-            )}
-
-            {/* Options Tab */}
-            {activeTab === 'options' && (
-              <motion.div
-                className="flex flex-col gap-3"
-                variants={columnVariants}
-              >
-                <QuickOptions />
-                <CameraFeed />
-                <AILearningDashboard />
-              </motion.div>
-            )}
-
-            {/* Stats Tab */}
-            {activeTab === 'stats' && (
-              <motion.div
-                className="flex flex-col gap-3 flex-1 min-h-0"
-                variants={columnVariants}
-              >
-                <ConversationTracker />
-              </motion.div>
-            )}
-          </div>
-
-          {/* Desktop Layout - 3 columns on large screens */}
-          <div className="hidden lg:grid grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
+        {/* Mobile Layout - Stack vertically */}
+        <div className="lg:hidden flex-1 overflow-y-auto space-y-3">
+          {/* Main Voice Control - Always visible on 'main' tab */}
+          {activeTab === 'main' && (
             <motion.div
-              className="col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0"
+              className="flex flex-col gap-2 min-h-0"
+              variants={columnVariants}
+            >
+              <StatusBar />
+              <div className="flex-1 flex items-center justify-center min-h-[300px] overflow-visible py-4">
+                <VoiceButton />
+              </div>
+              <CommandInput />
+              <TaskStatus />
+            </motion.div>
+          )}
+
+          {/* Options Tab */}
+          {activeTab === 'options' && (
+            <motion.div
+              className="flex flex-col gap-3"
               variants={columnVariants}
             >
               <QuickOptions />
               <CameraFeed />
               <AILearningDashboard />
             </motion.div>
+          )}
 
+          {/* Stats Tab */}
+          {activeTab === 'stats' && (
             <motion.div
-              className="col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0"
-              variants={columnVariants}
-            >
-              <StatusBar />
-              <div className="flex-1 flex items-center justify-center min-h-0 overflow-visible py-2">
-                <VoiceButton />
-              </div>
-              <CommandInput />
-              <TaskStatus />
-            </motion.div>
-
-            <motion.div
-              className="col-span-3 flex flex-col gap-3 overflow-hidden min-h-0"
+              className="flex flex-col gap-3 flex-1 min-h-0"
               variants={columnVariants}
             >
               <ConversationTracker />
             </motion.div>
-          </div>
-        </motion.div>
+          )}
+        </div>
 
-        {/* Detail View Modal */}
-        {detailContent && (
-          <DetailView
-            isOpen={!!selectedView}
-            onClose={closeDetailView}
-            title={detailContent.title}
+        {/* Desktop Layout - 3 columns on large screens */}
+        <div className="hidden lg:grid grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
+          <motion.div
+            className="col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0"
+            variants={columnVariants}
           >
-            {detailContent.content}
-          </DetailView>
-        )}
-        
-        {/* PWA Install Prompt */}
-        <PWAInstallPrompt />
-      </div>
+            <QuickOptions />
+            <CameraFeed />
+            <AILearningDashboard />
+          </motion.div>
+
+          <motion.div
+            className="col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0"
+            variants={columnVariants}
+          >
+            <StatusBar />
+            <div className="flex-1 flex items-center justify-center min-h-0 overflow-visible py-2">
+              <VoiceButton />
+            </div>
+            <CommandInput />
+            <TaskStatus />
+          </motion.div>
+
+          <motion.div
+            className="col-span-3 flex flex-col gap-3 overflow-hidden min-h-0"
+            variants={columnVariants}
+          >
+            <ConversationTracker />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Detail View Modal */}
+      {detailContent && (
+        <DetailView
+          isOpen={!!selectedView}
+          onClose={closeDetailView}
+          title={detailContent.title}
+        >
+          {detailContent.content}
+        </DetailView>
+      )}
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
+    </div>
   );
 }
 

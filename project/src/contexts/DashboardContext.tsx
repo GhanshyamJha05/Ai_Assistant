@@ -82,6 +82,9 @@ interface DashboardContextType {
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
+// GLOBAL DEDUPLICATION VARIABLE (Outside component to persist across re-renders/instances)
+let globalLastCommandInfo = { text: '', time: 0 };
+
 export const useDashboard = () => {
     const context = useContext(DashboardContext);
     if (!context) {
@@ -140,6 +143,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const analyserRef = useRef<AnalyserNode | null>(null);
     const microphoneStreamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    
+    // SAFETY: Use a ref to hold the active recognition instance
+    // This persists across re-renders and ensures we always clean up the *actual* active instance
+    const activeRecognitionRef = useRef<any>(null);
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -253,7 +260,19 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 recog.lang = voiceLanguage;
                 console.log(`🌐 Using selected language: ${recog.lang}`);
             }
-            recog.maxAlternatives = 3;  // Get multiple alternatives for better accuracy
+            // Cleanup previous instance if it exists
+            if (activeRecognitionRef.current) {
+                console.log('🧹 Aborting previous recognition instance');
+                try {
+                    activeRecognitionRef.current.abort();
+                    activeRecognitionRef.current.onend = null; // Prevent restart loops from old instance
+                } catch (e) {
+                    console.warn('Error aborting previous recognition:', e);
+                }
+            }
+            
+            // Set as active instance
+            activeRecognitionRef.current = recog;
 
             recog.onstart = () => {
                 console.log('🎤 Voice recognition started');
@@ -284,6 +303,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onresult = (event: any) => {
+                // Check if this instance is still the active one
+                if (activeRecognitionRef.current !== recog) {
+                    console.log('🛑 Ghost listener detected - ignoring result from stale instance');
+                    return;
+                }
+
                 console.log('🎯 Recognition event received:', {
                     resultIndex: event.resultIndex,
                     resultsLength: event.results.length,
@@ -322,14 +347,24 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                     // Deduplication check
                     const now = Date.now();
+                    
+                    // Check Global Variable (protects against duplicate listeners/instances)
+                    if (globalLastCommandInfo.text === final && (now - globalLastCommandInfo.time) < 2000) {
+                         console.log('🚫 Global duplicate command ignored:', final);
+                         return;
+                    }
+
+                    // Check Local Ref (standard check)
                     if (lastProcessedCommandRef.current && 
                         lastProcessedCommandRef.current.text === final && 
                         (now - lastProcessedCommandRef.current.time) < 2000) {
-                            console.log('🚫 Duplicate command ignored:', final);
+                            console.log('🚫 Local duplicate command ignored:', final);
                             return;
                     }
-                    // Initial update for quick response
+                    
+                    // Update both
                     lastProcessedCommandRef.current = { text: final, time: now };
+                    globalLastCommandInfo = { text: final, time: now };
 
                     // Always-active mode with wake word requirement
                     if (alwaysActive && requireWakeWord && !isProcessingCommand) {
@@ -494,17 +529,20 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('✅ Voice recognition initialized (not started)');
 
             return () => {
-                console.log('🧹 Cleaning up SpeechRecognition instance');
-                if (recog) {
-                    recog.onstart = null;
-                    recog.onresult = null;
-                    recog.onerror = null;
-                    recog.onend = null; // Prevent restart loops
+                console.log('🧹 Cleanup: component unmounting or language changing');
+                if (activeRecognitionRef.current) {
+                    const oldRecog = activeRecognitionRef.current;
+                    oldRecog.onstart = null;
+                    oldRecog.onresult = null;
+                    oldRecog.onerror = null;
+                    oldRecog.onend = null;
                     try {
-                        recog.abort();
+                        oldRecog.abort();
+                        console.log('✅ Stopped active recognition instance');
                     } catch (e) {
-                        console.warn('Error aborting recognition during cleanup:', e);
+                         // ignore errors on abort
                     }
+                    activeRecognitionRef.current = null;
                 }
             };
         }

@@ -24,7 +24,7 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5 hover:border-[#3B82F6]/30 transition-all duration-200 cursor-pointer"
+      className="glass-panel rounded-lg p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5 hover:border-neon-cyan/30 transition-all duration-200 cursor-pointer"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay }}
@@ -32,8 +32,8 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
     >
-      <div className="p-1.5 sm:p-2 bg-[#3B82F6]/10 rounded-lg">
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#3B82F6]" strokeWidth={1.5} />
+      <div className="p-1.5 sm:p-2 bg-neon-cyan/10 rounded-lg">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-neon-cyan" strokeWidth={1.5} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[9px] sm:text-[11px] text-[#9CA3AF] mb-0.5 truncate">{label}</p>

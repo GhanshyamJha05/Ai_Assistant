@@ -37,6 +37,76 @@ def handle_command(data):
         
         print(f'📨 Command received ({source}): {command_text}')
         
+        # ----------------------------------------------------
+        # NEW: Chain of Actions Integration (Autonomy Engine)
+        # ----------------------------------------------------
+        # Basic heuristic to detect executable commands vs. chat
+        # In a perfect world, we'd use an intent classifier here.
+        action_keywords = [
+            'open', 'close', 'click', 'minimize', 'maximize', 
+            'type', 'write', 'search', 'play', 'pause', 
+            'scroll', 'select', 'clear', 'delete', 'create',
+            'save', 'check', 'verify', 'scan', 'start', 'stop',
+            'go to', 'navigate'
+        ]
+        
+        is_action_request = any(kw in command_text.lower() for kw in action_keywords)
+        
+        # Exception for simple questions starting with these keywords, but keeping it simple for now
+        # If Multi-Agent is available and it looks like an action...
+        if is_action_request:
+            try:
+                from ai_assistant.core.chain_of_actions_manager import get_chain_manager
+                manager = get_chain_manager()
+                
+                # Notify client we are taking action
+                emit('command_response', {
+                    'success': True,
+                    'response': f"🤖 I'm on it. Starting execution for: '{command_text}'...",
+                    'command': command_text,
+                    'source': source,
+                    'is_action': True,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                # Define progress callback for WebSocket
+                def ws_progress_callback(progress_data):
+                    emit('chain_progress', progress_data)
+                
+                # Executing in background thread to not block SocketIO
+                import threading
+                import asyncio
+                
+                def run_chain_executor():
+                    async def _run():
+                        # Execute and pipe progress to WebSocket
+                        await manager.execute_command(command_text, on_progress=ws_progress_callback)
+                        
+                        # Fetch final status (optional, notification handles it mostly)
+                        # But we can emit a final 'command_completed' event here if we want
+                        emit('log_update', {
+                            'type': 'success', 
+                            'message': 'Chain execution finished',
+                            'timestamp': datetime.now().strftime('%H:%M:%S')
+                        })
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(_run())
+                    loop.close()
+
+                threading.Thread(target=run_chain_executor).start()
+                
+                return # Stop processing, we handed it off to the Agent
+
+            except ImportError:
+                print("⚠️ Chain Manager not available, falling back to legacy chat.")
+            except Exception as e:
+                print(f"⚠️ Chain dispatch failed: {e}, falling back.")
+        
+        # ------------------------------------------------_
+        # Standard Chat / Fallback Processing
+        # -------------------------------------------------
         # Log the command
         if learning_router:
             learning_router.log_user_query(command_text, source=source)

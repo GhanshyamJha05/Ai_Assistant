@@ -49,7 +49,7 @@ const QuickOptions = () => {
           <motion.button
             key={option.label}
             onClick={option.onClick}
-            className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2.5 sm:p-3.5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 hover:border-[#3B82F6] hover:shadow-[0_0_12px_rgba(59,130,246,0.3)] transition-all duration-200 cursor-pointer group"
+            className="glass-panel rounded-lg p-2.5 sm:p-3.5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 hover:border-neon-cyan hover:shadow-[0_0_12px_rgba(0,243,255,0.3)] transition-all duration-200 cursor-pointer group"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * index }}
@@ -57,7 +57,7 @@ const QuickOptions = () => {
             whileTap={{ scale: 0.95 }}
           >
             <option.icon
-              className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#3B82F6] group-hover:scale-110 transition-transform"
+              className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-neon-cyan group-hover:scale-110 transition-transform"
               strokeWidth={1.5}
             />
             <span className="text-[10px] sm:text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium">

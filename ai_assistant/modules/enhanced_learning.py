@@ -1,35 +1,19 @@
 """
-Enhanced Learning & Memory System for YourDaddy Assistant
+Redirect to ai_assistant.ai.enhanced_learning for backward compatibility.
 
-This module implements behavioral learning, skill acquisition, predictive actions,
-and personal knowledge graph capabilities.
+The canonical location is ai_assistant/ai/enhanced_learning.py.
+This file exists to maintain import compatibility.
 """
 
-import json
-import sqlite3
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Tuple, Optional
-from collections import defaultdict, Counter
-import pickle
-import os
-from dataclasses import dataclass
-try:
-    import networkx as nx
-    NETWORKX_AVAILABLE = True
-except ImportError:
-    print("⚠️ NetworkX not available - knowledge graph features disabled")
-    NETWORKX_AVAILABLE = False
-    nx = None
+# Import all public symbols from the canonical location
+from ai_assistant.ai.enhanced_learning import *
 
-# Optional scientific libraries
+# Ensure __all__ is preserved
 try:
-    import matplotlib.pyplot as plt
-    MATPLOTLIB_AVAILABLE = True
+    from ai_assistant.ai.enhanced_learning import __all__
 except ImportError:
-    print("⚠️ Matplotlib not available - visualization features disabled")
-    MATPLOTLIB_AVAILABLE = False
-    plt = None
+    pass
+
 
 try:
     from sklearn.cluster import KMeans

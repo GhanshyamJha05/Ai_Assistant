@@ -23,7 +23,7 @@ const ConversationTracker = () => {
   useEffect(() => {
     // Combine chatMessages and voiceCommands into a single timeline
     const combined: ConversationMessage[] = [];
-    
+
     // Add chat messages
     chatMessages.forEach(msg => {
       combined.push({
@@ -45,7 +45,7 @@ const ConversationTracker = () => {
 
     // Sort by ID (chronological order)
     combined.sort((a, b) => a.id - b.id);
-    
+
     setConversation(combined);
   }, [chatMessages, voiceCommands]);
 
@@ -59,7 +59,7 @@ const ConversationTracker = () => {
   return (
     <>
       <motion.div
-        className="bg-[#16181D] border border-[#1F2228] rounded-lg overflow-hidden flex-shrink-0 flex flex-col h-full"
+        className="glass-panel rounded-lg overflow-hidden flex-shrink-0 flex flex-col h-full"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -72,7 +72,7 @@ const ConversationTracker = () => {
           </div>
           <motion.button
             onClick={() => setShowHistory(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3B82F6]/20 text-[#3B82F6] rounded-lg hover:bg-[#3B82F6]/30 transition-all text-xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan rounded-lg hover:bg-neon-cyan/30 transition-all text-xs font-medium"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -116,11 +116,10 @@ const ConversationTracker = () => {
                 transition={{ delay: index * 0.02 }}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg p-3 ${
-                    message.type === 'user'
-                      ? 'bg-[#3B82F6]/20 border border-[#3B82F6]/30'
+                  className={`max-w-[85%] rounded-lg p-3 ${message.type === 'user'
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/30'
                       : 'bg-[#1F2228] border border-[#2A2D35]'
-                  }`}
+                    }`}
                 >
                   {/* Message Header */}
                   <div className="flex items-center gap-2 mb-1.5">
@@ -129,7 +128,7 @@ const ConversationTracker = () => {
                         {message.isVoice && (
                           <Mic className="w-3 h-3 text-[#3B82F6]" />
                         )}
-                        <span className="text-xs font-medium text-[#3B82F6]">You</span>
+                        <span className="text-xs font-medium text-neon-cyan">You</span>
                       </>
                     ) : (
                       <span className="text-xs font-medium text-[#10B981]">AI Assistant</span>

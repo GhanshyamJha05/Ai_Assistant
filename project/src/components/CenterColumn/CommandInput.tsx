@@ -29,14 +29,14 @@ const CommandInput = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <div className="bg-[#16181D] border border-[#1F2228] rounded-lg p-1 sm:p-1 flex items-center gap-2 sm:gap-2 focus-within:border-[#3B82F6]/50 transition-colors">
+      <div className="glass-panel rounded-lg p-1 sm:p-1 flex items-center gap-2 sm:gap-2 focus-within:border-neon-cyan/50 transition-colors">
         <input
           type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type a command or ask anything..."
-          className="flex-1 bg-transparent text-white placeholder-[#6B7280] px-3 sm:px-3 py-2 sm:py-2 text-sm sm:text-sm focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder-gray-400 px-3 sm:px-3 py-2 sm:py-2 text-sm sm:text-sm focus:outline-none"
         />
         <motion.button
           onClick={() => handleSubmit()}

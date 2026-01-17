@@ -35,13 +35,13 @@ const CameraFeed = () => {
       setHasPermission(true);
       setIsRecording(true);
       setError('');
-      
+
       // Wait for next render cycle, then set the stream
       setTimeout(() => {
         if (videoRef.current) {
           console.log('📺 Setting video srcObject...');
           videoRef.current.srcObject = stream;
-          
+
           videoRef.current.onloadedmetadata = async () => {
             console.log('🎬 Video metadata loaded');
             try {
@@ -55,7 +55,7 @@ const CameraFeed = () => {
           console.error('❌ Video ref is still null after state update');
         }
       }, 100);
-      
+
     } catch (err) {
       console.error('❌ Camera access error:', err);
       setError('Camera access denied');
@@ -85,7 +85,7 @@ const CameraFeed = () => {
 
   return (
     <motion.div
-      className="bg-[#16181D] border border-[#1F2228] rounded-lg p-2 sm:p-2.5 flex-shrink-0"
+      className="glass-panel rounded-lg p-2 sm:p-2.5 flex-shrink-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
@@ -175,7 +175,7 @@ const CameraFeed = () => {
                 </>
               ) : (
                 <>
-                  <Video className="w-12 h-12 text-[#3B82F6] opacity-60 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+                  <Video className="w-12 h-12 text-neon-cyan opacity-60 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                   <span className="text-xs text-[#9CA3AF]">Click to enable</span>
                 </>
               )}

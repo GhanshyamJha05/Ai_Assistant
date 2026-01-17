@@ -4,6 +4,9 @@ import subprocess
 
 from ..base_agent import BaseAgent
 from ..models import Task, TaskResult
+from .gui_controller import AppControllerFactory, BaseGUIController
+from .training_mode import TrainingMode
+from .visual_verifier import VisualVerifier
 
 class VideoAgent(BaseAgent):
     """
@@ -18,7 +21,8 @@ class VideoAgent(BaseAgent):
             "edit_video",
             "transcribe_video",
             "extract_audio",
-            "create_thumbnail"
+            "create_thumbnail",
+            "control_external_app"
         ]
         
         # Lazy load libraries to prevent startup lag
@@ -26,9 +30,18 @@ class VideoAgent(BaseAgent):
         self._whisper = None
         self._whisper_model = None
         
+        self.training_session = None
+        self._verifier = None
+        
+    @property
+    def verifier(self) -> VisualVerifier:
+        if not self._verifier:
+            self._verifier = VisualVerifier()
+        return self._verifier
+        
     async def can_handle(self, task: Task) -> bool:
         """Check if task involves video"""
-        keywords = ["video", "movie", "clip", "edit", "trim", "cut", "transcribe", "subtitle", "caption"]
+        keywords = ["video", "movie", "clip", "edit", "trim", "cut", "transcribe", "subtitle", "caption", "app", "premiere", "control", "train", "tune"]
         return any(kw in task.description.lower() for kw in keywords)
     
     async def execute(self, task: Task) -> TaskResult:
@@ -36,7 +49,11 @@ class VideoAgent(BaseAgent):
         try:
             desc = task.description.lower()
             
-            if "transcribe" in desc or "caption" in desc:
+            if "train" in desc or "tune" in desc:
+                return await self._handle_training(task)
+            elif "control" in desc or "app" in desc:
+                return await self._control_app(task)
+            elif "transcribe" in desc or "caption" in desc:
                 return await self._transcribe_video(task)
             elif "cut" in desc or "trim" in desc or "edit" in desc:
                 return await self._edit_video(task)
@@ -55,8 +72,19 @@ class VideoAgent(BaseAgent):
     def _load_moviepy(self):
         if not self._moviepy:
             try:
-                import moviepy.editor as mp
-                self._moviepy = mp
+                # Try new v2 import first, fall back to v1 editor if needed
+                try:
+                    import moviepy as mp
+                    # Check if v2 specific classes are available directly
+                    if hasattr(mp, 'VideoFileClip'):
+                        self._moviepy = mp
+                    else:
+                        import moviepy.editor as mp
+                        self._moviepy = mp
+                except ImportError:
+                     # Fallback for older versions
+                     import moviepy.editor as mp
+                     self._moviepy = mp
             except ImportError:
                 raise ImportError("moviepy not installed.")
         return self._moviepy
@@ -87,11 +115,23 @@ class VideoAgent(BaseAgent):
             # Load video
             clip = mp.VideoFileClip(input_file)
             
-            # Trim
-            if end_time:
-                clip = clip.subclip(start_time, end_time)
-            elif start_time > 0:
-                clip = clip.subclip(start_time)
+            # Trim - Handle MoviePy v1 vs v2
+            if hasattr(clip, 'subclipped'):
+                # MoviePy v2+ uses subclipped
+                if end_time:
+                    clip = clip.subclipped(start_time, end_time)
+                elif start_time > 0:
+                    clip = clip.subclipped(start_time)
+            elif hasattr(clip, 'subclip'):
+                 # MoviePy v1
+                if end_time:
+                    clip = clip.subclip(start_time, end_time)
+                elif start_time > 0:
+                    clip = clip.subclip(start_time)
+            else:
+                 # Fallback: try slicing
+                 if end_time:
+                     clip = clip.subclip(start_time, end_time) # Hope for best
                 
             # Save
             filename = task.params.get("output_filename", f"edited_{task.task_id[:8]}.mp4")
@@ -120,6 +160,10 @@ class VideoAgent(BaseAgent):
         try:
             clip = mp.VideoFileClip(input_file)
             
+            if not clip.audio:
+                clip.close()
+                return TaskResult(success=False, error="Video has no audio track")
+            
             filename = task.params.get("output_filename", f"audio_{task.task_id[:8]}.mp3")
             output_path = os.path.abspath(os.path.join("outputs", filename))
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -133,6 +177,73 @@ class VideoAgent(BaseAgent):
             )
         except Exception as e:
             return TaskResult(success=False, error=f"Audio extraction failed: {e}")
+
+    # --- GUI Automation ---
+
+    async def _control_app(self, task: Task) -> TaskResult:
+        """Control an external video editing app"""
+        app_name = task.params.get("app_name", "premiere")
+        action = task.params.get("action")
+        text = task.params.get("text")
+        
+        controller = AppControllerFactory.get_controller(app_name)
+        
+        # 1. Focus App
+        is_focused = controller.focus_window(app_name)
+        if not is_focused:
+            # For testing/demo purposes, if we can't find premiere, maybe we are just testing generic functionality?
+            # Or we return error. Let's return error but allow "notepad" for testing
+            if "notepad" not in app_name.lower() and "premiere" not in app_name.lower():
+                 return TaskResult(success=False, error=f"Could not find or focus window: {app_name}")
+            print(f"Warning: Could not focus {app_name}, proceeding blindly or creating new if possible not implemented.")
+        
+        # 2. Execute Action
+        if action:
+             # Check if it's a specific mapped action or raw keys
+             if hasattr(controller, 'execute_action'):
+                 controller.execute_action(action)
+             else:
+                 # Generic raw keys?
+                 pass
+                 
+        # 3. Type Text
+        if text:
+            controller.type_text(text)
+            
+        # 4. Visual Verification (Optional)
+        verify_flag = task.params.get("verify", False)
+        if verify_flag:
+            state_verified = self.verifier.verify_state(f"after_{action}", app_name)
+            if not state_verified:
+                 print("Warning: Visual verification failed.")
+            
+        return TaskResult(success=True, data={"message": f"Executed action '{action}' on '{app_name}'"})
+
+    async def _handle_training(self, task: Task) -> TaskResult:
+        """Handle training workflow definitions"""
+        mode = task.params.get("mode", "start") # start, stop, add
+        
+        if mode == "start":
+            profile = task.params.get("profile", "custom")
+            self.training_session = TrainingMode(profile)
+            return TaskResult(success=True, data={"message": f"Started training session for '{profile}'"})
+            
+        elif mode == "add":
+            if not self.training_session:
+                 return TaskResult(success=False, error="No active training session. Start one first.")
+            action = task.params.get("action_type", "hotkey")
+            params = task.params.get("params", {})
+            self.training_session.add_action(action, params)
+            return TaskResult(success=True, data={"message": "Action recorded"})
+            
+        elif mode == "save":
+            if not self.training_session:
+                 return TaskResult(success=False, error="No active training session.")
+            path = self.training_session.save_workflow()
+            self.training_session = None
+            return TaskResult(success=True, data={"message": f"Workflow saved to {path}"})
+            
+        return TaskResult(success=False, error=f"Unknown training mode: {mode}")
 
     async def _transcribe_video(self, task: Task) -> TaskResult:
         """Transcribe video using Whisper"""

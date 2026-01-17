@@ -222,7 +222,7 @@ class ChainOfActionsManager:
                 id=generate_action_id(),
                 type=ActionType.BROWSER,
                 description=f"Open browser for: {command}",
-                parameters={'command': command}
+                parameters={'command': command, 'sub_type': 'browser_navigate'}
             ))
         
         # App actions
@@ -231,7 +231,7 @@ class ChainOfActionsManager:
                 id=generate_action_id(),
                 type=ActionType.APP,
                 description=f"Open application for: {command}",
-                parameters={'command': command}
+                parameters={'command': command, 'sub_type': 'app_open'}
             ))
         
         # File actions
@@ -240,7 +240,7 @@ class ChainOfActionsManager:
                 id=generate_action_id(),
                 type=ActionType.FILE,
                 description=f"File operation: {command}",
-                parameters={'command': command}
+                parameters={'command': command, 'sub_type': 'file'}
             ))
         
         # Default action if nothing matched
@@ -590,10 +590,25 @@ class ChainOfActionsManager:
                     # simplistic extraction
                     app_name = params['command'].replace('open', '').strip()
                 
-                # SANTIY CHECK: If app name contains "and write" or similar, clean it
-                if app_name and " and " in app_name.lower():
-                    app_name = app_name.lower().split(" and ")[0].strip()
-                
+                # SANTIY CHECK: Aggressive cleaning of app names from composite commands
+                if app_name:
+                    app_name_lower = app_name.lower()
+                    # Common separators in composite commands
+                    separators = [" and ", " & ", " then ", " + ", " -> ", ", "]
+                    for sep in separators:
+                        if sep in app_name_lower:
+                            app_name = app_name_lower.split(sep)[0].strip()
+                            app_name_lower = app_name # usage for next iteration? No, simple break ok
+                            break
+                    
+                    # Remove common trailing action verbs if they snuck in
+                    # e.g. "whatsapp write" -> "whatsapp"
+                    action_verbs = [" write", " type", " message", " search", " send"]
+                    for verb in action_verbs:
+                         if app_name_lower.endswith(verb):
+                             app_name = app_name_lower[:-len(verb)].strip()
+                             break
+
                 if app_name:
                     success = self.app_agent.open_app(app_name)
                     return {"success": success, "output": f"Opened {app_name}"}
@@ -704,7 +719,8 @@ class ChainOfActionsManager:
         
         prompt = f"I just executed this action: '{action.description}'. " \
                  f"Please analyze the screen and verify if the action appears successful. " \
-                 f"Describe what you see that confirms or denies the success."
+                 f"IMPORTANT: Start your response with 'YES' if successful, or 'NO' if failed. " \
+                 f"Then describe what you see that confirms or denies the success."
 
         try:
             # Run in executor to avoid blocking asyncio loop
@@ -714,9 +730,18 @@ class ChainOfActionsManager:
                 lambda: self.vlm.analyze_screen(prompt=prompt)
             )
             
+            analysis = result.get("analysis", "No analysis provided")
+            # Parse YES/NO
+            is_success = analysis.strip().upper().startswith("YES")
+            if not is_success and not analysis.strip().upper().startswith("NO"):
+                # Ambiguous, default to True for safety unless clearly NO
+                 # Actually, let's be strict. If it doesn't say YES, assume check failed or needs review.
+                 # But VLM might be chatty. Let's look for "YES" in first 10 chars.
+                 is_success = "YES" in analysis.strip().upper()[:10]
+            
             return {
-                "verified": True,
-                "vlm_analysis": result.get("analysis", "No analysis provided"),
+                "verified": is_success,
+                "vlm_analysis": analysis,
                 "timestamp": result.get("timestamp")
             }
         except Exception as e:

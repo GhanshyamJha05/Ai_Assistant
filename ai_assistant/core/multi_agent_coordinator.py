@@ -5,6 +5,8 @@ from datetime import datetime
 from ..agents.registry import AgentRegistry
 from ..agents.models import Task, TaskResult, AgentStatus
 from ..agents.base_agent import BaseAgent
+from .memory_manager import MemoryManager
+from .interaction import InteractionManager
 
 class MultiAgentCoordinator:
     """
@@ -14,6 +16,8 @@ class MultiAgentCoordinator:
     
     def __init__(self, registry: AgentRegistry):
         self.registry = registry
+        self.memory = MemoryManager()
+        self.interaction = InteractionManager()
         self.active_tasks: Dict[str, Task] = {}
         self.task_results: Dict[str, TaskResult] = {}
         

@@ -48,76 +48,38 @@ class AppDiscovery:
     
     def scan_installed_applications(self) -> Dict[str, str]:
         """
-        Scan ONLY apps visible in Windows Start Menu and Settings > Apps.
-        This matches what users see and can launch via Windows Search.
+        Scan apps from EXACT same sources as Windows Settings > Apps & Features.
+        This is the definitive list of installed applications on Windows.
         
-        Discovery Methods:
-        1. Start Menu shortcuts (All Apps in Start Menu)
-        2. PowerShell Get-StartApps (Modern Windows apps in Settings)
+        Discovery Sources (same as Settings):
+        1. Registry Uninstall keys (Desktop apps)
+        2. AppX/MSIX packages (Store/Modern apps)
         
-        WHY THIS APPROACH:
-        - Only shows apps users can actually launch via Start Menu
-        - Matches Windows Search behavior (our universal launcher)
-        - Avoids hidden/system/unregistered apps that confuse users
-        - Faster scanning (no deep registry/filesystem crawling)
+        WHY THIS IS THE BEST APPROACH:
+        - Shows exact same apps as Settings > Apps & Features
+        - No missing apps or extra hidden apps
+        - Official Windows application registry
+        - What users expect to see
         """
-        print("🔍 Scanning Windows Start Menu and Settings apps...")
+        print("⚙️ Scanning from Windows Settings > Apps & Features sources...")
         apps = {}
         
-        # Method 1: Start Menu shortcuts - All Apps in Start Menu
-        print("  📂 Scanning Start Menu (All Apps)...")
-        apps.update(self._scan_start_menu())
+        # Method 1: Registry Uninstall Keys (Desktop Apps)
+        print("  📋 Reading Registry Uninstall Keys (Desktop Apps)...")
+        apps.update(self._scan_apps_and_features_registry())
         
-        # Method 2: PowerShell Get-StartApps (Modern App Discovery from Settings)
-        print("  ⚡ Scanning PowerShell Get-StartApps (Settings > Apps)...")
-        apps.update(self._scan_powershell_apps())
+        # Method 2: AppX Packages (Microsoft Store Apps)
+        print("  🏪 Reading AppX Packages (Store Apps)...")
+        apps.update(self._scan_appx_packages())
         
         # Save to cache
         self.apps_database = apps
         self.save_cache()
         
-        print(f"✅ Discovery complete! Found {len(apps)} Start Menu apps.")
+        print(f"✅ Discovery complete! Found {len(apps)} apps (same as Settings).")
         return apps
     
-    def _scan_powershell_apps(self) -> Dict[str, str]:
-        """Scan apps using PowerShell Get-StartApps command (Reliably finds Store/UWP apps)"""
-        apps = {}
-        try:
-            # Use PowerShell to get list of apps
-            # We use a custom object selection to get clean JSON output
-            cmd = 'powershell -NoProfile -NonInteractive -Command "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json"'
-            
-            # Run command with timeout to prevent hanging
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=15)
-            
-            if result.returncode == 0 and result.stdout.strip():
-                try:
-                    data = json.loads(result.stdout)
-                    
-                    # Handle single item vs list
-                    if isinstance(data, dict):
-                        data = [data]
-                        
-                    for item in data:
-                        if 'Name' in item and 'AppID' in item:
-                            name = item['Name']
-                            app_id = item['AppID']
-                            
-                            # Construct launch path using shell:AppsFolder
-                            # This works for ANY Store app / UWP app
-                            launch_path = f"explorer.exe shell:AppsFolder\\{app_id}"
-                            
-                            # Store in apps dict
-                            if name:
-                                apps[name.lower()] = launch_path
-                                
-                except json.JSONDecodeError:
-                    print(f"Failed to parse PowerShell output")
-        except Exception as e:
-            print(f"PowerShell scan failed: {e}")
-            
-        
-        return apps
+    # REMOVED: PowerShell Get-StartApps - not needed, using Windows Settings > Apps & Features sources
     
     def _open_via_windows_search(self, app_name: str) -> bool:
         """
@@ -146,103 +108,118 @@ class AppDiscovery:
             print(f"  ❌ Windows Search launch failed: {e}")
             return False
 
-    # REMOVED: Registry scanning - not needed for Start Menu only approach
-    # We only show apps that appear in Start Menu and Settings, which users can launch via Windows Search
-
-    # REMOVED: Essential store apps method - PowerShell Get-StartApps finds these automatically
-    # No need for hardcoded protocol handlers when using Windows Search as universal launcher
-    
-    def _scan_start_menu(self) -> Dict[str, str]:
-        """Scan Start Menu shortcuts"""
+    def _scan_apps_and_features_registry(self) -> Dict[str, str]:
+        """
+        Scan Registry Uninstall keys - EXACT same source as Settings > Apps & Features.
+        This finds all desktop applications installed via installers.
+        
+        Registry Locations (same as Windows Settings uses):
+        - HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall (64-bit apps)
+        - HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall (32-bit apps)
+        - HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall (user apps)
+        """
         apps = {}
-        start_menu_paths = [
-            os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
-            os.path.expandvars(r"%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs")
+        
+        # Registry paths that Settings > Apps & Features reads from
+        registry_paths = [
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Uninstall"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Uninstall"),
         ]
         
-        for start_path in start_menu_paths:
-            if os.path.exists(start_path):
-                for root, dirs, files in os.walk(start_path):
-                    for file in files:
-                        if file.endswith('.lnk'):
-                            shortcut_path = os.path.join(root, file)
-                            app_name = file[:-4]  # Remove .lnk extension
-                            target = self._resolve_shortcut(shortcut_path)
-                            # Accept .exe files OR empty targets (UWP apps use the shortcut itself)
-                            if target and target.lower().endswith('.exe'):
-                                # Check if it's a PWA (browser proxy executables)
-                                pwa_proxies = ['chrome_proxy.exe', 'msedge_proxy.exe', 'brave_proxy.exe', 
-                                              'opera_proxy.exe', 'vivaldi_proxy.exe', 'arc_proxy.exe']
-                                is_pwa = any(proxy in target.lower() for proxy in pwa_proxies)
-                                
-                                if is_pwa:
-                                    # Store the .lnk path for PWAs to preserve app-id arguments
-                                    apps[app_name.lower()] = shortcut_path
-                                else:
-                                    apps[app_name.lower()] = target
-                            elif not target or not target.strip():
-                                # UWP/Store apps - use the shortcut path itself
-                                apps[app_name.lower()] = shortcut_path
+        for root_key, reg_path in registry_paths:
+            try:
+                with winreg.OpenKey(root_key, reg_path) as key:
+                    for i in range(winreg.QueryInfoKey(key)[0]):
+                        try:
+                            subkey_name = winreg.EnumKey(key, i)
+                            with winreg.OpenKey(key, subkey_name) as subkey:
+                                try:
+                                    # Read DisplayName - this is what shows in Settings
+                                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
+                                    
+                                    # Skip if no name or it's an update/component
+                                    if not display_name or any(skip in display_name.lower() for skip in 
+                                        ['update', 'hotfix', 'security update', 'kb']):
+                                        continue
+                                    
+                                    # Try to get SystemComponent flag - if 1, it's hidden from Settings
+                                    try:
+                                        system_component = winreg.QueryValueEx(subkey, "SystemComponent")[0]
+                                        if system_component == 1:
+                                            continue  # Skip system components
+                                    except FileNotFoundError:
+                                        pass  # No SystemComponent key means it's visible
+                                    
+                                    # Try to get ParentKeyName - if exists, it's a sub-component
+                                    try:
+                                        parent = winreg.QueryValueEx(subkey, "ParentKeyName")[0]
+                                        if parent:
+                                            continue  # Skip sub-components
+                                    except FileNotFoundError:
+                                        pass
+                                    
+                                    # Store the app name (we use Windows Search to launch, so path doesn't matter)
+                                    app_key = display_name.lower().strip()
+                                    if app_key and app_key not in apps:
+                                        apps[app_key] = display_name  # Store display name as "path"
+                                        
+                                except (FileNotFoundError, OSError):
+                                    continue
+                        except OSError:
+                            continue
+            except Exception as e:
+                continue  # Skip if can't access registry path
         
         return apps
     
-    def _resolve_shortcut(self, shortcut_path: str) -> str:
-        """Resolve .lnk shortcut to actual target with improved methods."""
+    def _scan_appx_packages(self) -> Dict[str, str]:
+        """
+        Scan AppX/MSIX packages - Microsoft Store apps (same as Settings > Apps & Features).
+        Uses PowerShell Get-AppxPackage which is what Windows Settings uses internally.
+        """
+        apps = {}
         try:
-            # Method 1: Try with win32com if available
-            try:
-                import win32com.client
-                shell = win32com.client.Dispatch("WScript.Shell")
-                shortcut = shell.CreateShortCut(shortcut_path)
-                target = shortcut.Targetpath
-                if target and os.path.exists(target):
-                    return target
-            except ImportError:
-                pass
-            except Exception as e:
-                print(f"win32com shortcut resolution failed: {e}")
+            # PowerShell command to get AppX packages (same as Settings uses)
+            cmd = 'powershell -NoProfile -NonInteractive -Command "Get-AppxPackage | Where-Object {$_.Name -notlike \"*DeletedAllUserPackages*\" -and $_.SignatureKind -eq \"Store\"} | Select-Object Name,PackageFamilyName | ConvertTo-Json"'
             
-            # Method 2: PowerShell approach (with shorter timeout)
-            try:
-                cmd = f'powershell -Command "(New-Object -ComObject WScript.Shell).CreateShortcut(\'{shortcut_path}\').TargetPath"'
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=2)
-                if result.returncode == 0 and result.stdout.strip():
-                    target = result.stdout.strip()
-                    if os.path.exists(target):
-                        return target
-            except subprocess.TimeoutExpired:
-                pass  # Silent timeout - skip slow shortcuts
-            except Exception as e:
-                pass  # Silent errors to avoid log spam
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=10)
             
-            # Method 3: Python-only approach using struct (parse .lnk binary)
-            try:
-                with open(shortcut_path, 'rb') as f:
-                    # Read .lnk file header
-                    data = f.read()
-                    # Look for local path in the file (simplified approach)
-                    # .lnk files contain paths as null-terminated strings
-                    if b'\\' in data:
-                        # Find potential path strings
-                        parts = data.split(b'\\x00\\x00')
-                        for part in parts:
-                            try:
-                                path_str = part.decode('utf-8', errors='ignore')
-                                # Look for executable paths
-                                if '.exe' in path_str.lower() and ':\\' in path_str:
-                                    # Extract the path
-                                    for line in path_str.split('\\n'):
-                                        if '.exe' in line.lower() and os.path.exists(line.strip()):
-                                            return line.strip()
-                            except:
-                                continue
-            except Exception as e:
-                print(f"Binary shortcut resolution failed: {e}")
-            
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    data = json.loads(result.stdout)
+                    
+                    # Handle single item vs list
+                    if isinstance(data, dict):
+                        data = [data]
+                    
+                    for item in data:
+                        if 'Name' in item:
+                            # Extract friendly name from package name
+                            name = item['Name']
+                            
+                            # Convert package name to friendly display name
+                            # e.g., "Microsoft.WindowsCalculator" -> "Calculator"
+                            friendly_name = name.split('.')[-1] if '.' in name else name
+                            
+                            # Remove common suffixes
+                            friendly_name = friendly_name.replace('App', '').replace('UWP', '').strip()
+                            
+                            if friendly_name and len(friendly_name) > 2:
+                                app_key = friendly_name.lower()
+                                if app_key not in apps:
+                                    apps[app_key] = friendly_name
+                                    
+                except json.JSONDecodeError:
+                    pass
         except Exception as e:
-            print(f"Error resolving shortcut {shortcut_path}: {e}")
+            print(f"  ⚠️ AppX scan failed: {e}")
         
-        return ""
+        return apps
+    
+    # REMOVED: Start Menu scanning - not needed, using Windows Settings > Apps & Features sources
+    
+    # REMOVED: Shortcut resolution - not needed, we use Windows Search to launch all apps
     
     def save_cache(self):
         """Save discovered apps to cache file"""

@@ -63,7 +63,7 @@ except ImportError:
 
 # Internal imports - Automation tools
 try:
-    from automation_tools_new import (
+    from ai_assistant.automation_tools_new import (
         setup_memory, save_to_memory, get_memory,
         open_application, close_application,
         search_google, search_and_play_spotify,

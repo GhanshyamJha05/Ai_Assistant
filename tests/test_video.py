@@ -4,6 +4,8 @@ import sys
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Force add user site packages
+sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
 from ai_assistant.agents.video.video_agent import VideoAgent
 from ai_assistant.agents.models import Task
