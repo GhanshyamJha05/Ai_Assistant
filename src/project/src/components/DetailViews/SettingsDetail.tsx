@@ -2,9 +2,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, Lock, Palette, Globe, Database, Brain, Zap, DollarSign, Clock,
   Mic, Volume2, Shield, Download, Upload, RotateCcw, Save, Check, X,
-  Cpu, MessageSquare, Key, Terminal, Server, Layers, Speaker
+  Cpu, MessageSquare, Key, Terminal, Server, Layers, Speaker, HardDrive, Activity, Wifi
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 // --- Interfaces matching app_settings.json ---
 
@@ -123,6 +124,7 @@ const AI_MODELS: Record<string, string[]> = {
 // --- Component ---
 
 const SettingsDetail = () => {
+  const { systemStats } = useDashboard();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -296,6 +298,10 @@ const SettingsDetail = () => {
         transition={{ duration: 0.2 }}
         className="space-y-6"
       >
+        {activeTab === 'system' && (
+          <LiveMetrics stats={systemStats} />
+        )}
+
         {settings && settings[activeTab as keyof AppSettings] && (
           <EditableSection
             key={activeTab} // Force re-render on tab change to reset path context
@@ -491,6 +497,33 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
           </div>
         );
       })}
+    </div>
+  );
+};
+
+const LiveMetrics = ({ stats }: { stats: any }) => {
+  if (!stats) return null;
+
+  const metrics = [
+    { label: 'CPU Load', value: `${stats.cpu}%`, icon: Cpu, color: '#3B82F6' },
+    { label: 'Memory', value: `${stats.memory}%`, icon: HardDrive, color: '#10B981' },
+    { label: 'Disk', value: `${stats.disk || 0}%`, icon: Database, color: '#8B5CF6' },
+    { label: 'Network', value: stats.network, icon: Activity, color: '#F59E0B' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {metrics.map((m) => (
+        <div key={m.label} className="bg-[#1F2228] border border-[#2A2D35] p-4 rounded-lg flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-[#2A2D35]" style={{ color: m.color }}>
+            <m.icon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[#9CA3AF] text-xs uppercase font-medium">{m.label}</p>
+            <p className="text-white text-xl font-bold">{m.value}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

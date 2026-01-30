@@ -132,6 +132,16 @@ def main():
             logger.warning(f"Could not load config: {e}")
             port = int(os.getenv('BACKEND_PORT', 5000))
         
+        # =====================================================================
+        # START BACKGROUND TASKS
+        # =====================================================================
+        try:
+            from ai_assistant.services.backend.system_monitor import start_system_monitor
+            start_system_monitor(socketio)
+            logger.info("  📊 System monitoring task started")
+        except ImportError as e:
+            logger.warning(f"  ⚠️  Could not start system monitoring: {e}")
+        
         # Start server
         logger.info("="*80)
         logger.info(f"✅ Backend initialization complete")

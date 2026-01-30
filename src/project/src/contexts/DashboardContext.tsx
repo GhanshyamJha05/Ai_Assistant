@@ -17,6 +17,7 @@ export interface VoiceCommand {
 export interface SystemStats {
     cpu: number;
     memory: number;
+    disk: number;
     network: string;
 }
 
@@ -104,6 +105,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [systemStats, setSystemStats] = useState<SystemStats>({
         cpu: 0,
         memory: 0,
+        disk: 0,
         network: '0 MB/s',
     });
     const [learningStats, setLearningStats] = useState<LearningStats>({
@@ -133,7 +135,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [selectedView, setSelectedView] = useState<ViewType>(null); // Selected detail view
     const lastProcessedCommandRef = useRef<{ text: string, time: number } | null>(null); // Deduplication ref
     const socketRef = useRef<Socket | null>(null); // Ref for socket to avoid stale closures in listeners
-    
+
     // Session tracking state
     const [currentSession, setCurrentSession] = useState<ConversationSession | null>(null);
     const [conversationHistory, setConversationHistory] = useState<ConversationSession[]>([]);
@@ -144,7 +146,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const analyserRef = useRef<AnalyserNode | null>(null);
     const microphoneStreamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    
+
     // SAFETY: Use a ref to hold the active recognition instance
     // This persists across re-renders and ensures we always clean up the *actual* active instance
     const activeRecognitionRef = useRef<any>(null);
@@ -184,6 +186,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setSystemStats({
                 cpu: Math.round(stats.cpu_usage || 0),
                 memory: Math.round(stats.memory_usage || 0),
+                disk: Math.round(stats.disk_usage || 0),
                 network: stats.network_speed ? `${(stats.network_speed / 1024 / 1024).toFixed(1)} MB/s` : '0 MB/s',
             });
         });
@@ -275,7 +278,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     console.warn('Error aborting previous recognition:', e);
                 }
             }
-            
+
             // Set as active instance
             activeRecognitionRef.current = recog;
 
@@ -355,11 +358,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 if (final) {
                     // FAST STOP: Intercept stop commands client-side for zero latency
                     if (final.trim().match(/^(stop|quiet|silence|shutup|shut up|cancel|terminate|wait)$/i)) {
-                         console.log('🛑 Fast Stop Triggered');
-                         window.speechSynthesis.cancel();
-                         setInterimTranscript('');
-                         interimTranscriptRef.current = '';
-                         return; 
+                        console.log('🛑 Fast Stop Triggered');
+                        window.speechSynthesis.cancel();
+                        setInterimTranscript('');
+                        interimTranscriptRef.current = '';
+                        return;
                     }
 
                     console.log('✅ Final transcript:', final);
@@ -368,21 +371,21 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                     // Deduplication check
                     const now = Date.now();
-                    
+
                     // Check Global Variable (protects against duplicate listeners/instances)
                     if (globalLastCommandInfo.text === final && (now - globalLastCommandInfo.time) < 2000) {
-                         console.log('🚫 Global duplicate command ignored:', final);
-                         return;
+                        console.log('🚫 Global duplicate command ignored:', final);
+                        return;
                     }
 
                     // Check Local Ref (standard check)
-                    if (lastProcessedCommandRef.current && 
-                        lastProcessedCommandRef.current.text === final && 
+                    if (lastProcessedCommandRef.current &&
+                        lastProcessedCommandRef.current.text === final &&
                         (now - lastProcessedCommandRef.current.time) < 2000) {
-                            console.log('🚫 Local duplicate command ignored:', final);
-                            return;
+                        console.log('🚫 Local duplicate command ignored:', final);
+                        return;
                     }
-                    
+
                     // Update both
                     lastProcessedCommandRef.current = { text: final, time: now };
                     globalLastCommandInfo = { text: final, time: now };
@@ -432,7 +435,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                         // Send via socket for voice command processing, using REFs to avoid stale closures
                         const currentSocket = socketRef.current;
-                        
+
                         if (currentSocket && currentSocket.connected) {
                             console.log('📤 Sending voice_command event to backend:', final);
                             currentSocket.emit('voice_command', {
@@ -443,10 +446,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             console.log('✅ voice_command emitted successfully');
                         } else {
                             console.warn('⚠️ Socket not connected, using direct fallback (avoiding duplicate chat entry)');
-                            
+
                             // Log processing
                             addSystemLog('info', `Processing Voice: ${final}`);
-                            
+
                             // DIRECT FETCH FALLBACK (No addChatMessage for user, since addVoiceCommand already added it)
                             // This prevents double entries (one Voice Icon, one Chat Text)
                             fetch('http://127.0.0.1:5000/api/command', {
@@ -584,7 +587,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         oldRecog.abort();
                         console.log('✅ Stopped active recognition instance');
                     } catch (e) {
-                         // ignore errors on abort
+                        // ignore errors on abort
                     }
                     activeRecognitionRef.current = null;
                 }
@@ -1190,7 +1193,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (currentSession && (chatMessages.length > 0 || voiceCommands.length > 0)) {
                 saveCurrentSessionToHistory();
             }
-            
+
             // Load the selected session
             setChatMessages(session.messages);
             setVoiceCommands(session.voiceCommands);
@@ -1200,7 +1203,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const deleteSession = (sessionId: string) => {
         setConversationHistory(prev => prev.filter(s => s.id !== sessionId));
-        
+
         // Also remove from localStorage
         const stored = localStorage.getItem('conversationHistory');
         if (stored) {
@@ -1212,11 +1215,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const saveCurrentSessionToHistory = () => {
         if (!currentSession) return;
-        
+
         const endTime = new Date();
         const duration = calculateDuration(sessionStartTimeRef.current, endTime);
         const preview = chatMessages.length > 0 ? chatMessages[0].text : voiceCommands.length > 0 ? voiceCommands[0].command : '';
-        
+
         const sessionToSave: ConversationSession = {
             ...currentSession,
             endTime: endTime.toLocaleTimeString(),
@@ -1229,7 +1232,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             aiMessageCount: chatMessages.filter(m => m.type === 'ai').length,
             voiceCount: voiceCommands.length,
         };
-        
+
         setConversationHistory(prev => {
             const updated = [sessionToSave, ...prev];
             // Save to localStorage
@@ -1250,7 +1253,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         const sessionId = `session_${Date.now()}`;
         const startTime = new Date();
         sessionStartTimeRef.current = startTime;
-        
+
         setCurrentSession({
             id: sessionId,
             startTime: startTime.toLocaleTimeString(),
@@ -1271,15 +1274,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.error('Failed to load conversation history:', e);
             }
         }
-        
+
         // JARVIS PROTOCOL: Initial Greeting
         // Delay slightly to ensure UI is ready
         if (!hasGreetedRef.current) {
             hasGreetedRef.current = true;
             setTimeout(() => {
-                 const greeting = "At your service, Sir. All systems online.";
-                 addChatMessage(greeting, 'ai');
-                 speak(greeting, 'en-US');
+                const greeting = "At your service, Sir. All systems online.";
+                addChatMessage(greeting, 'ai');
+                speak(greeting, 'en-US');
             }, 1500);
         }
 

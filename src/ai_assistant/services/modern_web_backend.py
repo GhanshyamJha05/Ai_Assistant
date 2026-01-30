@@ -5240,6 +5240,14 @@ if __name__ == '__main__':
             # Start weekly periodic refresh
             start_periodic_refresh(interval_hours=168)  # 168 hours = 1 week
         
+        # Start robust system monitoring
+        try:
+            from ai_assistant.services.backend.system_monitor import start_system_monitor
+            start_system_monitor(socketio)
+            print("✅ System monitoring started")
+        except ImportError as e:
+            print(f"⚠️ Could not start system monitoring: {e}")
+        
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:
         print(f"âŒ Server failed to start: {e}")

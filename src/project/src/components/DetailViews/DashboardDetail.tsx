@@ -6,12 +6,12 @@ const DashboardDetail = () => {
   const { systemStats } = useDashboard();
 
   const detailedStats = [
-    { icon: Cpu, label: 'CPU Usage', value: `${systemStats.cpu}%`, color: '#3B82F6', trend: '+2.3%' },
-    { icon: HardDrive, label: 'Memory Usage', value: `${systemStats.memory}%`, color: '#10B981', trend: '+1.2%' },
-    { icon: Activity, label: 'Network Speed', value: systemStats.network, color: '#F59E0B', trend: '-0.5%' },
-    { icon: Server, label: 'Disk Usage', value: '45%', color: '#8B5CF6', trend: '+0.8%' },
-    { icon: Zap, label: 'Power Consumption', value: '120W', color: '#EF4444', trend: '-3.1%' },
-    { icon: TrendingUp, label: 'Performance Score', value: '92/100', color: '#06B6D4', trend: '+5.0%' },
+    { icon: Cpu, label: 'CPU Usage', value: `${systemStats.cpu}%`, color: '#3B82F6', trend: systemStats.cpu > 80 ? '+High' : 'Stable' },
+    { icon: HardDrive, label: 'Memory Usage', value: `${systemStats.memory}%`, color: '#10B981', trend: 'Stable' },
+    { icon: Activity, label: 'Network Speed', value: systemStats.network, color: '#F59E0B', trend: 'Live' },
+    { icon: Server, label: 'Disk Usage', value: `${systemStats.disk || 0}%`, color: '#8B5CF6', trend: 'Stable' },
+    { icon: Zap, label: 'Power Consumption', value: '--', color: '#EF4444', trend: 'N/A' },
+    { icon: TrendingUp, label: 'Performance Score', value: `${Math.max(0, 100 - Math.max(systemStats.cpu, systemStats.memory))}/100`, color: '#06B6D4', trend: 'Dynamic' },
   ];
 
   return (
