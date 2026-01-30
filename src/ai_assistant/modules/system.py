@@ -4,7 +4,14 @@ System monitoring, process management, and PC maintenance functions
 for the YourDaddy AI Assistant.
 """
 
-import psutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    psutil = None
+    PSUTIL_AVAILABLE = False
+    print("WARNING: psutil not found. System monitoring features will be disabled.")
+
 import platform
 import tempfile
 import shutil
@@ -15,6 +22,9 @@ def get_system_status() -> str:
     """
     Gets comprehensive system status including CPU, RAM, disk, and network info.
     """
+    if not PSUTIL_AVAILABLE or psutil is None:
+        return "❌ System monitoring requires 'psutil' package."
+
     print("--- 'Hands' (get_system_status) activated ---")
     try:
         # CPU Information

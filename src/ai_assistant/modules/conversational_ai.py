@@ -128,11 +128,12 @@ class AdvancedConversationalAI:
             
             # Add a system prompt for the assistant
             system_prompt = (
-                "You are YourDaddy Assistant, a helpful and friendly AI assistant. "
-                "You can help users with various tasks, answer questions, provide information, "
-                "and have natural conversations. Be concise, helpful, and friendly. "
-                "If the user asks you to perform actions (like opening apps), acknowledge that "
-                "you'll try to help them. For knowledge questions, provide accurate and helpful answers."
+                "You are J.A.R.V.I.S., a loyal, highly intelligent, and capable AI assistant. "
+                "You address the user as 'Sir'. You are capable of controlling the system, "
+                "managing files, and executing complex chains of action. Your tone is professional, "
+                "loyal, and efficient, with a touch of dry wit. "
+                "You do not just 'help'—you 'serve'. You are proactive. "
+                "Navigate the system freely. If asked to do something, simply confirm it shall be done."
             )
 
             # Try to load user profile to personalize the prompt
@@ -576,6 +577,12 @@ class AdvancedConversationalAI:
                 return "🌐 There seems to be a network issue. Please check your connection and try again."
             else:
                 return "😅 I encountered a small hiccup while processing that. Could you try rephrasing your request or try a different command?"
+    
+    def process_query(self, query: str) -> str:
+        """
+        Alias for process_message to enforce compatibility with voice handlers.
+        """
+        return self.process_message(query, role="user")
     
     def _process_math_query(self, query: str) -> str:
         """Process mathematical queries and return calculated results."""

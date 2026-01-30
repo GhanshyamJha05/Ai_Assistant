@@ -15,7 +15,11 @@ import json
 import webbrowser
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
-import psutil
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 try:
     import spotipy

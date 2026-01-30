@@ -175,6 +175,28 @@ class ModernAssistant:
             self._eager_init()
         else:
             print("⚡ Lazy initialization enabled - features load on first use")
+            
+    def process_query(self, query: str) -> str:
+        """
+        Process a natural language query using the best available AI method.
+        Added for backward compatibility and centralized processing.
+        """
+        try:
+            # Lazy import to avoid circular dependencies
+            try:
+                from ai_assistant.modules.llm_provider import UnifiedChatInterface
+                if self._llm_chat is None:
+                    self._llm_chat = UnifiedChatInterface(use_fallback=True)
+                    self._llm_chat.add_system_message("You are 'YourDaddy', a smart and helpful AI assistant.")
+                
+                return self._llm_chat.chat(query)
+            except ImportError:
+                # Fallback if module missing
+                return f"I received: {query} (AI engine unavailable)"
+                
+        except Exception as e:
+            print(f"Error processing query: {e}")
+            return f"I encountered an error replying to that: {str(e)}"
     
     def _background_init(self):
         """Initialize heavy components in background thread"""

@@ -71,6 +71,71 @@ def register_voice_handlers(socketio, assistant=None):
             # Set processing state
             emit('voice_status', {'state': 'processing'})
             
+            # -------------------------------------------------------------------------
+            # INTEGRATION: Chain of Actions (Multi-Agent System)
+            # -------------------------------------------------------------------------
+            try:
+                # Basic action detection heuristic
+                action_keywords = [
+                    'open', 'close', 'click', 'minimize', 'maximize', 
+                    'type', 'write', 'search', 'play', 'pause', 
+                    'scroll', 'select', 'clear', 'delete', 'create',
+                    'save', 'check', 'verify', 'scan', 'start', 'stop',
+                    'go to', 'navigate', 'analyze', 'research', 'browse',
+                    'find', 'look for'
+                ]
+                text_lower = text.lower()
+                is_action = any(kw in text_lower for kw in action_keywords)
+                
+                # If command is complex or explicit action, try Chain of Actions first
+                if is_action:
+                    try:
+                        from ai_assistant.core.chain_of_actions_manager import get_chain_manager
+                        chain_manager = get_chain_manager()
+                        
+                        logger.info(f"🔗 Routing voice command to Chain of Actions: {text}")
+                        
+                        # 1. Notify user immediately
+                        emit('voice_response', {
+                            'response': f"Right away. Starting task: {text}",
+                            'success': True
+                        })
+                        
+                        # 2. Define progress callback for UI updates
+                        def ws_progress_callback(progress_data):
+                            emit('chain_progress', progress_data)
+                        
+                        # 3. Execute in background (Async bridge)
+                        import threading
+                        import asyncio
+                        
+                        def run_chain_bg():
+                            async def _run():
+                                try:
+                                    await chain_manager.execute_command(text, on_progress=ws_progress_callback)
+                                except Exception as chain_err:
+                                    logger.error(f"Chain execution error: {chain_err}")
+                                    emit('voice_response', {
+                                        'response': f"I encountered a problem executing that task: {str(chain_err)}",
+                                        'success': False
+                                    })
+                            
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            loop.run_until_complete(_run())
+                            loop.close()
+                            
+                        threading.Thread(target=run_chain_bg).start()
+                        return  # Handled by Chain of Actions
+                        
+                    except ImportError:
+                        logger.warning("Chain of Actions not available, falling back to standard assistant")
+                    except Exception as e:
+                        logger.error(f"Error initializing Chain of Actions: {e}")
+                        # Fall through to standard assistant
+            except Exception as e:
+                 logger.error(f"Error in Chain of Actions check: {e}")
+
             # First, generate intelligent response based on intent/mood
             if INTELLIGENT_RESPONDER_AVAILABLE:
                 try:

@@ -1,0 +1,14 @@
+Checking Voice System Integrity...
+WARNING: pywinauto not found. Window automation features will be disabled.
+❌ Automation System: Failed (No module named 'pyttsx3')
+WARNING: pywinauto not found. Window automation features will be disabled.
+❌ Advanced AI Features: Failed (No module named 'pyttsx3')
+WARNING: pywinauto not found. Window automation features will be disabled.
+2026-01-18 12:03:11 | WARNING  | OpenCV not available - advanced verification disabled
+WARNING: pywinauto not found. Window automation features will be disabled.
+⚠️ Windows automation not available
+⚠️ OCR not available
+WARNING: pywinauto not found. Window automation features will be disabled.
+✅ Chain of Actions Method: Connected
+   - Manager Class Verified
+✅ Different Agents: Agent directories found

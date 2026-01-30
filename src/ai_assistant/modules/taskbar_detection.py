@@ -5,7 +5,10 @@ including running applications, taskbar icons, and system tray information.
 """
 
 import os
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 import time
 from typing import Dict, List, Tuple, Optional, Any
 try:

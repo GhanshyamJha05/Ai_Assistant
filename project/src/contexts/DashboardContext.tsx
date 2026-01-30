@@ -132,6 +132,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [audioLevel, setAudioLevel] = useState(0); // Real-time audio level 0-100
     const [selectedView, setSelectedView] = useState<ViewType>(null); // Selected detail view
     const lastProcessedCommandRef = useRef<{ text: string, time: number } | null>(null); // Deduplication ref
+    const socketRef = useRef<Socket | null>(null); // Ref for socket to avoid stale closures in listeners
     
     // Session tracking state
     const [currentSession, setCurrentSession] = useState<ConversationSession | null>(null);
@@ -147,6 +148,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // SAFETY: Use a ref to hold the active recognition instance
     // This persists across re-renders and ensures we always clean up the *actual* active instance
     const activeRecognitionRef = useRef<any>(null);
+    const hasGreetedRef = useRef(false); // Fix for double greeting
+
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -237,9 +240,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         setSocket(newSocket);
+        socketRef.current = newSocket; // Update ref
 
         return () => {
             newSocket.close();
+            socketRef.current = null;
         };
     }, []);
 
@@ -309,6 +314,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     return;
                 }
 
+                // BARGE-IN FEATURE: Immediate Silence on User Speech
+                // If the user starts talking (interim or final), stop the AI from speaking immediately.
+                if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                    console.log('🙊 Barge-in: User interrupted AI speech');
+                    window.speechSynthesis.cancel();
+                }
+
                 console.log('🎯 Recognition event received:', {
                     resultIndex: event.resultIndex,
                     resultsLength: event.results.length,
@@ -341,6 +353,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Process final result
                 if (final) {
+                    // FAST STOP: Intercept stop commands client-side for zero latency
+                    if (final.trim().match(/^(stop|quiet|silence|shutup|shut up|cancel|terminate|wait)$/i)) {
+                         console.log('🛑 Fast Stop Triggered');
+                         window.speechSynthesis.cancel();
+                         setInterimTranscript('');
+                         interimTranscriptRef.current = '';
+                         return; 
+                    }
+
                     console.log('✅ Final transcript:', final);
                     setInterimTranscript('');
                     interimTranscriptRef.current = ''; // Clear ref
@@ -378,10 +399,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                             // Play greeting
                             const greetings = [
-                                'Yes, I\'m listening',
-                                'How can I help you?',
-                                'I\'m ready',
-                                'What can I do for you?'
+                                'At your service, sir.',
+                                'systems initialized. Ready for command.',
+                                'For you, sir, always.',
+                                'I am ready. What is your will?',
+                                'Online and ready to serve.'
                             ];
                             const greeting = greetings[Math.floor(Math.random() * greetings.length)];
                             speak(greeting, voiceLanguage);
@@ -408,21 +430,43 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         console.log('🎯 Processing voice command:', final);
                         addVoiceCommand(final);
 
-                        // Send via socket for voice command processing
-                        if (socket && socket.connected) {
+                        // Send via socket for voice command processing, using REFs to avoid stale closures
+                        const currentSocket = socketRef.current;
+                        
+                        if (currentSocket && currentSocket.connected) {
                             console.log('📤 Sending voice_command event to backend:', final);
-                            console.log('📤 Socket connected:', socket.connected);
-                            console.log('📤 Socket ID:', socket.id);
-                            socket.emit('voice_command', {
+                            currentSocket.emit('voice_command', {
                                 text: final,
                                 language: voiceLanguage,
                                 timestamp: new Date().toISOString()
                             });
                             console.log('✅ voice_command emitted successfully');
                         } else {
-                            console.warn('⚠️ Socket not connected, using fallback');
-                            // Fallback to regular command
-                            sendCommand(final);
+                            console.warn('⚠️ Socket not connected, using direct fallback (avoiding duplicate chat entry)');
+                            
+                            // Log processing
+                            addSystemLog('info', `Processing Voice: ${final}`);
+                            
+                            // DIRECT FETCH FALLBACK (No addChatMessage for user, since addVoiceCommand already added it)
+                            // This prevents double entries (one Voice Icon, one Chat Text)
+                            fetch('http://127.0.0.1:5000/api/command', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ command: final }),
+                            })
+                                .then((res) => res.json())
+                                .then((data) => {
+                                    const response = data.response || data.message;
+                                    addChatMessage(response, 'ai');
+                                    // Speak response always for voice interactions
+                                    speak(response, voiceLanguage);
+                                })
+                                .catch((error) => {
+                                    console.error('API call error:', error);
+                                    const errorMsg = 'Error processing command. Please try again.';
+                                    addChatMessage(errorMsg, 'ai');
+                                    speak(errorMsg, voiceLanguage);
+                                });
                         }
 
                         // Reset processing state after command
@@ -1226,6 +1270,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             } catch (e) {
                 console.error('Failed to load conversation history:', e);
             }
+        }
+        
+        // JARVIS PROTOCOL: Initial Greeting
+        // Delay slightly to ensure UI is ready
+        if (!hasGreetedRef.current) {
+            hasGreetedRef.current = true;
+            setTimeout(() => {
+                 const greeting = "At your service, Sir. All systems online.";
+                 addChatMessage(greeting, 'ai');
+                 speak(greeting, 'en-US');
+            }, 1500);
         }
 
         // Save current session before unload

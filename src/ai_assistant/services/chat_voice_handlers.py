@@ -114,15 +114,17 @@ def handle_command(data):
         # Process the command through LLM if available
         if LLM_PROVIDER_AVAILABLE:
             try:
-                from ai_assistant.llm.llm_provider import process_query_with_llm
+                # IMPORTANT: Use the UnifiedChatInterface instead of nonexistent process_query_with_llm
+                from ai_assistant.modules.llm_provider import UnifiedChatInterface
                 
-                # Get LLM response with context
-                response_text = process_query_with_llm(
-                    query=command_text,
-                    context={'source': source, 'timestamp': datetime.now().isoformat()}
-                )
+                # Initialize Chat (smart detection)
+                chat = UnifiedChatInterface(use_fallback=True)
+                chat.add_system_message("You are 'YourDaddy', a smart and helpful AI assistant.")
                 
-                # Log the response
+                # Get response
+                response_text = chat.chat(command_text)
+                
+                # Log the response (if router exists)
                 if learning_router:
                     learning_router.log_ai_response(command_text, response_text)
                 

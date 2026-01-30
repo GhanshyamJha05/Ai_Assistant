@@ -53,25 +53,31 @@ class LocalAIManager:
             "total_tokens_generated": 0
         }
     
-    def download_model(self, model_name: str = "tinyllama") -> str:
+    def download_model(self, model_name: str = "llama3-3b") -> str:
         """
         Download quantized model (GGUF format)
         
         Recommended models for 8GB RAM:
-        - TinyLlama-1.1B-Chat (Q4_K_M): ~700MB, 10-15 tok/s on CPU
-        - Qwen2-0.5B (Q4_K_M): ~400MB, 15-25 tok/s on CPU
+        - Llama-3.2-3B: ~2.2GB, Best balance of smarts/speed
+        - Qwen2.5-1.5B: ~1.2GB, Very fast
+        - TinyLlama-1.1B: ~700MB, Minimal resource usage
         """
         
         model_files = {
+            "llama3-3b": {
+                "name": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+                "url": "https://huggingface.co/Bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+                "size": "~2.2GB"
+            },
+            "qwen1.5b": {
+                "name": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+                "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+                "size": "~1.2GB"
+            },
             "tinyllama": {
                 "name": "TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf",
                 "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
                 "size": "~700MB"
-            },
-            "qwen": {
-                "name": "Qwen2-0.5B-Instruct-Q4_K_M.gguf",
-                "url": "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf",
-                "size": "~400MB"
             }
         }
         

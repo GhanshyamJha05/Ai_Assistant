@@ -17,7 +17,7 @@ def create_blueprint(assistant):
     
     # Import automation functions
     try:
-        from automation_tools_new import (
+        from ai_assistant.automation_tools_new import (
             open_application, close_application,
             smart_open_application
         )

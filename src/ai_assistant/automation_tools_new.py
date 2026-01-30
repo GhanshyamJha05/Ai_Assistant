@@ -11,7 +11,7 @@ Architecture:
 """
 
 # Import all core automation functions
-from modules.core import (
+from ai_assistant.modules.core import (
     write_a_note,
     open_application,
     open_settings_page,
@@ -27,7 +27,7 @@ from modules.core import (
 )
 
 # Import app discovery functions
-from modules.app_discovery import (
+from ai_assistant.modules.app_discovery import (
     discover_applications,
     smart_open_application,
     refresh_app_database,
@@ -38,7 +38,7 @@ from modules.app_discovery import (
 )
 
 # Import memory management functions
-from modules.memory import (
+from ai_assistant.modules.memory import (
     setup_memory,
     save_to_memory,
     get_memory,
@@ -49,7 +49,7 @@ from modules.memory import (
 )
 
 # Import system monitoring functions
-from modules.system import (
+from ai_assistant.modules.system import (
     get_system_status,
     get_running_processes,
     cleanup_temp_files,
@@ -60,7 +60,7 @@ from modules.system import (
 )
 
 # Import calendar functions
-from modules.google_calendar import (
+from ai_assistant.modules.google_calendar import (
     setup_calendar_auth,
     get_upcoming_events,
     create_calendar_event,
@@ -70,7 +70,7 @@ from modules.google_calendar import (
 )
 
 # Import email functions
-from modules.email_handler import (
+from ai_assistant.modules.email_handler import (
     setup_email_auth,
     get_inbox_summary,
     send_email,
@@ -83,7 +83,7 @@ from modules.email_handler import (
 )
 
 # Import music functions
-from modules.music import (
+from ai_assistant.modules.music import (
     get_spotify_status,
     spotify_play_pause,
     spotify_next_track,
@@ -92,13 +92,13 @@ from modules.music import (
     get_media_players,
     control_media_player,
     get_system_volume,
-    set_system_volume,
+    # set_system_volume,  <-- This is already imported from modules.core
     create_spotify_playlist,
     get_music_recommendations
 )
 
 # Import file operations functions
-from modules.file_ops import (
+from ai_assistant.modules.file_ops import (
     organize_files_by_type,
     find_duplicate_files,
     remove_duplicate_files,
@@ -110,7 +110,7 @@ from modules.file_ops import (
 )
 
 # Import web scraping functions
-from modules.web_scraping import (
+from ai_assistant.modules.web_scraping import (
     get_weather_info,
     get_weather_forecast,
     get_latest_news,
@@ -124,24 +124,24 @@ from modules.web_scraping import (
 )
 
 # Import research functions
-from modules.research import research_topic
+from ai_assistant.modules.research import research_topic
 
 # Import WhatsApp functions
-from modules.whatsapp import send_whatsapp_message
+from ai_assistant.modules.whatsapp import send_whatsapp_message
 
 # Import complex workflows
-from modules.complex_workflows import process_file_workflow
+from ai_assistant.modules.complex_workflows import process_file_workflow
 
 from datetime import datetime
 import time
 
 # Import taskbar detection functions
-from modules.taskbar_detection import (
+from ai_assistant.modules.taskbar_detection import (
     TaskbarDetector
 )
 
 # Import document OCR functions
-from modules.document_ocr import (
+from ai_assistant.modules.document_ocr import (
     check_ocr_dependencies,
     extract_text_from_image,
     extract_text_from_pdf,
@@ -222,7 +222,11 @@ def detect_taskbar_apps():
 def can_see_taskbar():
     """Check if the assistant can see the taskbar and return capabilities"""
     try:
-        import psutil
+        try:
+            import psutil
+        except ImportError:
+            return {"error": "psutil not installed"}
+            
         capabilities = []
         limitations = []
         

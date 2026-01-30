@@ -12,8 +12,15 @@ except ImportError:
     print("WARNING: pywinauto not found. Window automation features will be disabled.")
 
 import time
-import os 
-import pyttsx3
+import os
+try:
+    import pyttsx3
+    TTS_AVAILABLE = True
+except ImportError:
+    pyttsx3 = None
+    TTS_AVAILABLE = False
+    print("WARNING: pyttsx3 not found. Text-to-Speech features will be disabled.")
+
 import json 
 import re
 import subprocess
@@ -184,6 +191,11 @@ def close_application(app_name: str) -> str:
 def speak(text_to_speak: str) -> str:
     """Speaks a given text string out loud."""
     print(f"--- 'Hands' (speak) activated. Text: {text_to_speak} ---")
+    
+    if not TTS_AVAILABLE or pyttsx3 is None:
+        print(f"🔊 [MOCKED TTS] {text_to_speak}")
+        return "TTS not available (Mocked)"
+        
     try:
         engine = pyttsx3.init()
         engine.say(text_to_speak)
