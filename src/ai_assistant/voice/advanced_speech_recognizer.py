@@ -114,6 +114,22 @@ class AdvancedSpeechRecognizer:
         self.recognition_history = []
         self.confidence_scores = []
         
+        # Initialize Advanced Noise Reduction
+        self.noise_reducer = None
+        if self.noise_reduction:
+            try:
+                from ai_assistant.voice.noise_reduction import NoiseReductionSystem, NoiseReductionConfig, NoiseReductionMethod
+                self.noise_reducer = NoiseReductionSystem(
+                    NoiseReductionConfig(
+                        method=NoiseReductionMethod.HYBRID,
+                        adaptive_parameters=True,
+                        enable_vad_gating=True
+                    )
+                )
+                logger.info("✅ Advanced Noise Reduction System initialized")
+            except ImportError as e:
+                logger.warning(f"⚠️ Advanced noise reduction not available: {e}. Using legacy noise gate.")
+        
         self._initialize_recognizers()
     
     def _initialize_recognizers(self):
@@ -180,7 +196,7 @@ class AdvancedSpeechRecognizer:
     def reduce_noise(self, audio_data, sr: int = 16000) -> np.ndarray:
         """
         Apply noise reduction to audio data
-        Reduces background noise while preserving speech
+        Uses Advanced Noise Reduction System if available, otherwise simple gate
         
         Args:
             audio_data: Audio data as numpy array
@@ -191,9 +207,16 @@ class AdvancedSpeechRecognizer:
         """
         if not self.noise_reduction:
             return audio_data
+            
+        # Use Advanced Noise Reduction if available
+        if self.noise_reducer:
+            try:
+                return self.noise_reducer.reduce_noise(audio_data)
+            except Exception as e:
+                logger.error(f"Advanced noise reduction failed: {e}. Falling back to simple gate.")
         
         try:
-            # Simple noise gate (remove very low amplitude)
+            # Fallback: Simple noise gate (remove very low amplitude)
             noise_threshold = np.mean(np.abs(audio_data)) * 0.1
             reduced = np.copy(audio_data)
             reduced[np.abs(reduced) < noise_threshold] = 0

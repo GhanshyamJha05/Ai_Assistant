@@ -657,33 +657,39 @@ class AdvancedConversationalAI:
             # This handles cases like "🚀 Open Chrome" -> "open chrome"
             clean_query = re.sub(r'[^\w\s\d\.\-\?\!]', '', query_lower).strip()
             
+            # Heuristic: Check first few words for command verbs to avoid false positives
+            # e.g. "I can see you didn't open chrome" should NOT trigger "open chrome"
+            words = clean_query.split()
+            first_few_words = words[:4] if len(words) > 4 else words
+            
             # PRIORITY 1: System/Settings commands (more specific than generic open)
-            if 'settings' in clean_query or 'control panel' in clean_query or \
-               any(word in clean_query for word in ['wifi', 'bluetooth', 'display', 'network', 'sound']) and 'open' in clean_query:
+            if ('settings' in clean_query or 'control panel' in clean_query or \
+               any(word in clean_query for word in ['wifi', 'bluetooth', 'display', 'network', 'sound'])) and \
+               any(word in first_few_words for word in ['open', 'start', 'show', 'launch']):
                 return self._execute_settings_command(query, clean_query)
             
             # PRIORITY 2: Opening apps/websites - Most common command
-            if any(word in clean_query for word in ['open', 'launch', 'start', 'run']):
+            if any(word in first_few_words for word in ['open', 'launch', 'start', 'run']):
                 return self._execute_open_command(query, clean_query)
             
             # PRIORITY 3: Closing apps
-            if any(word in clean_query for word in ['close', 'quit', 'exit', 'kill', 'stop']):
+            if any(word in first_few_words for word in ['close', 'quit', 'exit', 'kill', 'stop']):
                 return self._execute_close_command(query, clean_query)
             
             # PRIORITY 4: Searching - Google, web search
-            if any(word in clean_query for word in ['google', 'search', 'find', 'look up', 'look for']) and 'download' not in clean_query:
+            if any(word in first_few_words for word in ['google', 'search', 'find', 'lookup']) and 'download' not in clean_query:
                 return self._execute_search_command(query, clean_query)
             
             # PRIORITY 4.5: Downloading (YouTube/Media)
-            if 'download' in clean_query or ('get' in clean_query and 'audio' in clean_query):
+            if any(word in first_few_words for word in ['download', 'get']) and 'audio' in clean_query:
                 return self._execute_download_command(query, clean_query)
             
             # PRIORITY 5: Playing music
-            if 'play' in clean_query:
+            if 'play' in first_few_words:
                 return self._execute_play_command(query, clean_query)
             
             # PRIORITY 6: Creating documents
-            if any(word in clean_query for word in ['create', 'make', 'generate', 'new']) and \
+            if any(word in first_few_words for word in ['create', 'make', 'generate', 'new']) and \
                any(doc in clean_query for doc in ['ppt', 'powerpoint', 'presentation', 'pdf', 'document', 'doc', 'word']):
                 return self._execute_create_document(query, clean_query)
             
@@ -692,7 +698,7 @@ class AdvancedConversationalAI:
                 return self._execute_volume_command(query, clean_query)
             
             # PRIORITY 8: System commands (shutdown, restart, etc.)
-            if any(word in clean_query for word in ['shutdown', 'restart', 'sleep', 'lock']):
+            if any(word in first_few_words for word in ['shutdown', 'restart', 'sleep', 'lock']):
                 return self._execute_system_command(query, clean_query)
             
             return None

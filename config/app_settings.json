@@ -1,0 +1,89 @@
+{
+  "general": {
+    "animations": true,
+    "enableHinglish": true,
+    "language": "en-US",
+    "secondaryLanguage": "hi-IN",
+    "startOnBoot": true,
+    "theme": "dark"
+  },
+  "security": {
+    "apiKeys": {
+      "googleGemini": "",
+      "openAI": "",
+      "anthropic": "",
+      "elevenLabs": ""
+    },
+    "permissions": {
+      "allowFileDeletion": false,
+      "allowAppExecution": true,
+      "allowWebBrowsing": true,
+      "allowSystemControl": true
+    },
+    "encryption": {
+      "encryptDatabase": true,
+      "enablePinParams": false
+    }
+  },
+  "ai": {
+    "contextWindow": 10,
+    "defaultModel": "gemini-2.0-flash",
+    "defaultProvider": "openai",
+    "localLlm": {
+      "enabled": true,
+      "modelPath": "model/local_models",
+      "useGpu": true
+    },
+    "maxTokens": 4096,
+    "safetySettings": {
+      "dangerousContent": "BLOCK_MEDIUM_AND_ABOVE",
+      "harassment": "BLOCK_MEDIUM_AND_ABOVE",
+      "hateSpeech": "BLOCK_MEDIUM_AND_ABOVE",
+      "sexuallyExplicit": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    "temperature": 0.7
+  },
+  "voice": {
+    "tts": {
+      "engine": "edge_tts",
+      "voice": "en-US-AriaNeural",
+      "rate": 1.0,
+      "volume": 0.9,
+      "useCache": true
+    },
+    "stt": {
+      "engine": "whisper_api",
+      "model": "whisper-1",
+      "sensitivity": 0.5,
+      "language": "auto",
+      "continuous": true
+    },
+    "wakeWord": {
+      "enabled": true,
+      "phrases": [
+        "hey daddy",
+        "hey assistant",
+        "ok jarvis"
+      ],
+      "sensitivity": 0.6
+    }
+  },
+  "automation": {
+    "autoUpdate": true,
+    "autoBackup": "weekly",
+    "maxHistorySize": 1000,
+    "smartHome": {
+      "enabled": false,
+      "provider": "none"
+    }
+  },
+  "system": {
+    "logLevel": "INFO",
+    "maxLogSizeMb": 10,
+    "minimizeToTray": true,
+    "notifications": {
+      "desktop": true,
+      "sound": true
+    }
+  }
+}

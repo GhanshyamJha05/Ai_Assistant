@@ -84,8 +84,12 @@ def register_voice_handlers(socketio, assistant=None):
                     'go to', 'navigate', 'analyze', 'research', 'browse',
                     'find', 'look for'
                 ]
+                # Heuristic: Action keyword must be in the first 4 words to be a command
+                # This prevents "I can see you open..." from being treated as "open"
                 text_lower = text.lower()
-                is_action = any(kw in text_lower for kw in action_keywords)
+                words = text_lower.split()
+                first_few_words = words[:4] if len(words) > 4 else words
+                is_action = any(kw in first_few_words for kw in action_keywords)
                 
                 # If command is complex or explicit action, try Chain of Actions first
                 if is_action:
@@ -95,10 +99,10 @@ def register_voice_handlers(socketio, assistant=None):
                         
                         logger.info(f"🔗 Routing voice command to Chain of Actions: {text}")
                         
-                        # 1. Notify user immediately
-                        emit('voice_response', {
-                            'response': f"Right away. Starting task: {text}",
-                            'success': True
+                        # 1. Notify user (status update only, to avoid chat ordering issues)
+                        emit('voice_status', {
+                            'state': 'processing', 
+                            'message': f"Starting task: {text}"
                         })
                         
                         # 2. Define progress callback for UI updates

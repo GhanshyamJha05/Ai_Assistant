@@ -319,9 +319,140 @@ class WhatsAppAutomation(AppAutomation):
             return False
     
     def send_with_attachment(self, contact: str, message: str, file_path: str) -> bool:
-        """Send message with attachment"""
-        # Would implement attachment sending
-        pass
+        """
+        Send message with attachment
+        
+        Args:
+            contact: Contact name/number
+            message: Message text
+            file_path: Absolute path to file
+            
+        Returns:
+            Success status
+        """
+        logger.info(f"📎 Sending WhatsApp to {contact} with attachment: {file_path}")
+        
+        if not os.path.exists(file_path):
+            logger.error(f"❌ Attachment not found: {file_path}")
+            return False
+
+        if not WINDOWS_AUTO_AVAILABLE:
+            logger.error("❌ Windows automation (pyautogui/pywinauto) not available")
+            return False
+            
+        try:
+            # 1. Open WhatsApp & Chat (using standard send_message logic to get to chat)
+            # We use the whatsapp:// protocol to open the chat window
+            import webbrowser
+            from urllib.parse import quote
+            
+            # Need a phone number or exact contact match for deep link.
+            # If we don't have a phone number, we rely on the user having the chat open 
+            # OR we try to finding it in the UI (harder).
+            # For now, let's assume we can use the protocol if possible, or just focus window.
+            
+            # Try to get number if possible (imports inside method to avoid cycles)
+            from ai_assistant.modules.whatsapp import get_contact_number
+            phone = get_contact_number(contact)
+            
+            if phone:
+                url = f"whatsapp://send?phone={phone}&text={quote(message)}"
+                webbrowser.open(url)
+                time.sleep(3) # Wait for app to open/focus
+            else:
+                # If no phone number, we assume the contact name is searchable or recently used
+                # This is a bit risky. Fallback: Request manual open or implement UI search.
+                logger.warning(f"⚠️ No phone number for {contact}. Attempting to focus WhatsApp.")
+                
+                # Focus WhatsApp
+                if not self.focus_window("WhatsApp"):
+                    self.open_app("WhatsApp")
+                    time.sleep(5)
+                
+                # Search for contact (Ctrl + F)
+                pyautogui.hotkey('ctrl', 'f')
+                time.sleep(0.5)
+                pyautogui.write(contact)
+                time.sleep(1)
+                pyautogui.press('enter')
+                time.sleep(1)
+                
+                # Type message
+                if message:
+                    pyautogui.write(message)
+            
+            time.sleep(2)
+            
+            # 2. Attach File
+            # Standard shortcut for "Attach" in WhatsApp Desktop is not universal, 
+            # usually we click the paperclip icon or copy-paste the file.
+            
+            # METHOD A: Copy-Paste File (Most robust)
+            # This requires 'pyperclip' or similar to put file struct on clipboard, which is hard in pure python without win32api
+            # OR using powershell to set clipboard.
+            
+            # METHOD B: UI Interaction (Click Clip -> Click Document -> Type Path)
+            
+            # Let's try the Clip Button approach if visual navigation works, 
+            # BUT generic keyboard shortcuts are safer. 
+            # WhatsApp Desktop: Shift+Tab to focus clip? No standard hotkey.
+            
+            # METHOD C: Drag and Drop (Simulated)? Hard.
+            
+            # METHOD D:  "Select File" Dialog
+            # Click 'Attach' (Clip icon) -> assume it's near the text box? 
+            # Or use Image recognition to find the clip icon.
+            
+            # Let's try finding the clip icon visually if possible (requires template matching)
+            # IF NOT, fallback to:
+            #   Focus text box -> Tab backwards?
+            
+            # SIMPLIFIED APPROACH for now:
+            # We will use the 'Copy File' method if possible, otherwise we report limitation.
+            # Actually, we can use the 'pywinauto' to find the button if we had the control ID.
+            
+            # Let's try the Visual approach since we have `pyautogui`
+            # But we don't have the icon image. 
+            #
+            # ALTERNATIVE: Ctrl+V (Paste) the file path? No, that pastes text.
+            
+            # LET'S IMPLEMENT: "Document" attachment via Paperclip click (Blind coordinate guess relative to corners? No.)
+            
+            # BEST BET WITHOUT VISION: 
+            # 1. Type message
+            # 2. DON'T send yet.
+            # 3. Use the 'Attach' button if we can find it.
+            
+            # Wait, there IS a shortcut to attach document in some versions: Ctrl+Shift+U (Upload)? No.
+            
+            # Let's use the `pywhatkit` style approach or just `pyperclip` to copy the file object?
+            # It's complex. 
+            
+            # Let's try a simple visual search for the paperclip if we can. 
+            # Since we don't have the asset, let's assume the user has to confirm or we implement a standard "Task" for the user.
+            
+            # REVISION: Implementing the "File Copy to Clipboard" using PowerShell is reliable.
+            # Then Ctrl+V in WhatsApp.
+            
+            escaped_path = file_path.replace("'", "''")
+            ps_script = f"Set-Clipboard -Path '{file_path}'" 
+            subprocess.run(["powershell", "-Command", ps_script], capture_output=True)
+            
+            time.sleep(1)
+            
+            # Paste in WhatsApp
+            pyautogui.hotkey('ctrl', 'v')
+            time.sleep(2) # Wait for preview
+            
+            # Press Enter to send
+            pyautogui.press('enter')
+            
+            logger.info("✅ File pasted and sent")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to attach/send: {e}")
+            return False
 
 
 # Example usage

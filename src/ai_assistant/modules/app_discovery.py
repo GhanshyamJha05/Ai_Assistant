@@ -73,6 +73,9 @@ class AppDiscovery:
         print("  🏪 Reading AppX Packages (Store Apps)...")
         apps.update(self._scan_appx_packages())
         
+        # Method 3: Start Menu Shortcuts (PWAs and Utilities)
+        apps.update(self._scan_start_menu_shortcuts())
+        
         # Save to cache
         self.apps_database = apps
         self.save_cache()
@@ -236,9 +239,41 @@ class AppDiscovery:
         
         return apps
     
-    # REMOVED: Start Menu scanning - not needed, using Windows Settings > Apps & Features sources
-    
-    # REMOVED: Shortcut resolution - not needed, we use Windows Search to launch all apps
+    def _scan_start_menu_shortcuts(self) -> Dict[str, str]:
+        """
+        Scan Start Menu for .lnk shortcuts (Desktop apps, PWAs, Utility shortcuts).
+        This is critical for finding Brave/Chrome/Edge Apps (YouTube, Spotify, etc.)
+        that might not appear in the Registry or have different internal names.
+        """
+        apps = {}
+        
+        # Standard Start Menu locations
+        paths = [
+            os.path.join(os.environ.get('APPDATA', ''), r'Microsoft\Windows\Start Menu\Programs'),
+            os.path.join(os.environ.get('PROGRAMDATA', ''), r'Microsoft\Windows\Start Menu\Programs')
+        ]
+        
+        print("  📂 Scanning Start Menu shortcuts...")
+        for path in paths:
+            if os.path.exists(path):
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        if file.lower().endswith('.lnk'):
+                            # Use filename as app name (e.g., "YouTube.lnk" -> "youtube")
+                            name = file[:-4]
+                            
+                            # Clean up name (remove " - Shortcut", etc.)
+                            name = name.replace(" - Shortcut", "")
+                            
+                            full_path = os.path.join(root, file)
+                            app_key = name.lower().strip()
+                            
+                            # Don't overwrite existing registry entries unless it's a specific PWA
+                            # This allows "YouTube" from Brave to override generic entries
+                            if app_key not in apps:
+                                apps[app_key] = full_path
+                                
+        return apps
     
     def save_cache(self):
         """Save discovered apps to cache file"""
@@ -749,9 +784,16 @@ def smart_open_application(app_name: str) -> str:
                 return f"❌ Failed to open {app_name}: {e}"
         
         try:
+            # DIRECT LAUNCH (Preferred): If we have a valid path, launch it directly!
+            # This is 100% reliable for .lnk and .exe files found in Start Menu
+            if os.path.exists(app_path) and (app_path.endswith('.lnk') or app_path.endswith('.exe')):
+                print(f"  🚀 Launching directly: {app_path}")
+                os.startfile(app_path)
+                app_discovery.track_app_launch(app_name, app_path, success=True)
+                return f"✅ Opened {app_name}"
+            
             # UNIVERSAL METHOD: Windows Search (Win+Type+Enter)
-            # This is the most reliable way to launch ANY app - exactly how users do it manually
-            # Works for: Store apps, Desktop apps, PWAs, System apps, everything!
+            # Fallback for AppX apps or if direct launch fails
             print(f"  🔍 Launching '{app_name}' via Windows Search (Universal Method)...")
             if app_discovery._open_via_windows_search(app_name):
                 app_discovery.track_app_launch(app_name, app_path, success=True)
@@ -762,6 +804,15 @@ def smart_open_application(app_name: str) -> str:
                 return f"❌ Windows Search unavailable - install pyautogui: pip install pyautogui"
         except Exception as e:
             print(f"  ❌ Launch failed: {e}")
+            # Try to launch directly if Windows search logic failed but we have a path
+            if os.path.exists(app_path):
+                 try:
+                     os.startfile(app_path)
+                     app_discovery.track_app_launch(app_name, app_path, success=True)
+                     return f"✅ Opened {app_name}"
+                 except:
+                     pass
+            
             app_discovery.track_app_launch(app_name, app_path, success=False)
             return f"❌ Failed to launch {app_name}: {e}"
     else:

@@ -187,3 +187,4 @@ yourdaddy.log
 backend.log
 temp_*
 *.session
+*.gguf

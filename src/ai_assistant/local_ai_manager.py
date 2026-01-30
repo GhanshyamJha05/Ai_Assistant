@@ -18,8 +18,9 @@ from datetime import datetime
 
 try:
     from llama_cpp import Llama
-except ImportError:
-    print("⚠️ llama-cpp-python not installed. Run: pip install llama-cpp-python")
+except (ImportError, OSError, Exception) as e:
+    print(f"⚠️ llama-cpp-python not available: {e}")
+    print("ℹ️  Run: pip install llama-cpp-python (and ensure VS C++ Redistributable is installed)")
     Llama = None
 
 
@@ -53,6 +54,42 @@ class LocalAIManager:
             "total_tokens_generated": 0
         }
     
+    def find_best_available_model(self) -> Optional[str]:
+        """
+        Find the best available model in the models directory.
+        Priority:
+        1. Llama-3 (Best quality)
+        2. Qwen2.5 (Fastest)
+        3. TinyLlama (Legacy/Tiny)
+        4. Any other .gguf file
+        """
+        # Known models in priority order
+        priority_models = [
+            "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+            "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+            "qwen2-0_5b-instruct-q4_k_m.gguf",
+            "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+        ]
+        
+        # Check specific priority models first
+        for model_name in priority_models:
+            model_path = self.models_dir / model_name
+            if model_path.exists():
+                print(f"✅ Found priority model: {model_name}")
+                return str(model_path)
+                
+        # Fallback: Look for any .gguf file
+        gguf_files = list(self.models_dir.glob("*.gguf"))
+        if gguf_files:
+            # Sort by size descending (heuristic: bigger = better/smarter?) 
+            # or just pick the first one. Let's pick the largest one assuming it's most capable.
+            best_model = sorted(gguf_files, key=lambda x: x.stat().st_size, reverse=True)[0]
+            print(f"✅ Found fallback model: {best_model.name}")
+            return str(best_model)
+            
+        print("❌ No models found in", self.models_dir)
+        return None
+
     def download_model(self, model_name: str = "llama3-3b") -> str:
         """
         Download quantized model (GGUF format)

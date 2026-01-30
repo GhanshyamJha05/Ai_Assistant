@@ -72,6 +72,15 @@ def main():
             logger.info("  ✅ Learning API blueprint registered")
         except ImportError as e:
             logger.warning(f"  ⚠️  Learning API blueprint not available: {e}")
+
+        # Preferences / Settings API Blueprint
+        try:
+            from ai_assistant.services.backend.blueprints.preferences import create_blueprint as create_prefs_bp
+            prefs_bp = create_prefs_bp()
+            app.register_blueprint(prefs_bp)
+            logger.info("  ✅ Preferences API blueprint registered")
+        except ImportError as e:
+            logger.warning(f"  ⚠️  Preferences API blueprint not available: {e}")
         
         # =====================================================================
         # REGISTER CORE ROUTES from modular backend

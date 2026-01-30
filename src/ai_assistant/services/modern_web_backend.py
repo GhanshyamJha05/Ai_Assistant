@@ -250,7 +250,12 @@ except ImportError:
 load_dotenv()
 
 # Create Flask app
-app = Flask(__name__)
+# Point to new web assets location
+web_assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'web_assets'))
+template_dir = os.path.join(web_assets_dir, 'templates')
+static_dir = os.path.join(web_assets_dir, 'static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
 # Security Configuration - Use secrets manager for secure key handling
 if SECRETS_MANAGER_AVAILABLE:
@@ -430,24 +435,16 @@ def initialize_local_ai():
         logger.info("🤖 Initializing Local AI Manager...")
         local_ai_manager = LocalAIManager()
         
-        # Check for downloaded models
-        model_path = Path("model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf")
-        alt_model_path = Path("model/local_models/qwen2-0_5b-instruct-q4_k_m.gguf")
+        # Check for available models using the new auto-detection
+        model_path = local_ai_manager.find_best_available_model()
         
-        if model_path.exists():
-            logger.info(f"📥 Loading model: {model_path.name}")
-            if local_ai_manager.load_model(str(model_path), threads=4):
+        if model_path:
+            logger.info(f"📥 Loading model: {Path(model_path).name}")
+            if local_ai_manager.load_model(model_path, threads=4):
                 local_ai_initialized = True
                 logger.info("✅ Local AI ready!")
             else:
-                logger.error("❌ Failed to load TinyLlama model")
-        elif alt_model_path.exists():
-            logger.info(f"📥 Loading model: {alt_model_path.name}")
-            if local_ai_manager.load_model(str(alt_model_path), threads=4):
-                local_ai_initialized = True
-                logger.info("✅ Local AI ready!")
-            else:
-                logger.error("❌ Failed to load Qwen2 model")
+                logger.error(f"❌ Failed to load model: {model_path}")
         else:
             logger.warning("⚠️ No local models found. Download with:")
             logger.warning("  huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models")
