@@ -242,6 +242,29 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             addSystemLog('error', `Offline recognition error: ${data.error}`);
         });
 
+        // Google Speech Recognition handlers
+        newSocket.on('google_ready', (data: any) => {
+            console.log('🌐 Google Speech Recognition ready:', data);
+            addSystemLog('success', `Online recognition enabled (${data.language})`);
+        });
+
+        newSocket.on('google_transcript', (data: any) => {
+            console.log('🌐 Google transcript:', data);
+            if (data.isFinal) {
+                setInterimTranscript('');
+                // Process as voice command
+                newSocket.emit('voice_command', { text: data.text, language: voiceLanguage });
+            } else {
+                setInterimTranscript(data.text);
+                interimTranscriptRef.current = data.text;
+            }
+        });
+
+        newSocket.on('google_error', (data: any) => {
+            console.error('❌ Google Speech error:', data);
+            addSystemLog('error', `Online recognition error: ${data.error}`);
+        });
+
         setSocket(newSocket);
         socketRef.current = newSocket; // Update ref
 
@@ -933,14 +956,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const toggleVoice = () => {
         if (recognitionMode === 'vosk') {
-            // Use Vosk offline recognition
+            // Use Google Speech Recognition (backend-based, no C++ dependencies)
             if (isVoiceActive) {
-                stopVoskRecognition();
+                stopGoogleRecognition();
             } else {
-                startVoskRecognition();
+                startGoogleRecognition();
             }
             return;
         }
+
 
         // Web Speech API (existing code)
         if (!recognition) {
@@ -1179,6 +1203,78 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setIsRecognitionStarted(false);
         setInterimTranscript('');
         console.log('🛑 Vosk offline recognition stopped');
+    };
+
+    // Start Google Speech Recognition (online)
+    const startGoogleRecognition = async () => {
+        if (!socket) {
+            addSystemLog('error', 'Not connected to server');
+            return;
+        }
+
+        try {
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
+            });
+
+            // Create MediaRecorder for audio capture
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            // Start Google Speech session on backend
+            socket.emit('google_start_recognition', {
+                language: voiceLanguage,
+                sampleRate: 16000
+            });
+
+            // Send audio chunks to backend
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    // Convert blob to array buffer and send
+                    event.data.arrayBuffer().then(buffer => {
+                        socket.emit('google_audio_chunk', {
+                            audio: Array.from(new Uint8Array(buffer))
+                        });
+                    });
+                }
+            };
+
+            mediaRecorder.start(100); // Capture in 100ms chunks for real-time processing
+            setIsVoiceActive(true);
+            setIsRecognitionStarted(true);
+            console.log('🌐 Google Speech Recognition started');
+
+        } catch (error) {
+            console.error('❌ Microphone access denied:', error);
+            addSystemLog('error', 'Microphone access denied');
+        }
+    };
+
+    // Stop Google Speech Recognition
+    const stopGoogleRecognition = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+
+        if (socket) {
+            socket.emit('google_stop_recognition');
+        }
+
+        setIsVoiceActive(false);
+        setIsRecognitionStarted(false);
+        setInterimTranscript('');
+        console.log('🚫 Google Speech Recognition stopped');
     };
 
     const closeDetailView = () => {

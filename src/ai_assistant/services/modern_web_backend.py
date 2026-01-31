@@ -395,6 +395,16 @@ except ImportError as e:
     VOSK_WS_AVAILABLE = False
     logger.warning(f"⚠️ Vosk WebSocket handler not available: {e}")
 
+# Import Google Speech Recognition WebSocket handlers
+try:
+    from ai_assistant.services.google_speech_websocket_handler import register_google_speech_handlers
+    GOOGLE_SPEECH_WS_AVAILABLE = True
+    logger.info("✅ Google Speech Recognition WebSocket handler loaded (online recognition ready)")
+except ImportError as e:
+    GOOGLE_SPEECH_WS_AVAILABLE = False
+    logger.warning(f"⚠️ Google Speech WebSocket handler not available: {e}")
+
+
 # =============================================================================
 # STARTUP OPTIMIZATION - Feature Toggle Configuration
 # =============================================================================
@@ -5253,6 +5263,15 @@ if __name__ == '__main__':
         except ImportError as e:
             print(f"⚠️ Could not start system monitoring: {e}")
         
+        # Register Google Speech Recognition WebSocket handlers
+        if GOOGLE_SPEECH_WS_AVAILABLE:
+            try:
+                register_google_speech_handlers(socketio)
+                print("✅ Google Speech Recognition WebSocket handlers registered")
+            except Exception as e:
+                print(f"⚠️ Could not register Google Speech handlers: {e}")
+        
+
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:
         print(f"âŒ Server failed to start: {e}")
