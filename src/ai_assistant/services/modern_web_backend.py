@@ -428,29 +428,34 @@ def initialize_local_ai():
     global local_ai_manager, local_ai_initialized
     
     if not LOCAL_AI_AVAILABLE:
-        logger.warning("⚠️ Local AI not available")
+        logger.warning("Local AI not available")
         return
     
     try:
-        logger.info("🤖 Initializing Local AI Manager...")
+        logger.info("Initializing Local AI Manager (Ollama)...")
         local_ai_manager = LocalAIManager()
         
-        # Check for available models using the new auto-detection
-        model_path = local_ai_manager.find_best_available_model()
+        # Check if Ollama is running
+        if not local_ai_manager.is_ollama_running():
+            logger.warning("Ollama service is not running. Start it with 'ollama serve'")
+            return
         
-        if model_path:
-            logger.info(f"📥 Loading model: {Path(model_path).name}")
-            if local_ai_manager.load_model(model_path, threads=4):
+        # Check for available models using auto-detection
+        model_name = local_ai_manager.find_best_available_model()
+        
+        if model_name:
+            logger.info(f"Loading Ollama model: {model_name}")
+            if local_ai_manager.load_model(model_name):
                 local_ai_initialized = True
-                logger.info("✅ Local AI ready!")
+                logger.info("Local AI ready!")
             else:
-                logger.error(f"❌ Failed to load model: {model_path}")
+                logger.error(f"Failed to load model: {model_name}")
         else:
-            logger.warning("⚠️ No local models found. Download with:")
-            logger.warning("  huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models")
+            logger.warning("No Ollama models found. Download with:")
+            logger.warning("  ollama pull llama3.2")
     
     except Exception as e:
-        logger.error(f"❌ Local AI initialization failed: {e}")
+        logger.error(f"Local AI initialization failed: {e}")
 
 # Initialize local AI in background thread
 if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:

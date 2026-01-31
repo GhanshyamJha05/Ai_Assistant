@@ -76,12 +76,12 @@ class LocalAIManager:
         3. Any other available model
         """
         if not self.is_ollama_running():
-            print("❌ Ollama service is not running")
+            print("ERROR: Ollama service is not running")
             return None
             
         available_models = self.list_ollama_models()
         if not available_models:
-            print("❌ No models found in Ollama. Run 'ollama pull llama3.2' to download a model.")
+            print("ERROR: No models found in Ollama. Run 'ollama pull llama3.2' to download a model.")
             return None
         
         # Priority models
@@ -97,12 +97,12 @@ class LocalAIManager:
         # Check for priority models
         for model in priority_models:
             if model in available_models:
-                print(f"✅ Found priority model: {model}")
+                print(f"SUCCESS: Found priority model: {model}")
                 return model
         
         # Return first available model
         first_model = available_models[0]
-        print(f"✅ Using available model: {first_model}")
+        print(f"SUCCESS: Using available model: {first_model}")
         return first_model
     
     def load_model(self, model_name: str) -> bool:
@@ -113,21 +113,21 @@ class LocalAIManager:
             model_name: Name of Ollama model (e.g., "llama3.2", "qwen2.5")
         """
         if not self.is_ollama_running():
-            print("❌ Ollama service is not running. Start it with: ollama serve")
+            print("ERROR: Ollama service is not running. Start it with: ollama serve")
             return False
         
         available_models = self.list_ollama_models()
         if model_name not in available_models:
-            print(f"❌ Model '{model_name}' not found in Ollama")
-            print(f"📥 Download it with: ollama pull {model_name}")
+            print(f"ERROR: Model '{model_name}' not found in Ollama")
+            print(f"Download it with: ollama pull {model_name}")
             return False
         
-        print(f"🔄 Using Ollama model: {model_name}")
+        print(f"Loading Ollama model: {model_name}")
         
         self.current_model = model_name
         self.model_config = LocalModelConfig(name=model_name)
         
-        print(f"✅ Model ready: {model_name}")
+        print(f"SUCCESS: Model ready: {model_name}")
         return True
     
     def generate(
@@ -147,10 +147,10 @@ class LocalAIManager:
             stream: Stream response token by token
         """
         if not self.current_model:
-            return "❌ No model loaded. Call load_model() first."
+            return "ERROR: No model loaded. Call load_model() first."
         
         if not self.is_ollama_running():
-            return "❌ Ollama service is not running"
+            return "ERROR: Ollama service is not running"
         
         start_time = time.time()
         
@@ -175,7 +175,7 @@ class LocalAIManager:
             )
             
             if response.status_code != 200:
-                return f"❌ Ollama API error: {response.status_code}"
+                return f"ERROR: Ollama API error: {response.status_code}"
             
             data = response.json()
             generated_text = data.get("response", "").strip()
@@ -192,14 +192,14 @@ class LocalAIManager:
                 / self.stats["total_queries"]
             )
             
-            print(f"⚡ {tokens_per_sec:.1f} tokens/sec ({tokens_generated} tokens in {elapsed:.2f}s)")
+            print(f"Performance: {tokens_per_sec:.1f} tokens/sec ({tokens_generated} tokens in {elapsed:.2f}s)")
             
             return generated_text
             
         except requests.Timeout:
-            return "❌ Request timeout. Model might be processing."
+            return "ERROR: Request timeout. Model might be processing."
         except Exception as e:
-            return f"❌ Generation error: {e}"
+            return f"ERROR: Generation error: {e}"
     
     def _generate_stream(self, prompt: str, max_tokens: int, temperature: float) -> Generator:
         """Stream tokens as they're generated from Ollama"""
@@ -226,7 +226,7 @@ class LocalAIManager:
                         yield data["response"]
                         
         except Exception as e:
-            yield f"❌ Stream error: {e}"
+            yield f"ERROR: Stream error: {e}"
     
     def chat(self, message: str, max_tokens: int = 512) -> str:
         """
