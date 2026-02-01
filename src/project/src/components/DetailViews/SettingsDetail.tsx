@@ -211,7 +211,12 @@ const SettingsDetail = () => {
 
   // Helper to update state deeply
   const handleSettingChange = (category: string, path: string[], value: any) => {
-    if (!settings) return;
+    console.log('🔧 handleSettingChange called:', { category, path, value });
+
+    if (!settings) {
+      console.log('❌ No settings available');
+      return;
+    }
 
     // Deep clone entire state
     const newState = JSON.parse(JSON.stringify(settings));
@@ -223,6 +228,7 @@ const SettingsDetail = () => {
     if (path.length === 0) {
       newState[category] = value;
       setSettings(newState);
+      console.log('✅ Updated entire category:', category);
       return;
     }
 
@@ -234,6 +240,7 @@ const SettingsDetail = () => {
     // Set the final value
     current[path[path.length - 1]] = value;
 
+    console.log('✅ Dispatching new state:', newState);
     // Dispatch the new state (useReducer will deep clone it again)
     setSettings(newState);
   };
@@ -640,7 +647,10 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) => onChange(currentPath, e.target.checked)}
+                  onChange={(e) => {
+                    console.log('🔘 Toggle clicked:', { key, checked: e.target.checked, currentPath });
+                    onChange(currentPath, e.target.checked);
+                  }}
                   className="peer sr-only pointer-events-auto"
                 />
                 <div className="w-10 h-6 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] cursor-pointer"></div>
