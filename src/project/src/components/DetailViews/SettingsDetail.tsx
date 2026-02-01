@@ -202,30 +202,28 @@ const SettingsDetail = () => {
   const handleSettingChange = (category: string, path: string[], value: any) => {
     setSettings((prev: any) => {
       if (!prev) return null;
-      // Copy root state
-      const newState = { ...prev };
+
+      // DEEP clone entire state
+      const newState = JSON.parse(JSON.stringify(prev));
 
       // Navigate to the category
-      // Now navigate down the path within the category
       let current = newState[category];
 
-      // If path is empty, we are replacing the whole category (unlikely here)
+      // If path is empty, we are replacing the whole category
       if (path.length === 0) {
         newState[category] = value;
         return newState;
       }
 
+      // Navigate down the path
       for (let i = 0; i < path.length - 1; i++) {
-        // If current level is array or object, copy it to modify
-        if (Array.isArray(current[path[i]])) {
-          current[path[i]] = [...current[path[i]]];
-        } else {
-          current[path[i]] = { ...current[path[i]] };
-        }
         current = current[path[i]];
       }
 
+      // Set the final value
       current[path[path.length - 1]] = value;
+
+      console.log('Setting changed:', { category, path, value, newState });
       return newState;
     });
   };
