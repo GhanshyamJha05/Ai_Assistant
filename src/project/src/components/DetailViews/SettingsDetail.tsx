@@ -298,19 +298,11 @@ const SettingsDetail = () => {
         transition={{ duration: 0.2 }}
         className="space-y-6"
       >
-        {activeTab === 'voice' && (
-          <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-20 text-center">
-            <h1 className="text-6xl font-bold text-[#3B82F6] mb-4">✅ VISIBLE</h1>
-            <p className="text-2xl text-[#10B981]">Changes are loading! HMR working!</p>
-            <p className="text-lg text-white mt-4">Voice Settings will appear here</p>
-          </div>
-        )}
-
         {activeTab === 'system' && (
           <LiveMetrics stats={systemStats} />
         )}
 
-        {settings && settings[activeTab as keyof AppSettings] && activeTab !== 'voice' && (
+        {settings && settings[activeTab as keyof AppSettings] && (
           <EditableSection
             key={activeTab} // Force re-render on tab change to reset path context
             title={tabs.find(t => t.id === activeTab)?.label || ''}
