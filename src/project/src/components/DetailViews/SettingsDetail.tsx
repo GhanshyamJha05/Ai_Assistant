@@ -397,6 +397,68 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
           );
         }
 
+        // Special Handling: TTS Voice Dropdown
+        if (key === 'voice_id' && contextData.available_voices) {
+          const availableVoices = contextData.available_voices;
+          return (
+            <div key={key} className="space-y-2">
+              <label className="text-white text-sm font-medium capitalize block">TTS Voice</label>
+              <div className="relative">
+                <select
+                  value={String(value)}
+                  onChange={(e) => {
+                    onChange(currentPath, e.target.value);
+                    // Also update voice_name
+                    const selectedVoice = availableVoices.find((v: any) => v.id === e.target.value);
+                    if (selectedVoice) {
+                      onChange([...path, 'voice_name'], selectedVoice.name);
+                    }
+                  }}
+                  className="w-full p-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
+                >
+                  {availableVoices.map((voice: any) => (
+                    <option key={voice.id} value={voice.id}>
+                      {voice.name} ({voice.gender}, {voice.accent})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF]">▼</div>
+              </div>
+            </div>
+          );
+        }
+
+        // Skip voice_name and available_voices from rendering (handled by voice_id)
+        if (key === 'voice_name' || key === 'available_voices') {
+          return null;
+        }
+
+        // Special Handling: STT Engine Dropdown
+        if (key === 'engine' && path.includes('stt')) {
+          const engines = [
+            { value: 'vosk', label: 'Vosk (Offline, Fast)' },
+            { value: 'whisper', label: 'Whisper (High Accuracy)' },
+            { value: 'google', label: 'Google Cloud STT' }
+          ];
+          return (
+            <div key={key} className="space-y-2">
+              <label className="text-white text-sm font-medium capitalize block">STT Engine</label>
+              <div className="relative">
+                <select
+                  value={String(value)}
+                  onChange={(e) => onChange(currentPath, e.target.value)}
+                  className="w-full p-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
+                >
+                  {engines.map((engine) => (
+                    <option key={engine.value} value={engine.value}>{engine.label}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF]">▼</div>
+              </div>
+            </div>
+          );
+        }
+
         // Special Handling: AI Model Dropdown (Top Level)
         if (key === 'defaultModel') {
           // Look up 'defaultProvider' in the CURRENT data object (siblings)
