@@ -1658,6 +1658,27 @@ def api_single_system_stats(system_name):
         logger.error(f"Single system stats error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/local-ai/status', methods=['GET'])
+@limiter.limit("10 per minute")
+def api_local_ai_status():
+    """Get local AI initialization status for debugging"""
+    try:
+        return jsonify({
+            "success": True,
+            "local_ai_available": LOCAL_AI_AVAILABLE,
+            "local_ai_initialized": local_ai_initialized,
+            "local_ai_manager_loaded": local_ai_manager is not None,
+            "current_model": local_ai_manager.current_model if local_ai_manager else None,
+            "background_init_enabled": BACKGROUND_INIT,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
 @app.route('/api/chat', methods=['POST'])
 @jwt_required(optional=True)
 @limiter.limit("60 per minute")
