@@ -71,6 +71,8 @@ interface DashboardContextType {
     wakeWordDetected: boolean;
     recognitionMode: 'web' | 'vosk';
     toggleRecognitionMode: () => void;
+    aiMode: 'online' | 'offline';
+    toggleAIMode: () => void;
     speak: (text: string, lang?: string) => void;
     selectedView: ViewType;
     setSelectedView: (view: ViewType) => void;
@@ -124,6 +126,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
     const [recognitionMode, setRecognitionMode] = useState<'web' | 'vosk'>('web'); // 'web' = Google, 'vosk' = offline
+    const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
@@ -1133,6 +1136,44 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         speak(`Switched to ${modeName} speech recognition`, voiceLanguage);
     };
 
+    // Toggle AI Mode: Online (GPT/Gemini) <-> Offline (Ollama)
+    const toggleAIMode = async () => {
+        const newMode: 'online' | 'offline' = aiMode === 'online' ? 'offline' : 'online';
+        const provider = newMode === 'online' ? 'google' : 'local';
+
+        console.log(`🤖 Switching AI mode to: ${newMode} (provider: ${provider})`);
+        addSystemLog('info', `Switching to ${newMode} AI...`);
+
+        try {
+            // Update provider via backend API
+            const response = await fetch('http://localhost:5000/api/settings/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    category: 'ai',
+                    settings: {
+                        defaultProvider: provider
+                    }
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                setAIMode(newMode);
+                const modeName = newMode === 'online' ? 'Online AI (Google)' : 'Offline AI (Ollama)';
+                console.log(`✅ AI mode switched to: ${modeName}`);
+                addSystemLog('success', `Switched to ${modeName}`);
+                speak(`Switched to ${modeName}`, voiceLanguage);
+            } else {
+                console.error('❌ Failed to switch AI mode:', result.error);
+                addSystemLog('error', `Failed to switch AI mode: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('❌ Error switching AI mode:', error);
+            addSystemLog('error', 'Error switching AI mode');
+        }
+    };
+
     // Start Vosk offline recognition
     const startVoskRecognition = async () => {
         if (!socket) {
@@ -1422,10 +1463,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         alwaysActive,
         toggleAlwaysActive,
         toggleWakeWord,
-        requireWakeWord,
         wakeWordDetected,
         recognitionMode,
         toggleRecognitionMode,
+        aiMode,
+        toggleAIMode,
         speak,
         selectedView,
         setSelectedView,

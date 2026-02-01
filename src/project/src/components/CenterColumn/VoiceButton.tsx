@@ -98,7 +98,9 @@ const VoiceButton = () => {
     alwaysActive,
     toggleAlwaysActive,
     recognitionMode,
-    toggleRecognitionMode
+    toggleRecognitionMode,
+    aiMode,
+    toggleAIMode
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);
@@ -269,6 +271,19 @@ const VoiceButton = () => {
           title={recognitionMode === 'vosk' ? 'Backend (Google)' : 'Browser (Web Speech)'}
         >
           {recognitionMode === 'vosk' ? '🌐 Backend' : '🌐 Browser'}
+        </motion.button>
+
+        <motion.button
+          onClick={toggleAIMode}
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiMode === 'offline'
+            ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
+            : 'bg-[#1a1f2e] text-[#00f3ff]/50 border border-[#00f3ff]/20 hover:border-[#00f3ff]/40'
+            }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title={aiMode === 'offline' ? 'Offline AI (Ollama)' : 'Online AI (Google)'}
+        >
+          {aiMode === 'offline' ? '🤖 Offline' : '🤖 Online'}
         </motion.button>
 
         <button
