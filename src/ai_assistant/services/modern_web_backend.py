@@ -1845,7 +1845,28 @@ def api_command():
             # Continue to normal processing
         # === END: Multi-step Orchestration ===
         
-        # Process command with proper error handling
+        # Check if user wants to use local AI
+        use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
+        
+        if use_local_ai and local_ai_initialized and local_ai_manager:
+            # Use local Ollama model
+            try:
+                logger.info(f"Using local AI for command: {command[:50]}...")
+                local_response = local_ai_manager.chat(command, max_tokens=512)
+                
+                return jsonify({
+                    "success": True,
+                    "command": command,
+                    "response": local_response,
+                    "model": local_ai_manager.current_model,
+                    "offline_mode": True,
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as local_error:
+                logger.error(f"Local AI error: {local_error}, falling back to cloud")
+                # Fall through to cloud AI below
+        
+        # Process command with cloud AI (default)
         try:
             response = assistant.process_command(command)
             
@@ -1855,6 +1876,30 @@ def api_command():
                 "response": response,
                 "timestamp": datetime.now().isoformat()
             })
+        except Exception as cmd_error:
+            # If cloud fails and local AI is available, try local fallback
+            if local_ai_initialized and local_ai_manager:
+                logger.warning(f"Cloud AI failed ({str(cmd_error)[:100]}), using local AI fallback")
+                try:
+                    local_response = local_ai_manager.chat(command, max_tokens=512)
+                    
+                    return jsonify({
+                        "success": True,
+                        "command": command,
+                        "response": local_response,
+                        "model": local_ai_manager.current_model,
+                        "offline_mode": True,
+                        "fallback": True,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                except Exception as local_error:
+                    logger.error(f"Local AI fallback also failed: {local_error}")
+                    # Re-raise original cloud error
+                    raise cmd_error
+            else:
+                # No local AI available, return error
+                raise cmd_error
+                
         except Exception as cmd_error:
             return jsonify({
                 "success": False,
