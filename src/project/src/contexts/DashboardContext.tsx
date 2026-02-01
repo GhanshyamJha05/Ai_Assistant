@@ -464,10 +464,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                         if (currentSocket && currentSocket.connected) {
                             console.log('📤 Sending voice_command event to backend:', final);
+                            console.log(`🤖 Voice AI Mode: ${aiMode}`);
                             currentSocket.emit('voice_command', {
                                 text: final,
                                 language: voiceLanguage,
-                                timestamp: new Date().toISOString()
+                                timestamp: new Date().toISOString(),
+                                offline_mode: aiMode === 'offline'
                             });
                             console.log('✅ voice_command emitted successfully');
                         } else {
@@ -481,7 +483,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             fetch('http://127.0.0.1:5000/api/command', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ command: final }),
+                                body: JSON.stringify({
+                                    command: final,
+                                    offline_mode: aiMode === 'offline'
+                                }),
                             })
                                 .then((res) => res.json())
                                 .then((data) => {
@@ -912,15 +917,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         addChatMessage(command, 'user');
         addSystemLog('info', `Processing: ${command}`);
 
+        const useOfflineMode = aiMode === 'offline';
+        console.log(`🤖 AI Mode: ${aiMode} (offline_mode: ${useOfflineMode})`);
+
         if (socket && socket.connected) {
             console.log('📤 Sending command via socket:', command);
-            socket.emit('command', { command, message: command });
+            socket.emit('command', {
+                command,
+                message: command,
+                offline_mode: useOfflineMode
+            });
         } else {
             // Fallback to API
             fetch('http://127.0.0.1:5000/api/command', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command }),
+                body: JSON.stringify({
+                    command,
+                    offline_mode: useOfflineMode
+                }),
             })
                 .then((res) => res.json())
                 .then((data) => {
