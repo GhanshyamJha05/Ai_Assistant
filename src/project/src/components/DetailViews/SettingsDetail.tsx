@@ -496,16 +496,26 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
 
         // Array (Simple comma separated for now)
         if (Array.isArray(value)) {
+          // Safely convert array to string
+          const arrayValue = value.filter(v => v != null).join(', ');
+
           return (
             <div key={key} className="space-y-2 col-span-1 md:col-span-2">
               <label className="text-white text-sm font-medium capitalize block">{label}</label>
               <input
                 type="text"
-                value={value.join(', ')}
-                onChange={(e) => onChange(currentPath, e.target.value.split(',').map(s => s.trim()))}
+                value={arrayValue}
+                onChange={(e) => {
+                  const newValue = e.target.value
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                  onChange(currentPath, newValue);
+                }}
                 className="w-full p-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white focus:border-[#3B82F6] outline-none"
-                placeholder="Comma separated values"
+                placeholder="Comma separated values (e.g., hey daddy, hey assistant)"
               />
+              <p className="text-xs text-[#6B7280]">Separate multiple values with commas</p>
             </div>
           );
         }
