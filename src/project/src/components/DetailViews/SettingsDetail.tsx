@@ -356,7 +356,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
   const contextData = rootData || data;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       {Object.entries(data).map(([key, value]) => {
         const currentPath = [...path, key];
         const label = key.replace(/([A-Z])/g, ' $1').trim();
@@ -364,7 +364,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         // Sub-section (nested object)
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           return (
-            <div key={key} className="col-span-1 md:col-span-3 border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+            <div key={key} className="col-span-3 border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
               <h5 className="text-[#3B82F6] font-medium mb-3 capitalize flex items-center gap-2 text-sm">
                 <Layers className="w-4 h-4" />
                 {label}
@@ -455,6 +455,30 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF]">▼</div>
               </div>
+            </div>
+          );
+        }
+
+
+        // Special Handling: STT Model - only show for Vosk/Whisper
+        if (key === 'model' && path.includes('stt')) {
+          // Check if engine is Google (if so, don't show model field)
+          const currentEngine = data['engine'] || 'vosk';
+          if (currentEngine === 'google') {
+            return null; // Hide model field for Google
+          }
+
+          return (
+            <div key={key} className="space-y-1.5">
+              <label className="text-white text-xs font-medium capitalize block">Model</label>
+              <input
+                type="text"
+                value={String(value)}
+                onChange={(e) => onChange(currentPath, e.target.value)}
+                className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none"
+                placeholder={currentEngine === 'vosk' ? 'vosk-model-small-en-us-0.15' : 'whisper-medium'}
+              />
+              <p className="text-xs text-[#6B7280]">Required for {currentEngine === 'vosk' ? 'Vosk' : 'Whisper'}</p>
             </div>
           );
         }
