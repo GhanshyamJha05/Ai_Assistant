@@ -302,7 +302,74 @@ const SettingsDetail = () => {
           <LiveMetrics stats={systemStats} />
         )}
 
-        {settings && settings[activeTab as keyof AppSettings] && (
+        {/* Special layout for Voice tab */}
+        {activeTab === 'voice' && settings?.voice && (
+          <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg">
+            <div className="p-6 border-b border-[#2A2D35] flex justify-between items-center">
+              <h4 className="text-xl font-semibold text-white">Voice Configuration</h4>
+              <button
+                onClick={() => saveSettings('voice')}
+                disabled={saving}
+                className="px-6 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <Save className="w-4 h-4" />}
+                <span>Save Changes</span>
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-3 gap-4">
+              {/* STT Column */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#10B981] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <Mic className="w-4 h-4" />
+                  STT (Speech-to-Text)
+                </h5>
+                <div className="space-y-3">
+                  <RecursiveFormRenderer
+                    data={settings.voice.stt}
+                    onChange={(path, val) => handleSettingChange('voice', ['stt', ...path], val)}
+                    path={['stt']}
+                    rootData={settings.voice}
+                  />
+                </div>
+              </div>
+
+              {/* TTS Column */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#3B82F6] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <Volume2 className="w-4 h-4" />
+                  TTS (Text-to-Speech)
+                </h5>
+                <div className="space-y-3">
+                  <RecursiveFormRenderer
+                    data={settings.voice.tts}
+                    onChange={(path, val) => handleSettingChange('voice', ['tts', ...path], val)}
+                    path={['tts']}
+                    rootData={settings.voice}
+                  />
+                </div>
+              </div>
+
+              {/* Wake Word Column */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#8B5CF6] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <Speaker className="w-4 h-4" />
+                  Wake Word
+                </h5>
+                <div className="space-y-3">
+                  <RecursiveFormRenderer
+                    data={settings.voice.wakeWord}
+                    onChange={(path, val) => handleSettingChange('voice', ['wakeWord', ...path], val)}
+                    path={['wakeWord']}
+                    rootData={settings.voice}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {settings && settings[activeTab as keyof AppSettings] && activeTab !== 'voice' && (
           <EditableSection
             key={activeTab} // Force re-render on tab change to reset path context
             title={tabs.find(t => t.id === activeTab)?.label || ''}
@@ -356,7 +423,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
   const contextData = rootData || data;
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-3">
       {Object.entries(data).map(([key, value]) => {
         const currentPath = [...path, key];
         const label = key.replace(/([A-Z])/g, ' $1').trim();
