@@ -211,31 +211,31 @@ const SettingsDetail = () => {
 
   // Helper to update state deeply
   const handleSettingChange = (category: string, path: string[], value: any) => {
-    setSettings((prev: any) => {
-      if (!prev) return null;
+    if (!settings) return;
 
-      // DEEP clone entire state
-      const newState = JSON.parse(JSON.stringify(prev));
+    // Deep clone entire state
+    const newState = JSON.parse(JSON.stringify(settings));
 
-      // Navigate to the category
-      let current = newState[category];
+    // Navigate to the category
+    let current = newState[category];
 
-      // If path is empty, we are replacing the whole category
-      if (path.length === 0) {
-        newState[category] = value;
-        return newState;
-      }
+    // If path is empty, replace the whole category
+    if (path.length === 0) {
+      newState[category] = value;
+      setSettings(newState);
+      return;
+    }
 
-      // Navigate down the path
-      for (let i = 0; i < path.length - 1; i++) {
-        current = current[path[i]];
-      }
+    // Navigate down the path
+    for (let i = 0; i < path.length - 1; i++) {
+      current = current[path[i]];
+    }
 
-      // Set the final value
-      current[path[path.length - 1]] = value;
+    // Set the final value
+    current[path[path.length - 1]] = value;
 
-      return newState;
-    });
+    // Dispatch the new state (useReducer will deep clone it again)
+    setSettings(newState);
   };
 
   if (loading) {
