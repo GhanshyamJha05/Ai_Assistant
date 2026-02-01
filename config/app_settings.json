@@ -99,6 +99,30 @@
           "name": "Prabhat",
           "gender": "male",
           "accent": "Indian"
+        },
+        {
+          "id": "en-US-AnaNeural",
+          "name": "Ana",
+          "gender": "female",
+          "accent": "US"
+        },
+        {
+          "id": "en-US-ChristopherNeural",
+          "name": "Christopher",
+          "gender": "male",
+          "accent": "US"
+        },
+        {
+          "id": "en-GB-LibbyNeural",
+          "name": "Libby",
+          "gender": "female",
+          "accent": "UK"
+        },
+        {
+          "id": "en-US-EricNeural",
+          "name": "Eric",
+          "gender": "male",
+          "accent": "US"
         }
       ]
     },
