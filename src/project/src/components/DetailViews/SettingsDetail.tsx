@@ -417,7 +417,7 @@ const EditableSection = ({ title, data, category, onChange, onSave, saving }: {
   );
 };
 
-const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, onChange: (path: string[], val: any) => void, path: string[], rootData?: any }) => {
+const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { data: any, onChange: (path: string[], val: any) => void, path: string[], rootData?: any, depth?: number }) => {
   // Use rootData to look up siblings if needed (like defaultProvider)
   // If rootData is not passed, use data (only works at top level)
   const contextData = rootData || data;
@@ -428,8 +428,14 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         const currentPath = [...path, key];
         const label = key.replace(/([A-Z])/g, ' $1').trim();
 
-        // Sub-section (nested object)
+        // Sub-section (nested object) - SKIP if depth > 0 (we're already inside a voice column)
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          if (depth > 0) {
+            // We're inside a voice column, don't create subsections - just skip rendering this as a section
+            // This prevents the duplicate blue boxes
+            return null;
+          }
+          
           return (
             <div key={key} className="col-span-3 border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
               <h5 className="text-[#3B82F6] font-medium mb-3 capitalize flex items-center gap-2 text-sm">
@@ -438,7 +444,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
               </h5>
               {/* Pass rootData down so children can access top-level context if needed (though tricky with recursion) */}
               {/* Actually simpler: just recursively render. Sibling lookups need to be done carefully. */}
-              <RecursiveFormRenderer data={value} onChange={onChange} path={currentPath} rootData={contextData} />
+              <RecursiveFormRenderer data={value} onChange={onChange} path={currentPath} rootData={contextData} depth={depth + 1} />
             </div>
           );
         }
