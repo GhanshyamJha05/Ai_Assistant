@@ -129,8 +129,10 @@ const SettingsDetail = () => {
   // Use reducer for guaranteed state updates
   const [settings, setSettings] = useReducer(
     (state: AppSettings | null, newState: AppSettings | null) => {
+      // If newState is null or undefined, return it as-is
+      if (!newState) return newState;
       // Always return a completely new object reference
-      return newState ? JSON.parse(JSON.stringify(newState)) : null;
+      return JSON.parse(JSON.stringify(newState));
     },
     null
   );
