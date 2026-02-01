@@ -474,34 +474,38 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
         }
 
         // Special Handling: TTS Voice Dropdown
-        if (key === 'voice_id' && contextData.available_voices) {
-          const availableVoices = contextData.available_voices;
-          return (
-            <div key={key} className="space-y-1.5">
-              <label className="text-white text-xs font-medium capitalize block">TTS Voice</label>
-              <div className="relative">
-                <select
-                  value={String(value)}
-                  onChange={(e) => {
-                    onChange(currentPath, e.target.value);
-                    // Also update voice_name
-                    const selectedVoice = availableVoices.find((v: any) => v.id === e.target.value);
-                    if (selectedVoice) {
-                      onChange([...path, 'voice_name'], selectedVoice.name);
-                    }
-                  }}
-                  className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
-                >
-                  {availableVoices.map((voice: any) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.name} ({voice.gender}, {voice.accent})
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF] text-xs">▼</div>
+        if (key === 'voice_id') {
+          // Check if available_voices exists as a sibling or in contextData
+          const availableVoices = data.available_voices || contextData.available_voices || (contextData.tts && contextData.tts.available_voices);
+
+          if (availableVoices && Array.isArray(availableVoices) && availableVoices.length > 0) {
+            return (
+              <div key={key} className="space-y-1.5">
+                <label className="text-white text-xs font-medium capitalize block">TTS Voice</label>
+                <div className="relative">
+                  <select
+                    value={String(value)}
+                    onChange={(e) => {
+                      onChange(currentPath, e.target.value);
+                      // Also update voice_name
+                      const selectedVoice = availableVoices.find((v: any) => v.id === e.target.value);
+                      if (selectedVoice) {
+                        onChange([...path, 'voice_name'], selectedVoice.name);
+                      }
+                    }}
+                    className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
+                  >
+                    {availableVoices.map((voice: any) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.name} ({voice.gender}, {voice.accent})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF] text-xs">▼</div>
+                </div>
               </div>
-            </div>
-          );
+            );
+          }
         }
 
         // Skip voice_name and available_voices from rendering (handled by voice_id)
