@@ -324,6 +324,7 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
+                    key={JSON.stringify(settings.voice.stt)}
                     data={settings.voice.stt}
                     onChange={(path, val) => handleSettingChange('voice', ['stt', ...path], val)}
                     path={['stt']}
@@ -341,6 +342,7 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
+                    key={JSON.stringify(settings.voice.tts)}
                     data={settings.voice.tts}
                     onChange={(path, val) => handleSettingChange('voice', ['tts', ...path], val)}
                     path={['tts']}
@@ -358,6 +360,7 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
+                    key={JSON.stringify(settings.voice.wakeWord)}
                     data={settings.voice.wakeWord}
                     onChange={(path, val) => handleSettingChange('voice', ['wakeWord', ...path], val)}
                     path={['wakeWord']}
