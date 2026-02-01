@@ -1714,6 +1714,29 @@ def api_chat():
             # Continue to normal processing
         # === END: Multi-step Orchestration ===
         
+        # Check if user wants to use local AI
+        use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
+        
+        if use_local_ai and local_ai_initialized and local_ai_manager:
+            # Use local Ollama model
+            try:
+                logger.info(f"Using local AI for: {message[:50]}...")
+                local_response = local_ai_manager.chat(message, max_tokens=512)
+                
+                return jsonify({
+                    "message": message,
+                    "response": local_response,
+                    "features_used": ["local_ai", "ollama"],
+                    "model": local_ai_manager.current_model,
+                    "suggestions": [],
+                    "mood": "neutral",
+                    "user": current_user,
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as local_error:
+                logger.error(f"Local AI error: {local_error}, falling back to cloud")
+                # Fall through to cloud AI below
+        
         # Apply learning-enhanced response generation
         try:
             from ai_assistant.integrations.learning_integration import get_learning_assistant
@@ -1721,26 +1744,54 @@ def api_chat():
             if learning_assistant.systems_active:
                 # Enhance message with context-aware generation
                 message = learning_assistant.generate_intelligent_response(message, context)
-                logger.info("✅ Applied learning-enhanced response generation")
+                logger.info("Applied learning-enhanced response generation")
         except Exception as e:
             logger.warning(f"Learning enhancement skipped: {e}")
         
-        # Process with full AI capabilities
-        response = assistant.process_enhanced_chat(message, context, image_data)
-        
-        return jsonify({
-            "message": message,
-            "response": response["response"],
-            "features_used": response["features_used"],
-            "suggestions": response.get("suggestions", []),
-            "mood": response.get("mood", "neutral"),
-            "context_id": response.get("context_id"),
-            "user": current_user,
-            "timestamp": datetime.now().isoformat()
-        })
+        # Try cloud AI (Gemini) first, fallback to local if it fails
+        try:
+            # Process with full AI capabilities (Gemini)
+            response = assistant.process_enhanced_chat(message, context, image_data)
+            
+            return jsonify({
+                "message": message,
+                "response": response["response"],
+                "features_used": response["features_used"],
+                "suggestions": response.get("suggestions", []),
+                "mood": response.get("mood", "neutral"),
+                "context_id": response.get("context_id"),
+                "user": current_user,
+                "timestamp": datetime.now().isoformat()
+            })
+        except Exception as cloud_error:
+            # If Gemini fails (quota, network, etc.) and local AI is available, use it
+            if local_ai_initialized and local_ai_manager:
+                logger.warning(f"Cloud AI failed ({str(cloud_error)[:100]}), using local AI fallback")
+                try:
+                    local_response = local_ai_manager.chat(message, max_tokens=512)
+                    
+                    return jsonify({
+                        "message": message,
+                        "response": local_response,
+                        "features_used": ["local_ai_fallback", "ollama"],
+                        "model": local_ai_manager.current_model,
+                        "suggestions": [],
+                        "mood": "neutral",
+                        "fallback": True,
+                        "user": current_user,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                except Exception as local_error:
+                    logger.error(f"Local AI fallback also failed: {local_error}")
+                    # Re-raise original cloud error
+                    raise cloud_error
+            else:
+                # No local AI available, re-raise original error
+                raise cloud_error
+                
     except Exception as e:
         logging.error(f"Chat API error: {str(e)}")
-        return jsonify({"error": "Chat processing failed"}), 500
+        return jsonify({"error": f"Chat processing failed: {str(e)[:200]}"}), 500
 
 @app.route('/api/command', methods=['POST'])
 @limiter.limit("30 per minute")
@@ -4939,7 +4990,7 @@ try:
     def handle_command(data):
         """Handle command from voice or chat input"""
         try:
-            from ai_assistant.core.assistant import YourDaddyAssistant
+            from ai_assistant.core.assistant import ModernAssistant
             
             command_text = data.get('command') or data.get('message', '')
             source = data.get('source', 'chat')
@@ -4959,7 +5010,7 @@ try:
             try:
                 # Create assistant instance if needed
                 if not hasattr(handle_command, 'assistant'):
-                    handle_command.assistant = YourDaddyAssistant()
+                    handle_command.assistant = ModernAssistant()
                 
                 # Process the query
                 response_text = handle_command.assistant.process_query(command_text)

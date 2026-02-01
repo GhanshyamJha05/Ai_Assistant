@@ -26,22 +26,7 @@
     }
   },
   "ai": {
-    "contextWindow": 10,
-    "defaultModel": "gemini-2.0-flash",
-    "defaultProvider": "openai",
-    "localLlm": {
-      "enabled": true,
-      "modelPath": "model/local_models",
-      "useGpu": true
-    },
-    "maxTokens": 4096,
-    "safetySettings": {
-      "dangerousContent": "BLOCK_MEDIUM_AND_ABOVE",
-      "harassment": "BLOCK_MEDIUM_AND_ABOVE",
-      "hateSpeech": "BLOCK_MEDIUM_AND_ABOVE",
-      "sexuallyExplicit": "BLOCK_MEDIUM_AND_ABOVE"
-    },
-    "temperature": 0.7
+    "defaultProvider": "local"
   },
   "voice": {
     "tts": {
