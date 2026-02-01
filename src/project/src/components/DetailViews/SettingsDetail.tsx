@@ -151,6 +151,30 @@ const SettingsDetail = () => {
     }
   };
 
+  const handleSettingChange = (category: string, path: string[], value: any) => {
+    if (!settings) return;
+
+    setSettings(prevSettings => {
+      if (!prevSettings) return prevSettings;
+
+      const newSettings = JSON.parse(JSON.stringify(prevSettings)); // Deep clone
+
+      // Navigate to the correct nested location
+      let current: any = newSettings[category as keyof AppSettings];
+      for (let i = 0; i < path.length - 1; i++) {
+        if (!current[path[i]]) {
+          current[path[i]] = {};
+        }
+        current = current[path[i]];
+      }
+
+      // Set the value
+      current[path[path.length - 1]] = value;
+
+      return newSettings;
+    });
+  };
+
   const saveSettings = async (category: string) => {
     if (!settings) return;
 
