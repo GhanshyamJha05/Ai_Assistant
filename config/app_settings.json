@@ -38,7 +38,8 @@
       "noise_reduction": true,
       "stt": {
         "continuous": false,
-        "enabled": false
+        "enabled": false,
+        "noise_reduction": false
       }
     },
     "tts": {
@@ -119,14 +120,14 @@
       "enabled": true,
       "pitch": 1,
       "speed": 1,
-      "voice_id": "en-US-AriaNeural",
-      "voice_name": "Aria",
-      "volume": 1,
       "tts": {
         "enabled": false,
-        "voice_id": "en-IN-NeerjaNeural",
-        "voice_name": "Neerja"
-      }
+        "voice_id": "en-US-AnaNeural",
+        "voice_name": "Ana"
+      },
+      "voice_id": "en-US-AriaNeural",
+      "voice_name": "Aria",
+      "volume": 1
     },
     "wakeWord": {
       "enabled": false,
