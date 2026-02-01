@@ -356,7 +356,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
   const contextData = rootData || data;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {Object.entries(data).map(([key, value]) => {
         const currentPath = [...path, key];
         const label = key.replace(/([A-Z])/g, ' $1').trim();
@@ -364,8 +364,8 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         // Sub-section (nested object)
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           return (
-            <div key={key} className="col-span-1 md:col-span-2 border border-[#3A3D45] p-5 rounded-lg bg-[#252830]/50">
-              <h5 className="text-[#3B82F6] font-medium mb-4 capitalize flex items-center gap-2">
+            <div key={key} className="col-span-1 md:col-span-3 border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+              <h5 className="text-[#3B82F6] font-medium mb-3 capitalize flex items-center gap-2 text-sm">
                 <Layers className="w-4 h-4" />
                 {label}
               </h5>
@@ -379,19 +379,19 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         // Special Handling: AI Provider Dropdown (Top Level)
         if (key === 'defaultProvider') {
           return (
-            <div key={key} className="space-y-2">
-              <label className="text-white text-sm font-medium capitalize block">{label}</label>
+            <div key={key} className="space-y-1.5">
+              <label className="text-white text-xs font-medium capitalize block">{label}</label>
               <div className="relative">
                 <select
                   value={String(value)}
                   onChange={(e) => onChange(currentPath, e.target.value)}
-                  className="w-full p-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
+                  className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
                 >
                   {AI_PROVIDERS.map((provider) => (
                     <option key={provider.value} value={provider.value}>{provider.label}</option>
                   ))}
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF]">▼</div>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF] text-xs">▼</div>
               </div>
             </div>
           );
@@ -401,8 +401,8 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         if (key === 'voice_id' && contextData.available_voices) {
           const availableVoices = contextData.available_voices;
           return (
-            <div key={key} className="space-y-2">
-              <label className="text-white text-sm font-medium capitalize block">TTS Voice</label>
+            <div key={key} className="space-y-1.5">
+              <label className="text-white text-xs font-medium capitalize block">TTS Voice</label>
               <div className="relative">
                 <select
                   value={String(value)}
@@ -414,7 +414,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
                       onChange([...path, 'voice_name'], selectedVoice.name);
                     }
                   }}
-                  className="w-full p-3 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
+                  className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
                 >
                   {availableVoices.map((voice: any) => (
                     <option key={voice.id} value={voice.id}>
@@ -422,7 +422,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
                     </option>
                   ))}
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF]">▼</div>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9CA3AF] text-xs">▼</div>
               </div>
             </div>
           );
@@ -523,7 +523,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
         // Boolean
         if (typeof value === 'boolean') {
           return (
-            <label key={key} className="flex items-center gap-3 p-4 bg-[#2A2D35] rounded-lg cursor-pointer border border-[#3A3D45] hover:border-[#3B82F6]/50 transition-all group h-full">
+            <label key={key} className="flex items-center gap-2.5 p-3 bg-[#2A2D35] rounded-lg cursor-pointer border border-[#3A3D45] hover:border-[#3B82F6]/50 transition-all group h-full">
               <div className="relative flex items-center">
                 <input
                   type="checkbox"
@@ -531,10 +531,10 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData }: { data: any, 
                   onChange={(e) => onChange(currentPath, e.target.checked)}
                   className="peer sr-only"
                 />
-                <div className="w-11 h-6 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                <div className="w-9 h-5 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#3B82F6]"></div>
               </div>
               <div>
-                <span className="text-white font-medium capitalize block group-hover:text-[#3B82F6] transition-colors">{label}</span>
+                <span className="text-white text-sm font-medium capitalize block group-hover:text-[#3B82F6] transition-colors">{label}</span>
                 <span className="text-[#9CA3AF] text-xs">{value ? 'Enabled' : 'Disabled'}</span>
               </div>
             </label>

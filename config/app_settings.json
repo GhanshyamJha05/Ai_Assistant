@@ -26,98 +26,98 @@
     }
   },
   "ai": {
-    "defaultProvider": "local"
+    "defaultProvider": "openai"
   },
   "voice": {
-    "tts": {
+    "stt": {
+      "continuous": true,
       "enabled": true,
-      "voice_id": "en-US-AriaNeural",
-      "voice_name": "Aria",
-      "speed": 1.0,
-      "pitch": 1.0,
-      "volume": 1.0,
+      "engine": "google",
+      "language": "en-US",
+      "model": "vosk-model-small-en-us-0.15",
+      "noise_reduction": true
+    },
+    "tts": {
       "available_voices": [
         {
+          "accent": "US",
+          "gender": "female",
           "id": "en-US-AriaNeural",
-          "name": "Aria",
-          "gender": "female",
-          "accent": "US"
+          "name": "Aria"
         },
         {
+          "accent": "US",
+          "gender": "female",
           "id": "en-US-JennyNeural",
-          "name": "Jenny",
-          "gender": "female",
-          "accent": "US"
+          "name": "Jenny"
         },
         {
+          "accent": "US",
+          "gender": "male",
           "id": "en-US-GuyNeural",
-          "name": "Guy",
-          "gender": "male",
-          "accent": "US"
+          "name": "Guy"
         },
         {
+          "accent": "US",
+          "gender": "male",
           "id": "en-US-DavisNeural",
-          "name": "Davis",
-          "gender": "male",
-          "accent": "US"
+          "name": "Davis"
         },
         {
+          "accent": "UK",
+          "gender": "female",
           "id": "en-GB-SoniaNeural",
-          "name": "Sonia",
-          "gender": "female",
-          "accent": "UK"
+          "name": "Sonia"
         },
         {
+          "accent": "UK",
+          "gender": "male",
           "id": "en-GB-RyanNeural",
-          "name": "Ryan",
-          "gender": "male",
-          "accent": "UK"
+          "name": "Ryan"
         },
         {
+          "accent": "Indian",
+          "gender": "female",
           "id": "en-IN-NeerjaNeural",
-          "name": "Neerja",
-          "gender": "female",
-          "accent": "Indian"
+          "name": "Neerja"
         },
         {
+          "accent": "Indian",
+          "gender": "male",
           "id": "en-IN-PrabhatNeural",
-          "name": "Prabhat",
-          "gender": "male",
-          "accent": "Indian"
+          "name": "Prabhat"
         },
         {
+          "accent": "US",
+          "gender": "female",
           "id": "en-US-AnaNeural",
-          "name": "Ana",
-          "gender": "female",
-          "accent": "US"
+          "name": "Ana"
         },
         {
+          "accent": "US",
+          "gender": "male",
           "id": "en-US-ChristopherNeural",
-          "name": "Christopher",
-          "gender": "male",
-          "accent": "US"
+          "name": "Christopher"
         },
         {
-          "id": "en-GB-LibbyNeural",
-          "name": "Libby",
+          "accent": "UK",
           "gender": "female",
-          "accent": "UK"
+          "id": "en-GB-LibbyNeural",
+          "name": "Libby"
         },
         {
-          "id": "en-US-EricNeural",
-          "name": "Eric",
+          "accent": "US",
           "gender": "male",
-          "accent": "US"
+          "id": "en-US-EricNeural",
+          "name": "Eric"
         }
-      ]
-    },
-    "stt": {
+      ],
       "enabled": true,
-      "engine": "vosk",
-      "model": "vosk-model-small-en-us-0.15",
-      "language": "en-US",
-      "noise_reduction": true,
-      "continuous": true
+      "pitch": 1,
+      "speed": 1,
+      "voice_id": "en-US-AriaNeural",
+      "voice_name": "Aria",
+      "volume": 1
     },
     "wakeWord": {
       "enabled": false,
