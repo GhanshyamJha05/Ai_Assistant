@@ -4,7 +4,7 @@ import {
   Mic, Volume2, Shield, Download, Upload, RotateCcw, Save, Check, X,
   Cpu, MessageSquare, Key, Terminal, Server, Layers, Speaker, HardDrive, Activity, Wifi
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useReducer } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 // --- Interfaces matching app_settings.json ---
@@ -125,7 +125,16 @@ const AI_MODELS: Record<string, string[]> = {
 
 const SettingsDetail = () => {
   const { systemStats } = useDashboard();
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+
+  // Use reducer for guaranteed state updates
+  const [settings, setSettings] = useReducer(
+    (state: AppSettings | null, newState: AppSettings | null) => {
+      // Always return a completely new object reference
+      return newState ? JSON.parse(JSON.stringify(newState)) : null;
+    },
+    null
+  );
+
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
