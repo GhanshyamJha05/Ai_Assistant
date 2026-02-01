@@ -627,17 +627,20 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
         // Boolean
         if (typeof value === 'boolean') {
           return (
-            <label key={key} className="flex items-center gap-2.5 p-3 bg-[#2A2D35] rounded-lg cursor-pointer border border-[#3A3D45] hover:border-[#3B82F6]/50 transition-all group h-full">
-              <div className="relative flex items-center">
+            <label key={key} className="flex items-center gap-2.5 p-3 bg-[#2A2D35] rounded-lg cursor-pointer border border-[#3A3D45] hover:border-[#3B82F6]/50 transition-all group h-full pointer-events-auto">
+              <div className="relative flex items-center pointer-events-auto">
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) => onChange(currentPath, e.target.checked)}
-                  className="peer sr-only"
+                  onChange={(e) => {
+                    console.log(`Toggle ${label}: ${e.target.checked}`);
+                    onChange(currentPath, e.target.checked);
+                  }}
+                  className="peer sr-only pointer-events-auto"
                 />
-                <div className="w-9 h-5 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                <div className="w-10 h-6 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] cursor-pointer"></div>
               </div>
-              <div>
+              <div className="flex-1">
                 <span className="text-white text-sm font-medium capitalize block group-hover:text-[#3B82F6] transition-colors">{label}</span>
                 <span className="text-[#9CA3AF] text-xs">{value ? 'Enabled' : 'Disabled'}</span>
               </div>
