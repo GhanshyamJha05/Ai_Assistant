@@ -1869,6 +1869,13 @@ def api_command():
         # Check if user wants to use local AI
         use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
         
+        # DEBUG: Log the offline mode request
+        logger.info(f"🔍 Command received: {command[:30]}...")
+        logger.info(f"🔍 offline_mode flag in request: {data.get('offline_mode')}")
+        logger.info(f"🔍 use_local_ai: {use_local_ai}")
+        logger.info(f"🔍 local_ai_initialized: {local_ai_initialized}")
+        logger.info(f"🔍 local_ai_manager exists: {local_ai_manager is not None}")
+        
         if use_local_ai and local_ai_initialized and local_ai_manager:
             # Use local Ollama model
             try:
