@@ -330,6 +330,7 @@ const SettingsDetail = () => {
                     onChange={(path, val) => handleSettingChange('voice', ['stt', ...path], val)}
                     path={['stt']}
                     rootData={settings.voice}
+                    depth={1}
                   />
                 </div>
               </div>
@@ -346,6 +347,7 @@ const SettingsDetail = () => {
                     onChange={(path, val) => handleSettingChange('voice', ['tts', ...path], val)}
                     path={['tts']}
                     rootData={settings.voice}
+                    depth={1}
                   />
                 </div>
               </div>
@@ -362,6 +364,7 @@ const SettingsDetail = () => {
                     onChange={(path, val) => handleSettingChange('voice', ['wakeWord', ...path], val)}
                     path={['wakeWord']}
                     rootData={settings.voice}
+                    depth={1}
                   />
                 </div>
               </div>
@@ -435,7 +438,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
             // This prevents the duplicate blue boxes
             return null;
           }
-          
+
           return (
             <div key={key} className="col-span-3 border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
               <h5 className="text-[#3B82F6] font-medium mb-3 capitalize flex items-center gap-2 text-sm">
