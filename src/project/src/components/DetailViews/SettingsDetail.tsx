@@ -130,7 +130,6 @@ const SettingsDetail = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<keyof AppSettings | 'all'>('general');
-  const [renderKey, setRenderKey] = useState<number>(0); // Force re-render counter
 
   // Load settings on mount
   useEffect(() => {
@@ -224,12 +223,8 @@ const SettingsDetail = () => {
       // Set the final value
       current[path[path.length - 1]] = value;
 
-      console.log('Setting changed:', { category, path, value, newState });
       return newState;
     });
-
-    // Force re-render by incrementing key
-    setRenderKey(prev => prev + 1);
   };
 
   if (loading) {
@@ -328,7 +323,6 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
-                    key={`stt-${renderKey}`}
                     data={settings.voice.stt}
                     onChange={(path, val) => handleSettingChange('voice', ['stt', ...path], val)}
                     path={['stt']}
@@ -346,7 +340,6 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
-                    key={`tts-${renderKey}`}
                     data={settings.voice.tts}
                     onChange={(path, val) => handleSettingChange('voice', ['tts', ...path], val)}
                     path={['tts']}
@@ -364,7 +357,6 @@ const SettingsDetail = () => {
                 </h5>
                 <div className="space-y-3">
                   <RecursiveFormRenderer
-                    key={`wakeword-${renderKey}`}
                     data={settings.voice.wakeWord}
                     onChange={(path, val) => handleSettingChange('voice', ['wakeWord', ...path], val)}
                     path={['wakeWord']}
