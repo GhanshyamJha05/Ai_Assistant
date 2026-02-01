@@ -45,27 +45,78 @@
   },
   "voice": {
     "tts": {
-      "engine": "edge_tts",
-      "voice": "en-US-AriaNeural",
-      "rate": 1.0,
-      "volume": 0.9,
-      "useCache": true
+      "enabled": true,
+      "voice_id": "en-US-AriaNeural",
+      "voice_name": "Aria",
+      "speed": 1.0,
+      "pitch": 1.0,
+      "volume": 1.0,
+      "available_voices": [
+        {
+          "id": "en-US-AriaNeural",
+          "name": "Aria",
+          "gender": "female",
+          "accent": "US"
+        },
+        {
+          "id": "en-US-JennyNeural",
+          "name": "Jenny",
+          "gender": "female",
+          "accent": "US"
+        },
+        {
+          "id": "en-US-GuyNeural",
+          "name": "Guy",
+          "gender": "male",
+          "accent": "US"
+        },
+        {
+          "id": "en-US-DavisNeural",
+          "name": "Davis",
+          "gender": "male",
+          "accent": "US"
+        },
+        {
+          "id": "en-GB-SoniaNeural",
+          "name": "Sonia",
+          "gender": "female",
+          "accent": "UK"
+        },
+        {
+          "id": "en-GB-RyanNeural",
+          "name": "Ryan",
+          "gender": "male",
+          "accent": "UK"
+        },
+        {
+          "id": "en-IN-NeerjaNeural",
+          "name": "Neerja",
+          "gender": "female",
+          "accent": "Indian"
+        },
+        {
+          "id": "en-IN-PrabhatNeural",
+          "name": "Prabhat",
+          "gender": "male",
+          "accent": "Indian"
+        }
+      ]
     },
     "stt": {
-      "engine": "whisper_api",
-      "model": "whisper-1",
-      "sensitivity": 0.5,
-      "language": "auto",
+      "enabled": true,
+      "engine": "vosk",
+      "model": "vosk-model-small-en-us-0.15",
+      "language": "en-US",
+      "noise_reduction": true,
       "continuous": true
     },
     "wakeWord": {
-      "enabled": true,
+      "enabled": false,
       "phrases": [
         "hey daddy",
-        "hey assistant",
-        "ok jarvis"
+        "hey assistant"
       ],
-      "sensitivity": 0.6
+      "sensitivity": 0.5
     }
   },
   "automation": {
