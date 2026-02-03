@@ -24,7 +24,7 @@ DEFAULT_SETTINGS = {
     },
     "stt": {
         "enabled": True,
-        "engine": "vosk",  # vosk, whisper, google
+        "engine": "whisper",  # whisper, google
         "language": "en-US",
         "noise_reduction": True,
         "vad_enabled": True
@@ -49,7 +49,7 @@ VALID_VOICE_IDS = [
     "en-US-ChristopherNeural", "en-GB-LibbyNeural", "en-US-EricNeural"
 ]
 
-VALID_STT_ENGINES = ["vosk", "whisper", "google"]
+VALID_STT_ENGINES = ["whisper", "google"]
 
 class VoiceSettingsManager:
     """Manages voice settings persistence and validation"""
