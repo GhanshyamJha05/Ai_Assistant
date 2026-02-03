@@ -225,7 +225,6 @@ except ImportError:
 
 # Voice processing
 try:
-    import vosk
     import pvporcupine
     import pyaudio
     import speech_recognition as sr
@@ -384,16 +383,6 @@ except ImportError as e:
     VOICE_WEBSOCKET_AVAILABLE = False
     logger.warning(f"⚠️ Voice WebSocket handlers not available: {e}")
 
-# Import Vosk WebSocket handlers for offline recognition
-try:
-    from ai_assistant.services.vosk_websocket_handler import register_vosk_handlers, VOSK_AVAILABLE as VOSK_WS_AVAILABLE
-    if VOSK_WS_AVAILABLE:
-        logger.info("✅ Vosk WebSocket handler loaded (offline recognition ready)")
-    else:
-        logger.warning("⚠️ Vosk library not installed")
-except ImportError as e:
-    VOSK_WS_AVAILABLE = False
-    logger.warning(f"⚠️ Vosk WebSocket handler not available: {e}")
 
 # Import Google Speech Recognition WebSocket handlers
 try:
@@ -5189,13 +5178,6 @@ try:
     stats_thread = threading.Thread(target=broadcast_system_stats, daemon=True)
     stats_thread.start()
     
-    # Register Vosk WebSocket handlers for offline recognition
-    if VOSK_WS_AVAILABLE:
-        try:
-            register_vosk_handlers(socketio)
-            logger.info("✅ Vosk WebSocket handlers registered (offline recognition enabled)")
-        except Exception as e:
-            logger.error(f"Failed to register Vosk handlers: {e}")
     
     logger.info("✅ Chat & Voice Socket.IO handlers registered")
     
