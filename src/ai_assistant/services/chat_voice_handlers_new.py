@@ -41,18 +41,25 @@ def set_learning_router(router):
     learning_router = router
 
 # SocketIO will be injected
-socketio = None
+_socketio = None
 
 def set_socketio(sio):
-    """Set SocketIO instance"""
-    global socketio
-    socketio = sio
+    """Set SocketIO instance and register handlers"""
+    global _socketio
+    _socketio = sio
+    
+    # Register all handlers
+    sio.on_event('connect', handle_connect)
+    sio.on_event('disconnect', handle_disconnect)
+    sio.on_event('command', handle_command)
+    sio.on_event('voice_command', handle_voice_command)
+    
+    print("✅ Command handlers registered with socketio")
 
 # ==============================================
-# WebSocket Event Handlers
+# WebSocket Event Handlers (as regular functions)
 # ==============================================
 
-@socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
     print(f'✅ Client connected: {request.sid}')
@@ -62,12 +69,10 @@ def handle_connect():
         'timestamp': datetime.now().isoformat()
     })
 
-@socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection"""
     print(f'❌ Client disconnected: {request.sid}')
 
-@socketio.on('command')
 def handle_command(data):
     """
     Handle command with intelligent routing:
@@ -213,7 +218,6 @@ def handle_command(data):
             'timestamp': datetime.now().isoformat()
         })
 
-@socketio.on('voice_command')
 def handle_voice_command(data):
     """Handle voice command specifically"""
     try:
@@ -244,13 +248,13 @@ def broadcast_system_stats():
     """Broadcast system statistics periodically"""
     while True:
         try:
-            if PSUTIL_AVAILABLE and socketio:
+            if PSUTIL_AVAILABLE and _socketio:
                 stats = {
                     'cpu_usage': psutil.cpu_percent(interval=1),
                     'memory_usage': psutil.virtual_memory().percent,
                     'network_speed': 0  # Placeholder
                 }
-                socketio.emit('system_stats_update', stats)
+                _socketio.emit('system_stats_update', stats)
         except Exception as e:
             print(f'Stats broadcast error: {e}')
         time.sleep(5)  # Update every 5 seconds

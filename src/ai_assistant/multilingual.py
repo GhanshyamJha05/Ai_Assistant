@@ -3,7 +3,7 @@
 Advanced multilingual support for Hindi, English, and Hinglish:
 - Language detection and automatic switching
 - Real-time translation between languages
-- Voice recognition in multiple languages using Vosk (offline)
+- Voice recognition in multiple languages (Web Speech API)
 - Text-to-speech in Hindi and English
 - Hinglish processing and understanding
 - Cultural context awareness
@@ -62,13 +62,8 @@ try:
 except ImportError:
     GTTS_AVAILABLE = False
 
-try:
-    import vosk
-    import pyaudio
-    VOSK_AVAILABLE = True
-except ImportError:
-    VOSK_AVAILABLE = False
-    print("⚠️ Vosk not available. Install with: pip install vosk pyaudio")
+# Vosk removed - use Web Speech API instead
+VOSK_AVAILABLE = False
 
 class Language(Enum):
     """Supported languages."""
@@ -170,56 +165,9 @@ class MultilingualSupport:
                 self.speech_recognizer.energy_threshold = 4000
                 self.speech_recognizer.pause_threshold = 0.8
                 logging.info("✅ Multilingual speech recognition initialized")
-            
-            # Initialize Vosk for offline recognition
-            if VOSK_AVAILABLE:
-                self.vosk_models = {}
-                self.vosk_recognizers = {}
-                self._load_vosk_models()
-            else:
-                logging.warning("⚠️ Vosk not available for offline recognition")
                 
         except Exception as e:
             logging.error(f"❌ Speech recognition setup failed: {e}")
-    
-    def _load_vosk_models(self):
-        """Load Vosk models for offline speech recognition."""
-        try:
-            model_dir = Path("model")
-            
-            # Load English model
-            english_model_path = model_dir / "vosk-model-small-en-us-0.15"
-            if english_model_path.exists():
-                try:
-                    self.vosk_models['en'] = vosk.Model(str(english_model_path))
-                    self.vosk_recognizers['en'] = vosk.KaldiRecognizer(
-                        self.vosk_models['en'], 16000
-                    )
-                    logging.info("✅ Vosk English model loaded")
-                except Exception as e:
-                    logging.error(f"Failed to load English model: {e}")
-            else:
-                logging.warning(f"⚠️ English Vosk model not found at {english_model_path}")
-            
-            # Load Hindi model
-            hindi_model_path = model_dir / "vosk-model-small-hi-0.22"
-            if hindi_model_path.exists():
-                try:
-                    self.vosk_models['hi'] = vosk.Model(str(hindi_model_path))
-                    self.vosk_recognizers['hi'] = vosk.KaldiRecognizer(
-                        self.vosk_models['hi'], 16000
-                    )
-                    logging.info("✅ Vosk Hindi model loaded")
-                except Exception as e:
-                    logging.error(f"Failed to load Hindi model: {e}")
-            else:
-                logging.warning(f"⚠️ Hindi Vosk model not found at {hindi_model_path}")
-            
-            if not self.vosk_models:
-                logging.error("❌ No Vosk models loaded")
-                
-        except Exception as e:
-            logging.error(f"❌ Error loading Vosk models: {e}")
     
     def _setup_tts(self):
         """Setup text-to-speech for multiple languages."""

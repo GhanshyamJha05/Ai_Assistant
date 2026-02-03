@@ -451,13 +451,7 @@ class ContinuousListeningManager:
                 ("Google", lambda: self.recognizer.recognize_google(audio)),
                 ("Sphinx", lambda: self.recognizer.recognize_sphinx(audio)),
             ]
-            
-            # Try Vosk if available
-            try:
-                import vosk
-                recognition_methods.insert(0, ("Vosk", lambda: self._recognize_with_vosk(audio)))
-            except ImportError:
-                pass
+            # Recognition methods fallback chain (Vosk removed due to C++ dependencies)
             
             for method_name, recognize_func in recognition_methods:
                 try:
@@ -472,33 +466,6 @@ class ContinuousListeningManager:
             
         except Exception as e:
             logger.error(f"Speech recognition failed: {e}")
-            return None
-    
-    def _recognize_with_vosk(self, audio) -> Optional[str]:
-        """Recognize speech using Vosk (offline)"""
-        try:
-            import vosk
-            import json
-            
-            # Load model if available
-            model_path = Path("model/vosk-model-small-en-us-0.15")
-            if not model_path.exists():
-                return None
-            
-            model = vosk.Model(str(model_path))
-            rec = vosk.KaldiRecognizer(model, 16000)
-            
-            # Convert audio data
-            audio_data = audio.get_raw_data(convert_rate=16000, convert_width=2)
-            
-            if rec.AcceptWaveform(audio_data):
-                result = json.loads(rec.Result())
-                return result.get('text', '')
-            
-            return None
-            
-        except Exception as e:
-            logger.debug(f"Vosk recognition failed: {e}")
             return None
     
     def _extract_command(self, full_text: str, wake_word: str) -> str:

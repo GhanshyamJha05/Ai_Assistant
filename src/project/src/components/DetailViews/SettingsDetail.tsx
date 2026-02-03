@@ -551,7 +551,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
         }
 
 
-        // Special Handling: STT Model - only show for Vosk/Whisper
+        // Special Handling: STT Model - only show for Whisper
         if (key === 'model' && path.includes('stt')) {
           // Check if engine is Google (if so, don't show model field)
           const currentEngine = data['engine'] || 'whisper';
