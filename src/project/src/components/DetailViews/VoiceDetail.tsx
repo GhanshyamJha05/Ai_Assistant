@@ -262,7 +262,7 @@ const VoiceDetail = () => {
                 className="w-full bg-[#2A2D35] text-white px-4 py-2 rounded-lg border border-[#3A3D45] focus:border-[#3B82F6] focus:outline-none"
                 disabled={!settings?.stt?.enabled}
               >
-                <option value="vosk">Vosk (Offline, Fast)</option>
+
                 <option value="whisper">Whisper (High Accuracy)</option>
                 <option value="google">Google (Cloud)</option>
               </select>

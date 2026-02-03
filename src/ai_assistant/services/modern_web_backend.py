@@ -3074,8 +3074,9 @@ def handle_disconnect():
     """Handle client disconnection"""
     print(f"Client disconnected: {request.sid}")
 
-@socketio.on('command')
-def handle_command(data):
+# DISABLED: Duplicate handler - using chat_voice_handlers.py instead
+#@socketio.on('command')
+def handle_command_disabled_1(data):
     """Handle real-time command"""
     try:
         command = data.get('command', '')
@@ -5065,8 +5066,9 @@ try:
         """Handle client disconnection"""
         print(f'❌ Client disconnected: {request.sid}')
 
-    @socketio.on('command')
-    def handle_command(data):
+    # DISABLED: Duplicate handler - using chat_voice_handlers.py instead
+    #@socketio.on('command')
+    def handle_command_disabled_2(data):
         """Handle command from voice or chat input"""
         try:
             from ai_assistant.core.assistant import ModernAssistant
@@ -5401,6 +5403,15 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"⚠️ Could not register Google Speech handlers: {e}")
         
+        # Register improved command handlers with proper routing
+        try:
+            import ai_assistant.services.chat_voice_handlers_new as chat_handlers
+            chat_handlers.set_socketio(socketio)
+            chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
+            print("✅ Command handlers registered with local-first routing")
+        except Exception as e:
+            print(f"⚠️ Could not register command handlers: {e}")
+
 
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:
