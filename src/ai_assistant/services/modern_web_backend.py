@@ -5387,12 +5387,16 @@ if __name__ == '__main__':
         
         # Register improved command handlers with proper routing
         try:
+            print(f"🔍 DEBUG: socketio type = {type(socketio)}, value = {socketio}")
             import ai_assistant.services.chat_voice_handlers_new as chat_handlers
             chat_handlers.set_socketio(socketio)
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
             print("✅ Command handlers registered with local-first routing")
         except Exception as e:
             print(f"⚠️ Could not register command handlers: {e}")
+            import traceback
+            traceback.print_exc()
+
 
 
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)

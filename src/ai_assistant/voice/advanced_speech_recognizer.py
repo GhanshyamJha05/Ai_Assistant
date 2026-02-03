@@ -146,18 +146,12 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.warning(f"⚠️ Speech Recognition failed: {e}")
         
-        # Vosk (offline, instant) - Use singleton manager to prevent duplicate loading
-        if VOSK_AVAILABLE:
-            try:
-                from ai_assistant.voice.vosk_model_manager import get_vosk_manager
-                self.vosk_manager = get_vosk_manager()
-                # Models will load on-demand when first used
-                logger.info("✅ Vosk model manager connected (models load on-demand)")
-            except ImportError:
-                # Fallback to old behavior if manager not available
-                logger.warning("⚠️ VoskModelManager not available, using legacy loading")
-                self.vosk_manager = None
-                self._legacy_vosk_init()
+        
+        # Vosk (offline) - DISABLED to eliminate C++ dependency issues
+        # Use Web Speech API or Whisper instead
+        self.vosk_manager = None
+        logger.info("ℹ️ Vosk disabled - using Web Speech API for recognition")
+        
         
         # Whisper API
         if WHISPER_API_AVAILABLE and self.whisper_api_key:
