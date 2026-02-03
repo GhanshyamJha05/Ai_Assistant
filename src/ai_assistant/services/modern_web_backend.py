@@ -1,4 +1,4 @@
-﻿# YourDaddy Assistant - Modern Web Backend
+# YourDaddy Assistant - Modern Web Backend
 """
 Modern Flask backend to serve the React frontend and provide real-time APIs
 for YourDaddy Assistant's features.
@@ -467,9 +467,15 @@ def initialize_local_ai():
     except Exception as e:
         logger.error(f"Local AI initialization failed: {e}")
 
-# Initialize local AI in background thread
-if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:
-    threading.Thread(target=initialize_local_ai, daemon=True).start()
+
+# ⚡ OPTIMIZATION: Lazy load Ollama - only initialize when user selects it
+# This saves 30-60 seconds on startup!
+# Ollama will be initialized on-demand when provider == 'ollama'
+# 
+# if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:
+#     threading.Thread(target=initialize_local_ai, daemon=True).start()
+
+logger.info("⚡ Ollama will load on-demand (lazy loading enabled)")
 
 # =============================================================================
 
@@ -5374,8 +5380,8 @@ if __name__ == '__main__':
         
         # Start app discovery schedulers (non-blocking)
         if AUTOMATION_AVAILABLE:
-            # Start delayed refresh 30 seconds after server starts
-            start_auto_refresh_after_startup(delay_seconds=30)
+            # Start delayed refresh 5 minutes after server starts (to not slow down startup)
+            start_auto_refresh_after_startup(delay_seconds=300)  # 5 minutes
             # Start weekly periodic refresh
             start_periodic_refresh(interval_hours=168)  # 168 hours = 1 week
         
