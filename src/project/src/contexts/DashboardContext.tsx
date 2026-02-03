@@ -69,8 +69,7 @@ interface DashboardContextType {
     toggleWakeWord: () => void;
     requireWakeWord: boolean;
     wakeWordDetected: boolean;
-    recognitionMode: 'web' | 'vosk';
-    toggleRecognitionMode: () => void;
+
     aiMode: 'online' | 'offline';
     aiProvider: 'gemini' | 'openai' | 'ollama';
     setAIProvider: (provider: 'gemini' | 'openai' | 'ollama') => void;
@@ -127,7 +126,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
-    const [recognitionMode, setRecognitionMode] = useState<'web' | 'vosk'>('web'); // 'web' = Google, 'vosk' = offline
+
     const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
     const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama'>('gemini'); // Current AI provider
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -225,28 +224,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
-        // Vosk offline recognition handlers
-        newSocket.on('vosk_ready', (data: any) => {
-            console.log('🔒 Vosk offline recognition ready:', data);
-            addSystemLog('success', `Offline recognition enabled (${data.language})`);
-        });
-
-        newSocket.on('vosk_transcript', (data: any) => {
-            console.log('🔒 Vosk transcript:', data);
-            if (data.isFinal) {
-                setInterimTranscript('');
-                // Process as voice command
-                newSocket.emit('voice_command', { text: data.text, language: voiceLanguage });
-            } else {
-                setInterimTranscript(data.text);
-                interimTranscriptRef.current = data.text;
-            }
-        });
-
-        newSocket.on('vosk_error', (data: any) => {
-            console.error('❌ Vosk error:', data);
-            addSystemLog('error', `Offline recognition error: ${data.error}`);
-        });
 
         // Google Speech Recognition handlers
         newSocket.on('google_ready', (data: any) => {
@@ -980,18 +957,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     const toggleVoice = () => {
-        if (recognitionMode === 'vosk') {
-            // Use Google Speech Recognition (backend-based, no C++ dependencies)
-            if (isVoiceActive) {
-                stopGoogleRecognition();
-            } else {
-                startGoogleRecognition();
-            }
-            return;
-        }
-
-
-        // Web Speech API (existing code)
+        // Web Speech API (browser-based)
         if (!recognition) {
             alert('Voice recognition not supported in this browser');
             return;
@@ -1142,21 +1108,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         speak(message, voiceLanguage);
     };
 
-    // Toggle between Web Speech API (Google) and Vosk (offline)
-    const toggleRecognitionMode = () => {
-        const newMode = recognitionMode === 'web' ? 'vosk' : 'web';
 
-        // Stop current recognition
-        if (isVoiceActive) {
-            toggleVoice();
-        }
-
-        setRecognitionMode(newMode);
-        const modeName = newMode === 'web' ? 'Online (Google)' : 'Offline (Private)';
-        console.log(`🔄 Recognition mode: ${modeName}`);
-        addSystemLog('info', `Switched to ${modeName} recognition`);
-        speak(`Switched to ${modeName} speech recognition`, voiceLanguage);
-    };
 
     // Toggle AI Mode: Online (GPT/Gemini) <-> Offline (Ollama)
     const toggleAIMode = async () => {
@@ -1502,8 +1454,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         toggleAlwaysActive,
         toggleWakeWord,
         wakeWordDetected,
-        recognitionMode,
-        toggleRecognitionMode,
+
         aiMode,
         aiProvider,
         setAIProvider,

@@ -97,8 +97,6 @@ const VoiceButton = () => {
     setVoiceLanguage,
     alwaysActive,
     toggleAlwaysActive,
-    recognitionMode,
-    toggleRecognitionMode,
     aiMode,
     aiProvider,
     setAIProvider,
@@ -276,28 +274,15 @@ const VoiceButton = () => {
           Always On
         </motion.button>
 
-        <motion.button
-          onClick={toggleRecognitionMode}
-          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${recognitionMode === 'vosk'
-            ? 'bg-blue-500/20 text-blue-400 border border-blue-400/40'
-            : 'bg-[#1a1f2e] text-[#00f3ff]/50 border border-[#00f3ff]/20 hover:border-[#00f3ff]/40'
-            }`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title={recognitionMode === 'vosk' ? 'Backend (Google)' : 'Browser (Web Speech)'}
-        >
-          {recognitionMode === 'vosk' ? '🌐 Backend' : '🌐 Browser'}
-        </motion.button>
-
         {/* AI Provider Selector */}
         <div className="relative">
           <motion.button
             onClick={() => setShowProviderSelector(!showProviderSelector)}
             className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiProvider === 'ollama'
-                ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
-                : aiProvider === 'openai'
-                  ? 'bg-green-500/20 text-green-400 border border-green-400/40'
-                  : 'bg-blue-500/20 text-blue-400 border border-blue-400/40'
+              ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
+              : aiProvider === 'openai'
+                ? 'bg-green-500/20 text-green-400 border border-green-400/40'
+                : 'bg-blue-500/20 text-blue-400 border border-blue-400/40'
               }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

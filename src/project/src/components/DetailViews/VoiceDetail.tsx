@@ -161,8 +161,8 @@ const VoiceDetail = () => {
           <button
             onClick={toggleVoice}
             className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${isVoiceActive
-                ? 'bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30'
-                : 'bg-[#10B981]/20 text-[#10B981] hover:bg-[#10B981]/30'
+              ? 'bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30'
+              : 'bg-[#10B981]/20 text-[#10B981] hover:bg-[#10B981]/30'
               }`}
           >
             <Mic className="w-4 h-4" />
@@ -184,8 +184,8 @@ const VoiceDetail = () => {
               <button
                 onClick={toggleTTS}
                 className={`px-4 py-2 rounded-lg transition-all ${settings?.tts?.enabled
-                    ? 'bg-[#10B981]/20 text-[#10B981]'
-                    : 'bg-[#6B7280]/20 text-[#9CA3AF]'
+                  ? 'bg-[#10B981]/20 text-[#10B981]'
+                  : 'bg-[#6B7280]/20 text-[#9CA3AF]'
                   }`}
               >
                 {settings?.tts?.enabled ? 'ON' : 'OFF'}
@@ -240,8 +240,8 @@ const VoiceDetail = () => {
               <button
                 onClick={toggleSTT}
                 className={`px-4 py-2 rounded-lg transition-all ${settings?.stt?.enabled
-                    ? 'bg-[#10B981]/20 text-[#10B981]'
-                    : 'bg-[#6B7280]/20 text-[#9CA3AF]'
+                  ? 'bg-[#10B981]/20 text-[#10B981]'
+                  : 'bg-[#6B7280]/20 text-[#9CA3AF]'
                   }`}
               >
                 {settings?.stt?.enabled ? 'ON' : 'OFF'}
@@ -251,7 +251,7 @@ const VoiceDetail = () => {
             <div>
               <label className="text-white text-sm mb-2 block">Recognition Engine</label>
               <select
-                value={settings?.stt?.engine || 'vosk'}
+                value={settings?.stt?.engine || 'whisper'}
                 onChange={(e) => {
                   setSettings({
                     ...settings,
@@ -277,8 +277,8 @@ const VoiceDetail = () => {
                 onClick={toggleNoiseReduction}
                 disabled={!settings?.stt?.enabled}
                 className={`px-4 py-2 rounded-lg transition-all ${settings?.stt?.noise_reduction
-                    ? 'bg-[#10B981]/20 text-[#10B981]'
-                    : 'bg-[#6B7280]/20 text-[#9CA3AF]'
+                  ? 'bg-[#10B981]/20 text-[#10B981]'
+                  : 'bg-[#6B7280]/20 text-[#9CA3AF]'
                   } disabled:opacity-50`}
               >
                 {settings?.stt?.noise_reduction ? 'ON' : 'OFF'}

@@ -526,10 +526,8 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
           return null;
         }
 
-        // Special Handling: STT Engine Dropdown
         if (key === 'engine' && path.includes('stt')) {
           const engines = [
-            { value: 'vosk', label: 'Vosk (Offline, Fast)' },
             { value: 'whisper', label: 'Whisper (High Accuracy)' },
             { value: 'google', label: 'Google Cloud STT' }
           ];
@@ -556,7 +554,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
         // Special Handling: STT Model - only show for Vosk/Whisper
         if (key === 'model' && path.includes('stt')) {
           // Check if engine is Google (if so, don't show model field)
-          const currentEngine = data['engine'] || 'vosk';
+          const currentEngine = data['engine'] || 'whisper';
           if (currentEngine === 'google') {
             return null; // Hide model field for Google
           }
@@ -569,9 +567,9 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
                 value={String(value)}
                 onChange={(e) => onChange(currentPath, e.target.value)}
                 className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none"
-                placeholder={currentEngine === 'vosk' ? 'vosk-model-small-en-us-0.15' : 'whisper-medium'}
+                placeholder={currentEngine === 'whisper' ? 'whisper-medium' : 'google-cloud-default'}
               />
-              <p className="text-xs text-[#6B7280]">Required for {currentEngine === 'vosk' ? 'Vosk' : 'Whisper'}</p>
+              <p className="text-xs text-[#6B7280]">Required for {currentEngine === 'whisper' ? 'Whisper' : 'Google'}</p>
             </div>
           );
         }
