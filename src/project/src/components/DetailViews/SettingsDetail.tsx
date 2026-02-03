@@ -108,17 +108,15 @@ interface AppSettings {
 }
 
 const AI_PROVIDERS = [
-  { value: 'google', label: 'Google Gemini' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'local', label: 'Local LLM' }
+  { value: 'gemini', label: '🔷 Google Gemini' },
+  { value: 'openai', label: '🟢 OpenAI (GPT)' },
+  { value: 'ollama', label: '🤖 Ollama (Local)' }
 ];
 
 const AI_MODELS: Record<string, string[]> = {
-  google: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'],
+  gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'],
   openai: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  anthropic: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-  local: ['llama-3-8b', 'mistral-7b', 'gemma-2b', 'tinyllama-1.1b']
+  ollama: ['llama3.2', 'qwen2.5-coder:3b', 'mistral', 'gemma2']
 };
 
 // --- Component ---

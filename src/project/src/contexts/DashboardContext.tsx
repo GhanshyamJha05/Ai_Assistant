@@ -72,6 +72,8 @@ interface DashboardContextType {
     recognitionMode: 'web' | 'vosk';
     toggleRecognitionMode: () => void;
     aiMode: 'online' | 'offline';
+    aiProvider: 'gemini' | 'openai' | 'ollama';
+    setAIProvider: (provider: 'gemini' | 'openai' | 'ollama') => void;
     toggleAIMode: () => void;
     speak: (text: string, lang?: string) => void;
     selectedView: ViewType;
@@ -127,6 +129,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
     const [recognitionMode, setRecognitionMode] = useState<'web' | 'vosk'>('web'); // 'web' = Google, 'vosk' = offline
     const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
+    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama'>('gemini'); // Current AI provider
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
@@ -469,7 +472,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 text: final,
                                 language: voiceLanguage,
                                 timestamp: new Date().toISOString(),
-                                offline_mode: aiMode === 'offline'
+                                offline_mode: aiMode === 'offline',
+                                provider: aiProvider
                             });
                             console.log('✅ voice_command emitted successfully');
                         } else {
@@ -485,7 +489,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     command: final,
-                                    offline_mode: aiMode === 'offline'
+                                    offline_mode: aiMode === 'offline',
+                                    provider: aiProvider
                                 }),
                             })
                                 .then((res) => res.json())
@@ -918,14 +923,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         addSystemLog('info', `Processing: ${command}`);
 
         const useOfflineMode = aiMode === 'offline';
-        console.log(`🤖 AI Mode: ${aiMode} (offline_mode: ${useOfflineMode})`);
+        console.log(`🤖 AI Mode: ${aiMode} | Provider: ${aiProvider} (offline_mode: ${useOfflineMode})`);
 
         if (socket && socket.connected) {
             console.log('📤 Sending command via socket:', command);
             socket.emit('command', {
                 command,
                 message: command,
-                offline_mode: useOfflineMode
+                offline_mode: useOfflineMode,
+                provider: aiProvider
             });
         } else {
             // Fallback to API
@@ -934,7 +940,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     command,
-                    offline_mode: useOfflineMode
+                    offline_mode: useOfflineMode,
+                    provider: aiProvider
                 }),
             })
                 .then((res) => res.json())
@@ -1186,6 +1193,22 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         } catch (error) {
             console.error('❌ Error switching AI mode:', error);
             addSystemLog('error', 'Error switching AI mode');
+        }
+    };
+
+    // Set AI Provider: Gemini, OpenAI, or Ollama
+    const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama') => {
+        console.log(`🔄 Switching AI provider to: ${provider}`);
+        setAIProviderState(provider);
+
+        // Update aiMode based on provider
+        if (provider === 'ollama') {
+            setAIMode('offline');
+            addSystemLog('info', '🤖 Switched to Ollama (Offline)');
+        } else {
+            setAIMode('online');
+            const providerName = provider === 'gemini' ? 'Gemini' : 'OpenAI';
+            addSystemLog('info', `🔷 Switched to ${providerName} (Online)`);
         }
     };
 
@@ -1482,6 +1505,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         recognitionMode,
         toggleRecognitionMode,
         aiMode,
+        aiProvider,
+        setAIProvider,
         toggleAIMode,
         speak,
         selectedView,

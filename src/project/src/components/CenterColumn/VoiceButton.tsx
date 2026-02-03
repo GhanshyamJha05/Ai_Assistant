@@ -100,10 +100,13 @@ const VoiceButton = () => {
     recognitionMode,
     toggleRecognitionMode,
     aiMode,
+    aiProvider,
+    setAIProvider,
     toggleAIMode
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);
+  const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en-US');
 
   const languages = [
@@ -113,10 +116,23 @@ const VoiceButton = () => {
     { code: 'auto', name: 'Auto Detect', flag: '🌐' },
   ];
 
+  const aiProviders = [
+    { id: 'gemini' as const, name: 'Gemini', icon: '🔷', color: 'blue' },
+    { id: 'openai' as const, name: 'OpenAI', icon: '🟢', color: 'green' },
+    { id: 'ollama' as const, name: 'Ollama', icon: '🤖', color: 'purple' },
+  ];
+
+  const currentProvider = aiProviders.find(p => p.id === aiProvider) || aiProviders[0];
+
   const handleLanguageChange = (langCode: string) => {
     setSelectedLang(langCode);
     setVoiceLanguage?.(langCode);
     setShowLangSelector(false);
+  };
+
+  const handleProviderChange = (providerId: 'gemini' | 'openai' | 'ollama') => {
+    setAIProvider(providerId);
+    setShowProviderSelector(false);
   };
 
   const isListening = isVoiceActive || alwaysActive;
@@ -273,18 +289,50 @@ const VoiceButton = () => {
           {recognitionMode === 'vosk' ? '🌐 Backend' : '🌐 Browser'}
         </motion.button>
 
-        <motion.button
-          onClick={toggleAIMode}
-          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiMode === 'offline'
-            ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
-            : 'bg-[#1a1f2e] text-[#00f3ff]/50 border border-[#00f3ff]/20 hover:border-[#00f3ff]/40'
-            }`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title={aiMode === 'offline' ? 'Offline AI (Ollama)' : 'Online AI (Google)'}
-        >
-          {aiMode === 'offline' ? '🤖 Offline' : '🤖 Online'}
-        </motion.button>
+        {/* AI Provider Selector */}
+        <div className="relative">
+          <motion.button
+            onClick={() => setShowProviderSelector(!showProviderSelector)}
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiProvider === 'ollama'
+                ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
+                : aiProvider === 'openai'
+                  ? 'bg-green-500/20 text-green-400 border border-green-400/40'
+                  : 'bg-blue-500/20 text-blue-400 border border-blue-400/40'
+              }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title={`AI Provider: ${currentProvider.name}`}
+          >
+            {currentProvider.icon} {currentProvider.name}
+          </motion.button>
+
+          {/* Provider dropdown */}
+          <AnimatePresence>
+            {showProviderSelector && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="absolute left-0 top-full mt-2 bg-[#1a1f2e] border border-[#00f3ff]/30 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]"
+              >
+                {aiProviders.map((provider) => (
+                  <button
+                    key={provider.id}
+                    onClick={() => handleProviderChange(provider.id)}
+                    className={`w-full px-4 py-2 flex items-center gap-3 hover:bg-[#00f3ff]/10 transition-colors text-left ${aiProvider === provider.id ? 'bg-[#00f3ff]/10' : ''
+                      }`}
+                  >
+                    <span className="text-lg">{provider.icon}</span>
+                    <span className="text-sm text-white/80">{provider.name}</span>
+                    {aiProvider === provider.id && (
+                      <span className="ml-auto text-[#00f3ff]">✓</span>
+                    )}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <button
           onClick={() => setShowLangSelector(!showLangSelector)}
