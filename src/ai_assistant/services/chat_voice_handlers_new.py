@@ -164,16 +164,38 @@ def handle_command(data):
             try:
                 # Initialize Chat
                 chat = UnifiedChatInterface(use_fallback=True)
-                chat.add_system_message(
-                    "You are YourDaddy, a helpful AI assistant. "
-                    "You can answer general knowledge questions, help with information, "
-                    "and provide assistance."
-                )
+                
+                # Set provider-specific system message
+                provider_name = chat.provider_name.lower()
+                model_name = chat.model
+                
+                if 'openai' in provider_name or 'gpt' in model_name:
+                    system_msg = (
+                        "You are an AI assistant powered by OpenAI. "
+                        f"You are using the {model_name} model. "
+                        "You can answer general knowledge questions, help with information, "
+                        "and provide assistance."
+                    )
+                elif 'gemini' in provider_name or 'gemini' in model_name:
+                    system_msg = (
+                        "You are an AI assistant powered by Google Gemini. "
+                        f"You are using the {model_name} model. "
+                        "You can answer general knowledge questions, help with information, "
+                        "and provide assistance."
+                    )
+                else:
+                    system_msg = (
+                        "You are YourDaddy, a helpful AI assistant. "
+                        "You can answer general knowledge questions, help with information, "
+                        "and provide assistance."
+                    )
+                
+                chat.add_system_message(system_msg)
                 
                 # Get response from external AI
                 response_text = chat.chat(command_text)
                 
-                print(f'✅ [EXTERNAL AI] {response_text[:100]}...')
+                print(f'✅ [EXTERNAL AI - {provider_name.upper()}] {response_text[:100]}...')
                 
                 # Log learning
                 if learning_router:
@@ -185,7 +207,7 @@ def handle_command(data):
                     'success': True,
                     'response': response_text,
                     'command': command_text,
-                    'source': 'external_ai',
+                    'source': f'external_ai_{provider_name}',
                     'timestamp': datetime.now().isoformat()
                 })
                 

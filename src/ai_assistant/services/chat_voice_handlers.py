@@ -1,9 +1,11 @@
 # ==============================================
-# Chat & Voice Integration - Socket.IO Events
+# DEPRECATED: OLD Chat & Voice Integration - DISABLED
+# Use chat_voice_handlers_new.py instead
 # ==============================================
 
-@socketio.on('connect')
-def handle_connect():
+# DISABLED: Causes duplicate responses
+# @socketio.on('connect')
+def handle_connect_OLD():
     """Handle client connection"""
     print(f'✅ Client connected: {request.sid}')
     emit('connection_established', {
@@ -12,15 +14,18 @@ def handle_connect():
         'timestamp': datetime.now().isoformat()
     })
 
-@socketio.on('disconnect')
-def handle_disconnect():
+# DISABLED: Causes duplicate responses
+# @socketio.on('disconnect')
+def handle_disconnect_OLD():
     """Handle client disconnection"""
     print(f'❌ Client disconnected: {request.sid}')
 
-@socketio.on('command')
-def handle_command(data):
+# DISABLED: Causes duplicate responses - NEW handler in chat_voice_handlers_new.py
+# @socketio.on('command')
+def handle_command_OLD(data):
     """
-    Handle command from voice or chat input
+    DEPRECATED - Do not use
+    Use chat_voice_handlers_new.py instead
     Expected data: {'command': 'user command text', 'source': 'voice'|'chat'}
     """
     try:
@@ -35,7 +40,7 @@ def handle_command(data):
             })
             return
         
-        print(f'📨 Command received ({source}): {command_text}')
+        print(f'📨 [OLD HANDLER] Command received ({source}): {command_text}')
         
         # ----------------------------------------------------
         # NEW: Chain of Actions Integration (Autonomy Engine)
