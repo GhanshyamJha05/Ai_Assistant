@@ -6,12 +6,14 @@ class YourDaddyWebInterface {
         this.isListening = false;
         this.recognition = null;
         this.authToken = null;
+        this.currentModelPreference = null; // Store current model/provider preference
         
         this.initializeElements();
         this.initializeAuth();
         this.initializeSocket();
         this.initializeVoice();
         this.bindEvents();
+        this.loadModelPreference(); // Load model preference
         this.loadRecentApps();
         
         console.log('YourDaddy Web Interface initialized');
@@ -104,7 +106,10 @@ class YourDaddyWebInterface {
                         this.addMessage(reply, 'assistant');
                     }
                 } else if (data.error) {
-                    this.addMessage(data.error, 'error');
+                    // Filter out Errno 22 socket errors - these are internal errors
+                    if (!data.error.includes('[Errno 22]') && !data.error.includes('Invalid argument')) {
+                        this.addMessage(data.error, 'error');
+                    }
                 }
             });
             
@@ -236,11 +241,38 @@ class YourDaddyWebInterface {
         this.addMessage('Processing...', 'system');
         
         if (this.socket && this.socket.connected) {
-            // Send to backend via Socket.IO using the expected payload keys
+            // Extract provider and model from preference
+            let provider = null;
+            let model = null;
+            
+            if (this.currentModelPreference && this.currentModelPreference.preferred_model) {
+                const preferredModel = this.currentModelPreference.preferred_model;
+                // Determine provider from model name
+                if (preferredModel.includes('gemini')) {
+                    provider = 'gemini';
+                    model = preferredModel;
+                } else if (preferredModel.includes('gpt')) {
+                    provider = 'openai';
+                    model = preferredModel;
+                } else if (preferredModel.includes('claude')) {
+                    provider = 'anthropic';
+                    model = preferredModel;
+                } else {
+                    // Default to gemini if unknown
+                    provider = 'gemini';
+                    model = preferredModel;
+                }
+            }
+            
+            console.log(`Sending command with provider: ${provider}, model: ${model}`);
+            
+            // Send to backend via Socket.IO with model/provider info
             this.socket.emit('command', {
                 command: command,
                 message: command,
-                text: command
+                text: command,
+                provider: provider,
+                model: model
             });
         } else {
             // Try API call first, fallback to local processing
@@ -400,6 +432,29 @@ class YourDaddyWebInterface {
         
         if (statusDot) {
             statusDot.style.background = colors[type] || colors.info;
+        }
+    }
+    
+    async loadModelPreference() {
+        try {
+            const response = await fetch('/api/models/preference', {
+                headers: this.getAuthHeaders()
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.preference) {
+                    this.currentModelPreference = data.preference;
+                    console.log('Loaded model preference:', this.currentModelPreference);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load model preference:', error);
+            // Set default preference
+            this.currentModelPreference = {
+                preferred_model: 'gemini-2.0-flash-exp',
+                auto_route: true
+            };
         }
     }
     
@@ -640,6 +695,10 @@ async function saveModelSettings() {
         const data = await response.json();
         
         if (data.success) {
+            // Update the current preference in memory
+            assistant.currentModelPreference = data.preference;
+            console.log('Updated model preference:', assistant.currentModelPreference);
+            
             assistant.addMessage(`✅ Settings saved! Now using ${selectedModelId}`, 'success');
             assistant.closeModal();
         } else {

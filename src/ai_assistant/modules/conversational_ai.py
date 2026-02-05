@@ -22,6 +22,12 @@ import re
 import webbrowser
 import subprocess
 from ai_assistant.modules.youtube_ops import youtube_downloader
+from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
+try:
+    from PIL import ImageGrab
+except ImportError:
+    ImageGrab = None
+
 
 class ConversationState(Enum):
     """Conversation state enumeration."""
@@ -104,6 +110,15 @@ class AdvancedConversationalAI:
         self.proactive_thread = None
         self.running = True
         self._start_proactive_monitoring()
+        
+        # Initialize VLM Provider
+        try:
+            self.vision_provider = GeminiVisionProvider(model_name="gemini-2.0-flash-exp")
+            print("✅ Vision Provider initialized (Gemini)")
+        except Exception as e:
+            print(f"⚠️ Vision Provider init failed: {e}")
+            self.vision_provider = None
+
     
     def _init_llm_provider(self):
         """Initialize the LLM provider for generating real-time AI responses."""
@@ -505,6 +520,9 @@ class AdvancedConversationalAI:
             # Add message to conversation
             self.add_message(role, message)
             
+            message_lower = message.lower()
+
+            
             # Detect mood from user messages
             if role == "user":
                 self.detect_mood(message)
@@ -517,8 +535,48 @@ class AdvancedConversationalAI:
                     self.feedback_system.record_interaction(message, switch_msg, context={'type': 'context_switch'})
                 return switch_msg
             
+            # Chain of Action: Split by separators (and, then, aur, ,)
+            # Use regex to split but keep delimiters to reconstruct if needed, or just split.
+            # Handles: "open chrome and search google", "youtube khol aur song baja"
+            chain_separators = r'\s+(?:and|then|aur|&)\s+|,\s*'
+            
+            # Simple heuristic: If multiple parts found, process sequentially
+            parts = re.split(chain_separators, message_lower)
+            if len(parts) > 1:
+                results = []
+                for part in parts:
+                    part = part.strip()
+                    if not part: continue
+                    
+                    # Try to execute each part as a command
+                    # We recurse to self.process_message but avoid infinite recursion by checking strictly for command execution
+                    # Actually, using _try_execute_command is safer to avoid looping conversationally
+                    
+                    cmd_res = self._try_execute_command(part, part)
+                    if cmd_res:
+                        results.append(cmd_res)
+                    else:
+                        # If a part is not a command. e.g. "open chrome and hello"
+                        # "hello" is not a command. We typically ignore or handle as chat.
+                        # For now, let's treat it as a secondary query if needed, or just skip?
+                        # User wants Action triggers. If "hello" is passed, we might get "Hello!" response.
+                        
+                        # Fallback for chat parts? 
+                        # Only if it looks like a question or greeting?
+                        # Let's try to generate response for non-command parts too.
+                        # But prevent "I can help you with..." generic responses for fragments.
+                        
+                        # Safe fallback:
+                        chat_res = self._generate_contextual_response(part)
+                        if chat_res:
+                             results.append(chat_res)
+
+                if results:
+                    return " \n".join(results)
+
             # Process different types of queries
-            message_lower = message.lower()
+            # message_lower is already defined above
+
             
             # TRY TO EXECUTE COMMAND FIRST - This is the main change!
             command_result = self._try_execute_command(message, message_lower)
@@ -548,7 +606,8 @@ class AdvancedConversationalAI:
             if self.automation_callback:
                 # Last resort: check if it's asking to do something
                 action_words = ['open', 'close', 'start', 'stop', 'launch', 'run', 'play', 'search', 'find', 
-                               'create', 'make', 'set', 'change', 'show', 'get', 'check']
+                               'create', 'make', 'set', 'change', 'show', 'get', 'check',
+                               'khol', 'band', 'chala', 'baja', 'sun', 'dikha', 'bhejo', 'dhund', 'khoj']
                 if any(word in message_lower for word in action_words):
                     return "🤔 I can sense you want me to do something! Could you be more specific? Here are some examples:\n\n📱 'open chrome' - Opens Google Chrome\n🎵 'play music' - Plays music on YouTube\n🔍 'search for python' - Searches Google\n📝 'create a document' - Opens Word\n\nWhat exactly would you like me to do?"
             
@@ -669,15 +728,30 @@ class AdvancedConversationalAI:
                 return self._execute_settings_command(query, clean_query)
             
             # PRIORITY 2: Opening apps/websites - Most common command
-            if any(word in first_few_words for word in ['open', 'launch', 'start', 'run']):
+            if any(word in first_few_words for word in ['open', 'launch', 'start', 'run', 'khol', 'chalo', 'chalu']):
                 return self._execute_open_command(query, clean_query)
             
             # PRIORITY 3: Closing apps
-            if any(word in first_few_words for word in ['close', 'quit', 'exit', 'kill', 'stop']):
+            if any(word in first_few_words for word in ['close', 'quit', 'exit', 'kill', 'stop', 'band', 'hata']):
                 return self._execute_close_command(query, clean_query)
             
+            # PRIORITY 3.5: YouTube Search / Watch
+            if 'youtube' in clean_query:
+                # If command is explicitly 'search', 'find', 'watch', 'play', 'show' + youtube
+                if any(word in first_few_words for word in ['search', 'find', 'look', 'watch', 'play', 'show', 'dikha', 'chala']):
+                     return self._execute_play_command(query, clean_query)
+            
+            # PRIORITY 3.8: Vision / Screen Analysis
+            # "Look at this", "Screen dekho", "What is on screen", "Take screenshot"
+            if any(word in clean_query for word in ['look', 'see', 'screen', 'dekho', 'kya hai', 'scan', 'screenshot', 'capture', 'taskbar']) and \
+               any(word in clean_query for word in ['at', 'my', 'screen', 'dekho', 'this', 'ye', 'take', 'check', 'of']):
+                 print(f"DEBUG: Vision Intent Detected for {clean_query}")
+                 return self._execute_vision_command(query, clean_query)
+
+
+            
             # PRIORITY 4: Searching - Google, web search
-            if any(word in first_few_words for word in ['google', 'search', 'find', 'lookup']) and 'download' not in clean_query:
+            if any(word in first_few_words for word in ['google', 'search', 'find', 'lookup', 'dhund', 'khoj', 'pata']) and 'download' not in clean_query:
                 return self._execute_search_command(query, clean_query)
             
             # PRIORITY 4.5: Downloading (YouTube/Media)
@@ -685,7 +759,7 @@ class AdvancedConversationalAI:
                 return self._execute_download_command(query, clean_query)
             
             # PRIORITY 5: Playing music
-            if 'play' in first_few_words:
+            if any(word in first_few_words for word in ['play', 'baja', 'laga', 'sun']):
                 return self._execute_play_command(query, clean_query)
             
             # PRIORITY 6: Creating documents
@@ -739,7 +813,7 @@ class AdvancedConversationalAI:
         """Execute open application commands."""
         # Extract app name - remove command words
         app_name = query_lower
-        for word in ['open', 'launch', 'start', 'run', 'the', 'app', 'application', 'program']:
+        for word in ['open', 'launch', 'start', 'run', 'the', 'app', 'application', 'program', 'khol', 'chalu', 'karo']:
             app_name = app_name.replace(word, '')
         app_name = app_name.strip()
         
@@ -879,7 +953,7 @@ class AdvancedConversationalAI:
         """Execute close application commands."""
         # Extract app name - remove command words
         app_name = query_lower
-        for word in ['close', 'stop', 'quit', 'exit', 'kill', 'end', 'terminate', 'the', 'app', 'application']:
+        for word in ['close', 'stop', 'quit', 'exit', 'kill', 'end', 'terminate', 'the', 'app', 'application', 'band', 'hata', 'karo']:
             app_name = app_name.replace(word, '')
         app_name = app_name.strip()
         
@@ -941,12 +1015,31 @@ class AdvancedConversationalAI:
         """Execute Google search commands."""
         # Extract search query - remove command words
         search_query = query_lower
-        for word in ['google', 'search for', 'search', 'look up', 'look for', 'find', 'about', 'on', 'the']:
+        for word in ['google', 'search for', 'search', 'look up', 'look for', 'find', 'about', 'on', 'the', 'dhund', 'khoj', 'karo', 'ke baare mein']:
             search_query = search_query.replace(word, '')
         search_query = search_query.strip()
         
         if not search_query or len(search_query) < 2:
             return "What would you like me to search for?"
+            
+        # 🌟 CONTEXT AWARENESS: Check Active Window
+        # ONLY if user didn't explicitly ask for Google
+        if 'google' not in query_lower:
+            try:
+                active_window = self._get_active_window_title().lower()
+                print(f"DEBUG: Active Window: {active_window}")
+                
+                if 'youtube' in active_window:
+                    # Redirect to YouTube search
+                    return self._execute_play_command(f"{search_query}", f"{search_query}")
+                    
+                elif 'spotify' in active_window:
+                    # Redirect to Spotify search (if supported, else standard play)
+                    return self._execute_play_command(f"play {search_query} on spotify", f"play {search_query} on spotify")
+                    
+            except Exception as e:
+                print(f"Context check failed: {e}")
+
         
         # Try automation callback first (might have better search integration)
         if self.automation_callback:
@@ -977,11 +1070,11 @@ class AdvancedConversationalAI:
         if ' by ' in song:
             # Keep everything after 'play' but preserve 'by artist'
             song = song.replace('play', '').strip()
-            for word in ['music', 'song', 'on spotify', 'on youtube', 'the', 'some', 'something']:
+            for word in ['music', 'song', 'on spotify', 'on youtube', 'the', 'some', 'something', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']:
                 song = song.replace(word, '')
         else:
             # Normal processing for direct song names
-            for word in ['play', 'music', 'song', 'on spotify', 'on youtube', 'the', 'some']:
+            for word in ['play', 'music', 'song', 'on spotify', 'on youtube', 'the', 'some', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']:
                 song = song.replace(word, '')
         
         song = song.strip()
@@ -1109,6 +1202,51 @@ class AdvancedConversationalAI:
                 return "I can help with: lock, sleep. For shutdown/restart, please use the Start menu for safety."
         except Exception as e:
             return f"❌ Could not execute system command: {str(e)}"
+
+    def _get_active_window_title(self) -> str:
+        """Get the title of the currently active window."""
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+            buff = ctypes.create_unicode_buffer(length + 1)
+            ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
+            return buff.value
+        except Exception:
+            return ""
+
+    def _execute_vision_command(self, query: str, query_lower: str) -> str:
+        """Execute vision/VLM commands by analyzing the screen."""
+        if not self.vision_provider:
+             return "⚠️ Vision features are not initialized. Please check GEMINI_API_KEY."
+        
+        if not ImageGrab:
+             return "⚠️ PIL ImageGrab is not available. Cannot capture screen."
+
+        try:
+            # 1. Capture Screen
+            # TODO: Minimize chat window if possible? For now, we capture as is.
+            screenshot = ImageGrab.grab()
+            
+            # 2. Refine Prompt
+            # Remove trigger words to get the actual question
+            prompt = query_lower
+            for word in ['look', 'at', 'this', 'screen', 'dekho', 'scan', 'check', 'my', 'what', 'is', 'on', 'the', 'kya', 'hai', 'ye']:
+                 prompt = prompt.replace(word, '')
+            prompt = prompt.strip()
+            
+            # If prompt is too short, assume general description
+            if len(prompt) < 3:
+                full_prompt = "Describe what is currently visible on my screen in detail."
+            else:
+                full_prompt = f"Analyze this screen and answer: {query}"
+            
+            # 3. Analyze
+            return f"👀 Looking at screen...\n" + self.vision_provider.analyze_image(screenshot, full_prompt).text
+            
+        except Exception as e:
+            return f"❌ Vision verification failed: {str(e)}"
+
     
     def _process_command_query(self, query: str) -> str:
         """Process command-based queries."""

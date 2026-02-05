@@ -238,6 +238,17 @@ const SettingsDetail = () => {
     // Set the final value
     current[path[path.length - 1]] = value;
 
+    // Special handling for side effects
+    // If voice_id changes, also update voice_name
+    if (path[path.length - 1] === 'voice_id') {
+      const availableVoices = (newState.voice && newState.voice.tts && newState.voice.tts.available_voices) || [];
+      const selectedVoice = availableVoices.find((v: any) => v.id === value);
+      if (selectedVoice) {
+        current['voice_name'] = selectedVoice.name;
+        console.log('✅ Auto-updated voice_name to:', selectedVoice.name);
+      }
+    }
+
     console.log('✅ Dispatching new state:', newState);
     // Dispatch the new state (useReducer will deep clone it again)
     setSettings(newState);
@@ -498,14 +509,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
                 <div className="relative">
                   <select
                     value={String(value)}
-                    onChange={(e) => {
-                      onChange(currentPath, e.target.value);
-                      // Also update voice_name
-                      const selectedVoice = availableVoices.find((v: any) => v.id === e.target.value);
-                      if (selectedVoice) {
-                        onChange([...path, 'voice_name'], selectedVoice.name);
-                      }
-                    }}
+                    onChange={(e) => onChange(currentPath, e.target.value)}
                     className="w-full p-2.5 bg-[#2A2D35] border border-[#3A3D45] rounded-lg text-white text-sm focus:border-[#3B82F6] outline-none appearance-none cursor-pointer hover:border-[#3B82F6]/50 transition-colors"
                   >
                     {availableVoices.map((voice: any) => (
@@ -649,11 +653,13 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
                   }}
                   className="peer sr-only pointer-events-auto"
                 />
-                <div className="w-10 h-6 bg-[#1F2228] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] cursor-pointer"></div>
+                <div className={`w-10 h-6 rounded-full transition-colors relative ${value ? 'bg-[#3B82F6]' : 'bg-[#1F2228]'} border border-[#3A3D45]`}>
+                  <div className={`absolute top-[1px] left-[1px] bg-white rounded-full h-5 w-5 transition-transform shadow-sm ${value ? 'translate-x-full border-transparent' : 'border-gray-300'}`}></div>
+                </div>
               </div>
               <div className="flex-1">
                 <span className="text-white text-sm font-medium capitalize block group-hover:text-[#3B82F6] transition-colors">{label}</span>
-                <span className="text-[#9CA3AF] text-xs">{value ? 'Enabled' : 'Disabled'}</span>
+                <span className={`text-xs ${value ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'}`}>{value ? 'Enabled' : 'Disabled'}</span>
               </div>
             </label>
           );

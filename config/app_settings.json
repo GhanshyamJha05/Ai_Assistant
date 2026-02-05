@@ -35,12 +35,7 @@
       "engine": "google",
       "language": "en-US",
       "model": "vosk-model-small-en-us-0.15",
-      "noise_reduction": true,
-      "stt": {
-        "continuous": false,
-        "enabled": false,
-        "noise_reduction": false
-      }
+      "noise_reduction": true
     },
     "tts": {
       "available_voices": [
@@ -120,11 +115,6 @@
       "enabled": true,
       "pitch": 1,
       "speed": 1,
-      "tts": {
-        "enabled": false,
-        "voice_id": "en-US-AnaNeural",
-        "voice_name": "Ana"
-      },
       "voice_id": "en-US-AriaNeural",
       "voice_name": "Aria",
       "volume": 1
@@ -135,10 +125,7 @@
         "hey daddy",
         "hey assistant"
       ],
-      "sensitivity": 0.5,
-      "wakeWord": {
-        "enabled": true
-      }
+      "sensitivity": 0.5
     }
   },
   "automation": {

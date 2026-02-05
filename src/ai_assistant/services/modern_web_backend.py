@@ -3115,9 +3115,14 @@ def handle_enhanced_chat(data):
         context = data.get('context', {})
         image_data = data.get('image', None)
         model = data.get('model')  # Get model preference
+        provider = data.get('provider')  # Get provider preference
         
         if message or image_data:
-            response = assistant.process_enhanced_chat(message, context, image_data, model_preference=model)
+            response = assistant.process_enhanced_chat(
+                message, context, image_data, 
+                model_preference=model, 
+                provider_preference=provider
+            )
             emit('enhanced_chat_response', {
                 'message': message,
                 'response': response['response'],

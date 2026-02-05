@@ -442,12 +442,14 @@
         let lastUserMessage = null;
         let lastAIMessageElement = null;
         let messageFeedback = {}; // Track feedback for each message
+        let currentModelPreference = null; // Track current model preference
         
         socket = io();
         
         socket.on('connect', function() {
         isConnected = true;
         console.log('Connected to server');
+        loadModelPreference(); // Load model preference on connect
         });
 
         socket.on('disconnect', function() {
@@ -482,7 +484,40 @@
         }
         });
         }
-
+        // Load model preference from backend
+        async function loadModelPreference() {
+        try {
+            const response = await fetch('/api/models/preference');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.preference) {
+                    currentModelPreference = data.preference;
+                    console.log('Loaded model preference:', currentModelPreference);
+                    updateModelDisplay();
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load model preference:', error);
+            currentModelPreference = {
+                preferred_model: 'gemini-2.0-flash-exp',
+                auto_route: true
+            };
+            updateModelDisplay();
+        }
+        }
+        
+        // Update model display in header
+        function updateModelDisplay() {
+        const modelSelector = document.querySelector('.model-selector-text');
+        if (modelSelector && currentModelPreference) {
+            const modelName = currentModelPreference.preferred_model;
+            let displayName = modelName;
+            if (modelName.includes('gpt-4')) displayName = 'GPT-4';
+            else if (modelName.includes('gpt-3.5')) displayName = 'GPT-3.5';
+            else if (modelName.includes('gemini')) displayName = 'Gemini 2.0';
+            modelSelector.textContent = displayName;
+        }
+        }
         // Setup event listeners
         function setupEventListeners() {
         const input = document.getElementById('chat-input');
@@ -538,11 +573,36 @@
         currentRequestId = 'req-' + Date.now();
         updateSendButton();
 
+        // Extract provider and model from preference
+        let provider = null;
+        let model = null;
+        
+        if (currentModelPreference && currentModelPreference.preferred_model) {
+            const preferredModel = currentModelPreference.preferred_model;
+            if (preferredModel.includes('gemini')) {
+                provider = 'gemini';
+                model = preferredModel;
+            } else if (preferredModel.includes('gpt')) {
+                provider = 'openai';
+                model = preferredModel;
+            } else if (preferredModel.includes('claude')) {
+                provider = 'anthropic';
+                model = preferredModel;
+            } else {
+                provider = 'gemini';
+                model = preferredModel;
+            }
+        }
+        
+        console.log(`Sending message with provider: ${provider}, model: ${model}`);
+
         socket.emit('enhanced_chat', {
         message: message,
         context: currentContext || {},
         image: selectedImage,
-        requestId: currentRequestId
+        requestId: currentRequestId,
+        provider: provider,
+        model: model
         });
 
         // Clear input and image

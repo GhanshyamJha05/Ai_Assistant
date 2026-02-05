@@ -129,10 +129,152 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
     const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama'>('gemini'); // Current AI provider
+    const [aiModel, setAIModel] = useState<string>(''); // Current AI model
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
+
+    // Fetch Settings on Mount to sync Provider/Model
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/settings/all');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.settings && data.settings.ai) {
+                        const aiSettings = data.settings.ai;
+                        if (aiSettings.defaultProvider) {
+                            setAIProviderState(aiSettings.defaultProvider);
+                            console.log(`🔄 Synced Provider from settings: ${aiSettings.defaultProvider}`);
+                        }
+                        if (aiSettings.defaultModel) {
+                            setAIModel(aiSettings.defaultModel);
+                            console.log(`🔄 Synced Model from settings: ${aiSettings.defaultModel}`);
+                        }
+
+                        // Sync AI Mode
+                        if (aiSettings.defaultProvider === 'ollama') {
+                            setAIMode('offline');
+                        } else {
+                            setAIMode('online');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to sync AI settings:", error);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    // ... (keep existing code) ...
+
+    const sendCommand = (command: string) => {
+        // Add user message to chat
+        addChatMessage(command, 'user');
+        addSystemLog('info', `Processing: ${command}`);
+
+        const useOfflineMode = aiMode === 'offline';
+        console.log(`🤖 AI Mode: ${aiMode} | Provider: ${aiProvider} | Model: ${aiModel}`);
+
+        if (socket && socket.connected) {
+            console.log('📤 Sending command via socket:', command);
+            socket.emit('command', {
+                command,
+                message: command,
+                offline_mode: useOfflineMode,
+                provider: aiProvider,
+                model: aiModel
+            });
+        } else {
+            // Fallback to API
+            fetch('http://127.0.0.1:5000/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command,
+                    offline_mode: useOfflineMode,
+                    provider: aiProvider,
+                    model: aiModel
+                }),
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    const response = data.response || data.message;
+                    addChatMessage(response, 'ai');
+
+                    // Speak the response if always-active mode
+                    if (alwaysActive) {
+                        speak(response, voiceLanguage);
+                    }
+                })
+                .catch((error) => {
+                    console.error('API call error:', error);
+                    const errorMsg = 'Error processing command. Please try again.';
+                    addChatMessage(errorMsg, 'ai');
+                    if (alwaysActive) {
+                        speak(errorMsg, voiceLanguage);
+                    }
+                });
+        }
+    };
+
+    // ... (keep existing code) ...
+
+    const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama') => {
+        console.log(`🔄 Switching AI provider to: ${provider}`);
+        setAIProviderState(provider);
+        // Reset model when provider changes (optional, or set to first available)
+        // setAIModel(''); 
+
+        // Update aiMode based on provider
+        if (provider === 'ollama') {
+            setAIMode('offline');
+            addSystemLog('info', '🤖 Switched to Ollama (Offline)');
+        } else {
+            setAIMode('online');
+            const providerName = provider === 'gemini' ? 'Gemini' : 'OpenAI';
+            addSystemLog('info', `🔷 Switched to ${providerName} (Online)`);
+        }
+    };
+
+    // Expose setAIModel
+    const setAIModelByName = (model: string) => {
+        console.log(`🔄 Switching AI model to: ${model}`);
+        setAIModel(model);
+    };
+
+
+
+    // ... (keep existing) ...
+    aiProvider,
+        setAIProvider,
+        // Add setAIModel if interface allows, currently interface DashboardContextType doesn't have it.
+        // I should also update the interface at the top of the file!
+        // For now, I'll just use the internal state for sendCommand
+        // But SettingsDetail needs to call proper setter. 
+        // I will add a method refreshSettings to re-fetch? Or just expose setAIModel?
+        // Let's rely on fetchSettings on mount for reload, AND manual update via setAIProvider.
+        // But setAIProvider checks settings? No.
+
+        // Let's add a sync method
+
+
+        // ...
+        // I need to update interface first.
+        // Wait, I can't update interface and implementation in one replace_file_content if they are far apart.
+        // The interface is lines 53-85. The implementation is 1368.
+
+        // I will first update the implementation of sendCommand and state initialization.
+        // Then I will update interface and expose sync function if needed.
+
+        // Actually, simpler: I'll just fetch settings on mount. User has to refresh page to apply settings to Context?
+        // No, user said "reload your browser page" in my instructions.
+        // So fetching on mount is sufficient for the "Restart + Refresh" workflow.
+
+        // I will only modify the implementation part now.
+
     const [requireWakeWord, setRequireWakeWord] = useState(false); // Require wake word in always-active mode
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state
     const [isProcessingCommand, setIsProcessingCommand] = useState(false); // Processing command after wake word
@@ -894,53 +1036,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         ]);
     };
 
-    const sendCommand = (command: string) => {
-        // Add user message to chat
-        addChatMessage(command, 'user');
-        addSystemLog('info', `Processing: ${command}`);
 
-        const useOfflineMode = aiMode === 'offline';
-        console.log(`🤖 AI Mode: ${aiMode} | Provider: ${aiProvider} (offline_mode: ${useOfflineMode})`);
-
-        if (socket && socket.connected) {
-            console.log('📤 Sending command via socket:', command);
-            socket.emit('command', {
-                command,
-                message: command,
-                offline_mode: useOfflineMode,
-                provider: aiProvider
-            });
-        } else {
-            // Fallback to API
-            fetch('http://127.0.0.1:5000/api/command', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    command,
-                    offline_mode: useOfflineMode,
-                    provider: aiProvider
-                }),
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    const response = data.response || data.message;
-                    addChatMessage(response, 'ai');
-
-                    // Speak the response if always-active mode
-                    if (alwaysActive) {
-                        speak(response, voiceLanguage);
-                    }
-                })
-                .catch((error) => {
-                    console.error('API call error:', error);
-                    const errorMsg = 'Error processing command. Please try again.';
-                    addChatMessage(errorMsg, 'ai');
-                    if (alwaysActive) {
-                        speak(errorMsg, voiceLanguage);
-                    }
-                });
-        }
-    };
 
     const setVoiceLanguage = (lang: string) => {
         console.log(`🌍 Changing language to: ${lang}`);
@@ -1149,20 +1245,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     // Set AI Provider: Gemini, OpenAI, or Ollama
-    const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama') => {
-        console.log(`🔄 Switching AI provider to: ${provider}`);
-        setAIProviderState(provider);
 
-        // Update aiMode based on provider
-        if (provider === 'ollama') {
-            setAIMode('offline');
-            addSystemLog('info', '🤖 Switched to Ollama (Offline)');
-        } else {
-            setAIMode('online');
-            const providerName = provider === 'gemini' ? 'Gemini' : 'OpenAI';
-            addSystemLog('info', `🔷 Switched to ${providerName} (Online)`);
-        }
-    };
 
 
     // Start Google Speech Recognition (online)

@@ -225,12 +225,14 @@ def handle_command(data):
                     learning_router.log_user_query(command_text, source=source)
                     learning_router.log_ai_response(command_text, response_text)
                 
-                # Emit response
+                # Emit response (safe_emit will catch any socket errors)
                 safe_emit('command_response', {
                     'success': True,
                     'response': response_text,
                     'command': command_text,
                     'source': f'external_ai_{provider_name}',
+                    'provider': provider_name,
+                    'model': model_name,
                     'timestamp': datetime.now().isoformat()
                 })
                 
