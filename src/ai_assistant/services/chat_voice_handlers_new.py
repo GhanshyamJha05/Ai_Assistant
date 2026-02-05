@@ -92,6 +92,17 @@ def handle_command(data):
             return
         
         print(f'📨 Command received ({source}): {command_text}')
+        print(f'🔍 DEBUG: Full Data Payload: {data}')  # Log entire payload to see if provider is sent
+        
+        # Define safe emit helper to catch Errno 22
+        def safe_emit(event, payload):
+            try:
+                emit(event, payload)
+            except OSError as e:
+                # Errno 22 often happens with socketio emit on windows if payload is too large or socket closed
+                print(f"⚠️ Socket emit error (ignored): {e}")
+            except Exception as e:
+                print(f"⚠️ General emit error: {e}")
         
         # ============================================
         # PRIORITY 1: Local Command Processing
@@ -135,7 +146,7 @@ def handle_command(data):
                     print(f'✅ [LOCAL TOOLS] {response_text[:100]}...')
                     
                     # Emit response
-                    emit('command_response', {
+                    safe_emit('command_response', {
                         'success': True,
                         'response': response_text,
                         'command': command_text,
@@ -166,6 +177,8 @@ def handle_command(data):
                 preferred_provider = data.get('provider')
                 preferred_model = data.get('model')
                 
+                print(f"🔧 Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
+
                 # Initialize Chat with user preference
                 chat = UnifiedChatInterface(
                     provider=preferred_provider,
@@ -177,6 +190,8 @@ def handle_command(data):
                 provider_name = chat.provider_name.lower()
                 model_name = chat.model
                 
+                print(f"ℹ️ Actual Provider: {provider_name}, Actual Model: {model_name}")
+
                 if 'openai' in provider_name or 'gpt' in model_name:
                     system_msg = (
                         "You are an AI assistant powered by OpenAI. "
@@ -186,7 +201,7 @@ def handle_command(data):
                     )
                 elif 'gemini' in provider_name or 'gemini' in model_name:
                     system_msg = (
-                        "You are an AI assistant powered by Google Gemini. "
+                        "You are YourDaddy Assistant, powered by Google Gemini. "
                         f"You are using the {model_name} model. "
                         "You can answer general knowledge questions, help with information, "
                         "and provide assistance."
@@ -211,7 +226,7 @@ def handle_command(data):
                     learning_router.log_ai_response(command_text, response_text)
                 
                 # Emit response
-                emit('command_response', {
+                safe_emit('command_response', {
                     'success': True,
                     'response': response_text,
                     'command': command_text,
@@ -223,6 +238,8 @@ def handle_command(data):
                 
             except Exception as llm_error:
                 print(f'❌ External AI error: {llm_error}')
+                # Don't return here, let it fall through to fallback if needed, or emit error silently
+                # But typically if AI fails we want to know, just not crash socket
         
         # ============================================
         # FALLBACK: Simple acknowledgment
@@ -230,7 +247,7 @@ def handle_command(data):
         if not response_text:
             response_text = f'I received your command: "{command_text}". Processing...'
             
-        emit('command_response', {
+        safe_emit('command_response', {
             'success': True,
             'response': response_text,
             'command': command_text,
@@ -238,15 +255,21 @@ def handle_command(data):
             'timestamp': datetime.now().isoformat()
         })
             
+    except OSError as e:
+         print(f"⚠️ Critical Socket/OS Error caught in handle_command: {e}")
+         # DO NOT EMIT TO USER, just log it. This prevents the "Error: [Errno 22]" chat message
     except Exception as e:
         print(f'❌ Command handling error: {e}')
         import traceback
         print(traceback.format_exc())
-        emit('command_response', {
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        })
+        
+        # Only emit operational errors, not low-level system errors
+        if "[Errno 22]" not in str(e):
+            safe_emit('command_response', {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            })
 
 def handle_voice_command(data):
     """Handle voice command specifically"""
