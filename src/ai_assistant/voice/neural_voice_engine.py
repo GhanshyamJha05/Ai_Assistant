@@ -119,20 +119,13 @@ class NeuralVoiceEngine:
         else:
             logger.warning("⚠️ Edge-TTS not available. Install: pip install edge-tts")
         
-        # Coqui TTS (offline, good quality)
+        # Coqui TTS (offline, good quality) - Lazy load to save startup time
+        self.coqui_available = False # Will check when needed
         if COQUI_AVAILABLE:
-            try:
-                device = "cuda" if self.gpu else "cpu"
-                logger.info(f"🚀 Loading Coqui TTS (device: {device})...")
-                # Lazy load to avoid startup delays
-                self.coqui_available = True
-                logger.info("✅ Coqui TTS available for offline synthesis")
-            except Exception as e:
-                logger.warning(f"⚠️ Coqui TTS initialization failed: {e}")
-                self.coqui_available = False
+             logger.debug("Sound engine: Coqui TTS library found (will load on-demand)")
         else:
-            logger.warning("⚠️ Coqui TTS not available. Install: pip install TTS")
-            self.coqui_available = False
+             # Only log debug, not warning, since we have other engines
+             logger.debug("Sound engine: Coqui TTS not installed (optional)")
         
         # pyttsx3 (fallback)
         if PYTTSX3_AVAILABLE:

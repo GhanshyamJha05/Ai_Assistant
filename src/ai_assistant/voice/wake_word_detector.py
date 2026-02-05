@@ -101,8 +101,8 @@ class SmartWakeWordDetector:
         
         try:
             config = Config()
-            config.set_string('-hmm', Path(__file__).parent.parent / 'models' / 'en-us')
-            config.set_string('-dict', Path(__file__).parent.parent / 'models' / 'en-us' / 'cmudict-en-us.dict')
+            config.set_string('-hmm', str(Path(__file__).parent.parent / 'models' / 'en-us'))
+            config.set_string('-dict', str(Path(__file__).parent.parent / 'models' / 'en-us' / 'cmudict-en-us.dict'))
             
             # Create decoder
             self.decoder = Decoder(config)
