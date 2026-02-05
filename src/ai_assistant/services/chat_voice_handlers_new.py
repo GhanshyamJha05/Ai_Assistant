@@ -162,8 +162,16 @@ def handle_command(data):
         # ============================================
         if LLM_PROVIDER_AVAILABLE and not used_local_tools:
             try:
-                # Initialize Chat
-                chat = UnifiedChatInterface(use_fallback=True)
+                # Extract provider/model preference from request
+                preferred_provider = data.get('provider')
+                preferred_model = data.get('model')
+                
+                # Initialize Chat with user preference
+                chat = UnifiedChatInterface(
+                    provider=preferred_provider,
+                    model=preferred_model,
+                    use_fallback=True
+                )
                 
                 # Set provider-specific system message
                 provider_name = chat.provider_name.lower()
