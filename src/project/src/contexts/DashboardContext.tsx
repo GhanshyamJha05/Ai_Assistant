@@ -1297,6 +1297,24 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setSelectedView(null);
     };
 
+    // Refs for accessing latest state in effects/cleanup
+    const chatMessagesRef = useRef<Message[]>([]);
+    const voiceCommandsRef = useRef<VoiceCommand[]>([]);
+    const currentSessionRef = useRef<ConversationSession | null>(null);
+
+    // Sync refs with state
+    useEffect(() => {
+        chatMessagesRef.current = chatMessages;
+    }, [chatMessages]);
+
+    useEffect(() => {
+        voiceCommandsRef.current = voiceCommands;
+    }, [voiceCommands]);
+
+    useEffect(() => {
+        currentSessionRef.current = currentSession;
+    }, [currentSession]);
+
     // Session management functions
     const loadSession = (sessionId: string) => {
         const session = conversationHistory.find(s => s.id === sessionId);
@@ -1325,32 +1343,50 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
     };
 
-    const saveCurrentSessionToHistory = () => {
-        if (!currentSession) return;
+    // Internal save function that can work with either passed state or latest state
+    const saveInternal = (session: ConversationSession | null, msgs: Message[], cmds: VoiceCommand[]) => {
+        if (!session) return;
+
+        // Don't save empty sessions
+        if (msgs.length === 0 && cmds.length === 0) return;
 
         const endTime = new Date();
         const duration = calculateDuration(sessionStartTimeRef.current, endTime);
-        const preview = chatMessages.length > 0 ? chatMessages[0].text : voiceCommands.length > 0 ? voiceCommands[0].command : '';
+        const preview = msgs.length > 0 ? msgs[0].text : cmds.length > 0 ? cmds[0].command : '';
 
         const sessionToSave: ConversationSession = {
-            ...currentSession,
+            ...session,
             endTime: endTime.toLocaleTimeString(),
             duration,
             preview: preview.substring(0, 100),
-            messages: [...chatMessages],
-            voiceCommands: [...voiceCommands],
-            messageCount: chatMessages.length + voiceCommands.length,
-            userMessageCount: chatMessages.filter(m => m.type === 'user').length + voiceCommands.length,
-            aiMessageCount: chatMessages.filter(m => m.type === 'ai').length,
-            voiceCount: voiceCommands.length,
+            messages: [...msgs],
+            voiceCommands: [...cmds],
+            messageCount: msgs.length + cmds.length,
+            userMessageCount: msgs.filter(m => m.type === 'user').length + cmds.length,
+            aiMessageCount: msgs.filter(m => m.type === 'ai').length,
+            voiceCount: cmds.length,
         };
 
         setConversationHistory(prev => {
-            const updated = [sessionToSave, ...prev];
+            // Check if this session ID already exists in history to update it instead of adding duplicate
+            const exists = prev.some(s => s.id === session.id);
+            let updated;
+
+            if (exists) {
+                updated = prev.map(s => s.id === session.id ? sessionToSave : s);
+            } else {
+                updated = [sessionToSave, ...prev];
+            }
+
             // Save to localStorage
             localStorage.setItem('conversationHistory', JSON.stringify(updated.slice(0, 50))); // Keep last 50
             return updated;
         });
+    };
+
+    const saveCurrentSessionToHistory = () => {
+        // Use refs if called from cleanup, otherwise use state (though refs are always safe here)
+        saveInternal(currentSessionRef.current, chatMessagesRef.current, voiceCommandsRef.current);
     };
 
     const calculateDuration = (start: Date, end: Date): string => {
@@ -1366,7 +1402,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         const startTime = new Date();
         sessionStartTimeRef.current = startTime;
 
-        setCurrentSession({
+        const newSession = {
             id: sessionId,
             startTime: startTime.toLocaleTimeString(),
             messageCount: 0,
@@ -1375,7 +1411,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             voiceCount: 0,
             messages: [],
             voiceCommands: [],
-        });
+        };
+
+        setCurrentSession(newSession);
+        // Initialize ref immediately for cleanup safety
+        currentSessionRef.current = newSession;
 
         // Load history from localStorage
         const stored = localStorage.getItem('conversationHistory');
@@ -1400,8 +1440,44 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         // Save current session before unload
         return () => {
-            if (chatMessages.length > 0 || voiceCommands.length > 0) {
-                saveCurrentSessionToHistory();
+            // USE REFS here to get the LATEST data at unmount time
+            const session = currentSessionRef.current;
+            const msgs = chatMessagesRef.current;
+            const cmds = voiceCommandsRef.current;
+
+            console.log('💾 Auto-saving session on unmount:', {
+                id: session?.id,
+                msgCount: msgs.length
+            });
+
+            if (session && (msgs.length > 0 || cmds.length > 0)) {
+                // Determine duration, preview etc.
+                const endTime = new Date();
+                const duration = `${Math.floor((endTime.getTime() - startTime.getTime()) / 60000)}m ${Math.floor(((endTime.getTime() - startTime.getTime()) % 60000) / 1000)}s`;
+                const preview = msgs.length > 0 ? msgs[0].text : cmds.length > 0 ? cmds[0].command : '';
+
+                const sessionToSave: ConversationSession = {
+                    ...session,
+                    endTime: endTime.toLocaleTimeString(),
+                    duration,
+                    preview: preview.substring(0, 100),
+                    messages: [...msgs],
+                    voiceCommands: [...cmds],
+                    messageCount: msgs.length + cmds.length,
+                    userMessageCount: msgs.filter(m => m.type === 'user').length + cmds.length,
+                    aiMessageCount: msgs.filter(m => m.type === 'ai').length,
+                    voiceCount: cmds.length,
+                };
+
+                // Directly update localStorage since state updates won't trigger re-render on unmount
+                const storedHistory = localStorage.getItem('conversationHistory');
+                let history = storedHistory ? JSON.parse(storedHistory) : [];
+
+                // Add to history
+                history = [sessionToSave, ...history].slice(0, 50);
+                localStorage.setItem('conversationHistory', JSON.stringify(history));
+
+                console.log('✅ Session saved to localStorage');
             }
         };
     }, []);
