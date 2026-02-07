@@ -158,8 +158,8 @@ def handle_command(data):
                     
                     # Log learning
                     if learning_router:
-                        learning_router.log_user_query(command_text, source=source)
-                        learning_router.log_ai_response(command_text, response_text)
+                        learning_router.route_conversation(speaker='user', content=command_text, category='command', input_mode=source)
+                        learning_router.route_conversation(speaker='assistant', content=response_text, category='response', input_mode=source)
                     
                     return  # Successfully handled
                     
@@ -224,8 +224,8 @@ def handle_command(data):
                 
                 # Log learning
                 if learning_router:
-                    learning_router.log_user_query(command_text, source=source)
-                    learning_router.log_ai_response(command_text, response_text)
+                    learning_router.route_conversation(speaker='user', content=command_text, category='command', input_mode=source)
+                    learning_router.route_conversation(speaker='assistant', content=response_text, category='response', input_mode=source)
                 
                 # Emit response (safe_emit will catch any socket errors)
                 safe_emit('command_response', {

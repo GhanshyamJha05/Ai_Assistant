@@ -114,8 +114,8 @@ const AI_PROVIDERS = [
 ];
 
 const AI_MODELS: Record<string, string[]> = {
-  gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'],
-  openai: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  gemini: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'],
+  openai: ['gpt-4o-mini', 'gpt-3.5-turbo', 'gpt-4o'],
   ollama: ['llama3.2', 'qwen2.5-coder:3b', 'mistral', 'gemma2']
 };
 
@@ -239,6 +239,15 @@ const SettingsDetail = () => {
       const selectedVoice = availableVoices.find((v: any) => v.id === value);
       if (selectedVoice) {
         current['voice_name'] = selectedVoice.name;
+      }
+    }
+
+    // If defaultProvider changes, auto-select first model
+    if (category === 'ai' && path.length === 1 && path[0] === 'defaultProvider') {
+      const newProvider = value as string;
+      const availableModels = AI_MODELS[newProvider] || [];
+      if (availableModels.length > 0) {
+        current['defaultModel'] = availableModels[0];
       }
     }
 
@@ -388,7 +397,88 @@ const SettingsDetail = () => {
           </div>
         )}
 
-        {settings && settings[activeTab as keyof AppSettings] && activeTab !== 'voice' && (
+        {/* Special layout for AI tab */}
+        {activeTab === 'ai' && settings?.ai && (
+          <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg">
+            <div className="p-6 border-b border-[#2A2D35] flex justify-between items-center">
+              <h4 className="text-xl font-semibold text-white">AI Configuration</h4>
+              <button
+                onClick={() => saveSettings('ai')}
+                disabled={saving}
+                className="px-6 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <Save className="w-4 h-4" />}
+                <span>Save Changes</span>
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-3 gap-4">
+              {/* Column 1: Core Settings */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#3B82F6] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <Brain className="w-4 h-4" />
+                  Core Settings
+                </h5>
+                <div className="space-y-3">
+                  {/* Manually render top-level fields */}
+                  {['defaultProvider', 'defaultModel', 'temperature', 'maxTokens', 'contextWindow'].map(key => {
+                    const value = settings.ai[key as keyof AISettings];
+                    // Create a mini data object for the renderer to handle just this field
+                    const fieldData = { [key]: value };
+
+                    return (
+                      <RecursiveFormRenderer
+                        key={key}
+                        data={fieldData}
+                        onChange={(path, val) => handleSettingChange('ai', path, val)}
+                        path={[]} // Path is relative to the data passed, so empty here
+                        rootData={settings.ai} // Pass full AI settings as root for dependency lookups (like provider->model)
+                        depth={1}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Column 2: Safety Settings */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#10B981] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <Shield className="w-4 h-4" />
+                  Safety Settings
+                </h5>
+                <div className="space-y-3">
+                  <RecursiveFormRenderer
+                    data={settings.ai.safetySettings}
+                    onChange={(path, val) => handleSettingChange('ai', ['safetySettings', ...path], val)}
+                    path={['safetySettings']}
+                    rootData={settings.ai}
+                    depth={1}
+                  />
+                </div>
+              </div>
+
+              {/* Column 3: Local LLM */}
+              <div className="border border-[#3A3D45] p-4 rounded-lg bg-[#252830]/50">
+                <h5 className="text-[#8B5CF6] font-medium mb-3 flex items-center gap-2 text-sm">
+                  <HardDrive className="w-4 h-4" />
+                  Local LLM
+                </h5>
+                <div className="space-y-3">
+                  <RecursiveFormRenderer
+                    data={settings.ai.localLlm}
+                    onChange={(path, val) => handleSettingChange('ai', ['localLlm', ...path], val)}
+                    path={['localLlm']}
+                    rootData={settings.ai}
+                    depth={1}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Default layout for other tabs */}
+        {settings && settings[activeTab as keyof AppSettings] && activeTab !== 'voice' && activeTab !== 'ai' && (
           <EditableSection
             key={activeTab} // Force re-render on tab change to reset path context
             title={tabs.find(t => t.id === activeTab)?.label || ''}

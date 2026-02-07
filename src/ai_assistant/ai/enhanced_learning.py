@@ -482,7 +482,7 @@ class PersonalKnowledgeGraph:
     
     def load_graph(self):
         """Load knowledge graph from database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         cursor = conn.cursor()
         
         try:
@@ -513,7 +513,7 @@ class PersonalKnowledgeGraph:
         """Add a new knowledge node"""
         node_id = f"{node_type}_{hash(content) % 10000:04d}"
         
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -532,7 +532,7 @@ class PersonalKnowledgeGraph:
         """Add a relationship between nodes"""
         edge_id = f"edge_{hash(source_id + target_id + relationship_type) % 10000:04d}"
         
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         cursor = conn.cursor()
         
         cursor.execute('''

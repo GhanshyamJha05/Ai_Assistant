@@ -116,7 +116,7 @@ class AdvancedConversationalAI:
         
         # Initialize VLM Provider
         try:
-            self.vision_provider = GeminiVisionProvider(model_name="gemini-2.0-flash-exp")
+            self.vision_provider = GeminiVisionProvider(model_name="gemini-1.5-flash")
             print("✅ Vision Provider initialized (Gemini)")
         except Exception as e:
             print(f"⚠️ Vision Provider init failed: {e}")
@@ -152,7 +152,7 @@ class AdvancedConversationalAI:
             # Try to create a unified chat interface with automatic provider detection
             self.llm_provider = UnifiedChatInterface(
                 provider='gemini',
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 use_fallback=True
             )
             
