@@ -247,33 +247,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
 
-    // ... (keep existing) ...
-    aiProvider,
-        setAIProvider,
-        // Add setAIModel if interface allows, currently interface DashboardContextType doesn't have it.
-        // I should also update the interface at the top of the file!
-        // For now, I'll just use the internal state for sendCommand
-        // But SettingsDetail needs to call proper setter. 
-        // I will add a method refreshSettings to re-fetch? Or just expose setAIModel?
-        // Let's rely on fetchSettings on mount for reload, AND manual update via setAIProvider.
-        // But setAIProvider checks settings? No.
-
-        // Let's add a sync method
-
-
-        // ...
-        // I need to update interface first.
-        // Wait, I can't update interface and implementation in one replace_file_content if they are far apart.
-        // The interface is lines 53-85. The implementation is 1368.
-
-        // I will first update the implementation of sendCommand and state initialization.
-        // Then I will update interface and expose sync function if needed.
-
-        // Actually, simpler: I'll just fetch settings on mount. User has to refresh page to apply settings to Context?
-        // No, user said "reload your browser page" in my instructions.
-        // So fetching on mount is sufficient for the "Restart + Refresh" workflow.
-
-        // I will only modify the implementation part now.
 
     const [requireWakeWord, setRequireWakeWord] = useState(false); // Require wake word in always-active mode
     const [wakeWordDetected, setWakeWordDetected] = useState(false); // Wake word detection state

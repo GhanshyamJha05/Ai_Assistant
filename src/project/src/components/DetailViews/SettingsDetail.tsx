@@ -351,7 +351,7 @@ const SettingsDetail = () => {
                 <div className="space-y-3">
                   <RecursiveFormRenderer
                     data={settings.voice.stt}
-                    onChange={(path, val) => handleSettingChange('voice', ['stt', ...path], val)}
+                    onChange={(path, val) => handleSettingChange('voice', path, val)}
                     path={['stt']}
                     rootData={settings.voice}
                     depth={1}
@@ -368,7 +368,7 @@ const SettingsDetail = () => {
                 <div className="space-y-3">
                   <RecursiveFormRenderer
                     data={settings.voice.tts}
-                    onChange={(path, val) => handleSettingChange('voice', ['tts', ...path], val)}
+                    onChange={(path, val) => handleSettingChange('voice', path, val)}
                     path={['tts']}
                     rootData={settings.voice}
                     depth={1}
@@ -385,7 +385,7 @@ const SettingsDetail = () => {
                 <div className="space-y-3">
                   <RecursiveFormRenderer
                     data={settings.voice.wakeWord}
-                    onChange={(path, val) => handleSettingChange('voice', ['wakeWord', ...path], val)}
+                    onChange={(path, val) => handleSettingChange('voice', path, val)}
                     path={['wakeWord']}
                     rootData={settings.voice}
                     depth={1}

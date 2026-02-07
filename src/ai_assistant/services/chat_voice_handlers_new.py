@@ -133,7 +133,9 @@ def handle_command(data):
                 conv_ai = AdvancedConversationalAI(automation_callback=automation_callback)
                 
                 # Process through conversational AI (has intent detection built-in)
-                response_text = conv_ai.process_message(command_text)
+                provider = data.get('provider')
+                model = data.get('model')
+                response_text = conv_ai.process_message(command_text, provider=provider, model=model)
                 
                 # Check if it actually executed something or just returned generic response
                 if response_text and not any(phrase in response_text.lower() for phrase in [

@@ -20,9 +20,12 @@ import sqlite3
 import os
 import re
 import webbrowser
-import subprocess
-from ai_assistant.modules.youtube_ops import youtube_downloader
 from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
+try:
+    from ai_assistant.modules.intent_router import IntentRouter
+except ImportError:
+    IntentRouter = None
+
 try:
     from PIL import ImageGrab
 except ImportError:
@@ -118,6 +121,18 @@ class AdvancedConversationalAI:
         except Exception as e:
             print(f"⚠️ Vision Provider init failed: {e}")
             self.vision_provider = None
+
+        # Initialize Semantic Intent Router
+        try:
+            if IntentRouter:
+                self.intent_router = IntentRouter()
+                print("✅ Semantic Intent Router initialized")
+            else:
+                self.intent_router = None
+                print("⚠️ IntentRouter module not found")
+        except Exception as e:
+            print(f"⚠️ Intent Router init failed: {e}")
+            self.intent_router = None
 
     
     def _init_llm_provider(self):
@@ -514,7 +529,7 @@ class AdvancedConversationalAI:
             except Exception as e:
                 print(f"⚠️ Failed to save training data: {e}")
     
-    def process_message(self, message: str, role: str = "user") -> str:
+    def process_message(self, message: str, role: str = "user", provider: str = None, model: str = None) -> str:
         """Process a message and generate an intelligent response with REAL execution."""
         try:
             # Add message to conversation
@@ -567,7 +582,7 @@ class AdvancedConversationalAI:
                         # But prevent "I can help you with..." generic responses for fragments.
                         
                         # Safe fallback:
-                        chat_res = self._generate_contextual_response(part)
+                        chat_res = self._generate_contextual_response(part, provider=provider, model=model)
                         if chat_res:
                              results.append(chat_res)
 
@@ -612,7 +627,7 @@ class AdvancedConversationalAI:
                     return "🤔 I can sense you want me to do something! Could you be more specific? Here are some examples:\n\n📱 'open chrome' - Opens Google Chrome\n🎵 'play music' - Plays music on YouTube\n🔍 'search for python' - Searches Google\n📝 'create a document' - Opens Word\n\nWhat exactly would you like me to do?"
             
             # Default: Generate contextual response with LLM
-            response = self._generate_contextual_response(message)
+            response = self._generate_contextual_response(message, provider, model)
             
             # Save all conversational responses to training data
             if self.feedback_system and role == "user":
@@ -720,6 +735,24 @@ class AdvancedConversationalAI:
             # e.g. "I can see you didn't open chrome" should NOT trigger "open chrome"
             words = clean_query.split()
             first_few_words = words[:4] if len(words) > 4 else words
+            
+            # --- SEMANTIC ROUTING LAYER ---
+            if self.intent_router:
+                route, score = self.intent_router.determine_intent(query)
+                if route:
+                    print(f"🧠 Semantic Route: {route} (Confidence: {score})")
+                    if route == 'vision':
+                        return self._execute_vision_command(query, clean_query)
+                    elif route == 'open':
+                         return self._execute_open_command(query, clean_query)
+                    elif route == 'close':
+                        return self._execute_close_command(query, clean_query)
+                    elif route == 'search':
+                        return self._execute_search_command(query, clean_query)
+                    elif route == 'play':
+                         return self._execute_play_command(query, clean_query)
+            # ------------------------------
+
             
             # PRIORITY 1: System/Settings commands (more specific than generic open)
             if ('settings' in clean_query or 'control panel' in clean_query or \
@@ -907,7 +940,9 @@ class AdvancedConversationalAI:
                 url = 'https://' + url.replace('www.', '')
             try:
                 webbrowser.open(url)
-                return f"✅ Opening {url} in your browser"
+                webbrowser.open(url)
+                return self._format_success(f"✅ Opening {url} in your browser", f"open {url}")
+
             except Exception as e:
                 return f"❌ Could not open website: {str(e)}"
         
@@ -928,14 +963,18 @@ class AdvancedConversationalAI:
             if target.startswith('http'):
                 try:
                     webbrowser.open(target)
-                    return f"✅ Opening {app_name.title()}"
+                    webbrowser.open(target)
+                    return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+
                 except Exception as e:
                     return f"❌ Could not open: {str(e)}"
             
             # Otherwise it's an executable
             try:
                 subprocess.Popen(target, shell=True)
-                return f"✅ Opening {app_name.title()}"
+                subprocess.Popen(target, shell=True)
+                return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+
             except:
                 pass  # Try automation callback below
         # Last resort: try as-is
@@ -945,7 +984,9 @@ class AdvancedConversationalAI:
             else:
                 app_name_exe = app_name
             subprocess.Popen(app_name_exe, shell=True)
-            return f"✅ Opening {app_name.title()}"
+            subprocess.Popen(app_name_exe, shell=True)
+            return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+
         except:
             return f"❌ Could not find application '{app_name}'. Try being more specific or check if it's installed."
     
@@ -1225,13 +1266,11 @@ class AdvancedConversationalAI:
 
         try:
             # 1. Capture Screen
-            # TODO: Minimize chat window if possible? For now, we capture as is.
             screenshot = ImageGrab.grab()
             
             # 2. Refine Prompt
-            # Remove trigger words to get the actual question
             prompt = query_lower
-            for word in ['look', 'at', 'this', 'screen', 'dekho', 'scan', 'check', 'my', 'what', 'is', 'on', 'the', 'kya', 'hai', 'ye']:
+            for word in ['look', 'at', 'this', 'screen', 'dekho', 'scan', 'check', 'my', 'what', 'is', 'on', 'the', 'kya', 'hai', 'ye', 'take', 'screenshot', 'capture', 'taskbar']:
                  prompt = prompt.replace(word, '')
             prompt = prompt.strip()
             
@@ -1247,6 +1286,34 @@ class AdvancedConversationalAI:
         except Exception as e:
             return f"❌ Vision verification failed: {str(e)}"
 
+    def _verify_task_completion(self, original_command: str) -> str:
+        """Wait and verify task completion using VLM."""
+        if not self.vision_provider or not ImageGrab: return ""
+        
+        target_app = original_command.split(' ', 1)[1] if ' ' in original_command else original_command
+        if len(target_app) < 2: return ""
+
+        try:
+            # 1. Wait for action (2s)
+            time.sleep(2) 
+            
+            # 2. Capture
+            screenshot = ImageGrab.grab()
+            
+            # 3. Ask VLM
+            prompt = f"I just executed command: '{original_command}'. Check if '{target_app}' is visible/open/active on the screen. Reply with '✅ Verified' or '❌ Issue' and a very short reason."
+            
+            res = self.vision_provider.analyze_image(screenshot, prompt)
+            return f"\n\n[Vision Audit]: {res.text}"
+        except:
+             return ""
+
+    def _format_success(self, message: str, command: str) -> str:
+        """Helper to append verification to success message."""
+        verify = self._verify_task_completion(command)
+        return f"{message}{verify}"
+
+
     
     def _process_command_query(self, query: str) -> str:
         """Process command-based queries."""
@@ -1257,12 +1324,36 @@ class AdvancedConversationalAI:
         
         return f"I can help execute that command. You asked: '{query}'"
     
-    def _generate_contextual_response(self, message: str) -> str:
+    def _generate_contextual_response(self, message: str, provider: str = None, model: str = None) -> str:
         """Generate a contextual response using LLM or fallback to rule-based."""
         message_lower = message.lower().strip()
         
+        # Determine which provider to use
+        active_provider = self.llm_provider
+        
+        # Dynamic Switching if requested
+        if provider and active_provider:
+             # If requested provider is different from current
+             current_name = active_provider.provider_name.lower() if hasattr(active_provider, 'provider_name') else ''
+             if provider.lower() not in current_name:
+                  try:
+                       print(f"🔄 Temporarily switching LLM: {current_name} -> {provider}")
+                       from ai_assistant.modules.llm_provider import UnifiedChatInterface
+                       # Create temp provider
+                       active_provider = UnifiedChatInterface(provider=provider, model=model, use_fallback=True)
+                       
+                       # Add Identity System Message
+                       if 'openai' in provider.lower():
+                            active_provider.add_system_message("You are an AI assistant powered by OpenAI.")
+                       elif 'gemini' in provider.lower():
+                            active_provider.add_system_message("You are YourDaddy, powered by Google Gemini.")
+                            
+                  except Exception as e:
+                       print(f"⚠️ Failed to switch provider: {e}")
+                       active_provider = self.llm_provider # Fallback to default
+
         # FIRST: Try to use the LLM provider for real-time AI responses
-        if self.llm_provider:
+        if active_provider:
             try:
                 # Build conversation context for the LLM
                 conversation_context = ""
@@ -1278,7 +1369,7 @@ class AdvancedConversationalAI:
                 
                 # Generate response using LLM
                 print(f"🤖 Generating AI response for: {message[:50]}...")
-                response = self.llm_provider.chat(message, stream=False)
+                response = active_provider.chat(message, stream=False)
                 
                 print(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
                 print(f"DEBUG: Response content: {str(response)[:100]}")
