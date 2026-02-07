@@ -647,10 +647,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) => {
-                    console.log('🔘 Toggle clicked:', { key, checked: e.target.checked, currentPath });
-                    onChange(currentPath, e.target.checked);
-                  }}
+                  onChange={(e) => onChange(currentPath, e.target.checked)}
                   className="peer sr-only pointer-events-auto"
                 />
                 <div className={`w-10 h-6 rounded-full transition-colors relative ${value ? 'bg-[#3B82F6]' : 'bg-[#1F2228]'} border border-[#3A3D45]`}>
