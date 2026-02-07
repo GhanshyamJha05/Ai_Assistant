@@ -662,8 +662,8 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
 
         // Special Handling: AI Model Dropdown (Top Level)
         if (key === 'defaultModel') {
-          // Look up 'defaultProvider' in the CURRENT data object (siblings)
-          const currentProvider = data['defaultProvider'] || 'google';
+          // Look up 'defaultProvider' in the CURRENT data object (siblings) OR rootData
+          const currentProvider = data['defaultProvider'] || (rootData && rootData['defaultProvider']) || 'google';
           const availableModels = AI_MODELS[currentProvider] || [];
 
           return (
