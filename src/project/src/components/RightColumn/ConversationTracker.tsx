@@ -15,7 +15,7 @@ interface ConversationMessage {
 const ConversationTracker = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const { chatMessages, voiceCommands, currentSession } = useDashboard();
+  const { chatMessages, voiceCommands, currentSession, startNewSession } = useDashboard();
 
   // Merge chat and voice into a unified conversation
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
@@ -70,15 +70,26 @@ const ConversationTracker = () => {
             <MessageSquare className="w-4 h-4 text-[#3B82F6]" />
             <h3 className="text-sm font-medium text-white">Ongoing Conversation</h3>
           </div>
-          <motion.button
-            onClick={() => setShowHistory(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan rounded-lg hover:bg-neon-cyan/30 transition-all text-xs font-medium"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <History className="w-3.5 h-3.5" />
-            History
-          </motion.button>
+          <div className="flex gap-2">
+            <motion.button
+              onClick={() => startNewSession?.()}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3B82F6]/20 text-[#3B82F6] rounded-lg hover:bg-[#3B82F6]/30 transition-all text-xs font-medium"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="text-lg leading-none">+</span>
+              New
+            </motion.button>
+            <motion.button
+              onClick={() => setShowHistory(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan rounded-lg hover:bg-neon-cyan/30 transition-all text-xs font-medium"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <History className="w-3.5 h-3.5" />
+              History
+            </motion.button>
+          </div>
         </div>
 
         {/* Session Info */}
@@ -117,8 +128,8 @@ const ConversationTracker = () => {
               >
                 <div
                   className={`max-w-[85%] rounded-lg p-3 ${message.type === 'user'
-                      ? 'bg-neon-cyan/20 border border-neon-cyan/30'
-                      : 'bg-[#1F2228] border border-[#2A2D35]'
+                    ? 'bg-neon-cyan/20 border border-neon-cyan/30'
+                    : 'bg-[#1F2228] border border-[#2A2D35]'
                     }`}
                 >
                   {/* Message Header */}

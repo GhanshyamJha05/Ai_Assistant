@@ -82,6 +82,7 @@ interface DashboardContextType {
     conversationHistory: ConversationSession[];
     loadSession?: (sessionId: string) => void;
     deleteSession?: (sessionId: string) => void;
+    startNewSession?: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -313,6 +314,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         newSocket.on('log_update', (log: any) => {
             addSystemLog(log.type || 'info', log.message);
+        });
+
+        newSocket.on('learning_stats_update', (stats: any) => {
+            setLearningStats({
+                database: stats.database || '--',
+                systems: stats.systems || '--',
+                conversations: stats.conversations || '--'
+            });
         });
 
         // Handle voice command responses with talkback
@@ -1396,6 +1405,44 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         return `${minutes}m ${seconds}s`;
     };
 
+    const startNewSession = () => {
+        // Save status of current session before resetting
+        if (currentSession && (chatMessages.length > 0 || voiceCommands.length > 0)) {
+            saveCurrentSessionToHistory();
+        }
+
+        // Create new session
+        const sessionId = `session_${Date.now()}`;
+        const startTime = new Date();
+        sessionStartTimeRef.current = startTime;
+
+        const newSession = {
+            id: sessionId,
+            startTime: startTime.toLocaleTimeString(),
+            messageCount: 0,
+            userMessageCount: 0,
+            aiMessageCount: 0,
+            voiceCount: 0,
+            messages: [],
+            voiceCommands: [],
+        };
+
+        // Reset state
+        setChatMessages([]);
+        setVoiceCommands([]);
+        setCurrentSession(newSession);
+
+        // Update refs
+        chatMessagesRef.current = [];
+        voiceCommandsRef.current = [];
+        currentSessionRef.current = newSession;
+
+        // Play greeting for new session
+        const greeting = "Ready for a new session, Sir.";
+        addChatMessage(greeting, 'ai');
+        speak(greeting, 'en-US');
+    };
+
     // Initialize current session on mount
     useEffect(() => {
         const sessionId = `session_${Date.now()}`;
@@ -1528,6 +1575,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         conversationHistory,
         loadSession,
         deleteSession,
+        startNewSession,
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
