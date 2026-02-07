@@ -209,12 +209,7 @@ const SettingsDetail = () => {
 
   // Helper to update state deeply
   const handleSettingChange = (category: string, path: string[], value: any) => {
-    console.log('🔧 handleSettingChange called:', { category, path, value });
-
-    if (!settings) {
-      console.log('❌ No settings available');
-      return;
-    }
+    if (!settings) return;
 
     // Deep clone entire state
     const newState = JSON.parse(JSON.stringify(settings));
@@ -226,7 +221,6 @@ const SettingsDetail = () => {
     if (path.length === 0) {
       newState[category] = value;
       setSettings(newState);
-      console.log('✅ Updated entire category:', category);
       return;
     }
 
@@ -245,11 +239,9 @@ const SettingsDetail = () => {
       const selectedVoice = availableVoices.find((v: any) => v.id === value);
       if (selectedVoice) {
         current['voice_name'] = selectedVoice.name;
-        console.log('✅ Auto-updated voice_name to:', selectedVoice.name);
       }
     }
 
-    console.log('✅ Dispatching new state:', newState);
     // Dispatch the new state (useReducer will deep clone it again)
     setSettings(newState);
   };
