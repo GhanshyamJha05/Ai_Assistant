@@ -135,14 +135,15 @@ class LearningDataRouter:
                 self.current_session_id = datetime.now().strftime("%Y%m%d_%H")
             
             # Add behavior data
+            # Add behavior data
             self.behavior_clusterer.add_session(
                 session_id=self.current_session_id,
                 user_id="default_user",
-                session_data=[{
+                session_data={
                     'action': content[:50],
                     'category': category,
                     'importance': importance
-                }]
+                }
             )
         except Exception as e:
             print(f"Behavior clustering error: {e}")
@@ -151,9 +152,16 @@ class LearningDataRouter:
         """Route to conversation clustering"""
         try:
             # Group last 5 messages
+            # Group last 5 messages
             if len(self.conversation_history) >= 5:
                 recent = self.conversation_history[-5:]
-                messages = [m['content'] for m in recent]
+                # Convert to format expected by clusterer (list of dicts with role/content)
+                messages = []
+                for m in recent:
+                    messages.append({
+                        'role': m['speaker'],
+                        'content': m['content']
+                    })
                 
                 self.conversation_clusterer.add_conversation(
                     conversation_id=f"conv_{len(self.conversation_history)//5}",
@@ -166,12 +174,12 @@ class LearningDataRouter:
     def _route_to_command_sequences(self, content: str):
         """Route to command sequence learner"""
         try:
-            if self.last_command:
-                # Learn transition from last command to current
-                self.command_sequences.add_transition(
-                    self.last_command[:30],
-                    content[:30]
-                )
+            # Record command in sequence (handles transitions internally)
+            self.command_sequences.record_command(
+                command=content[:50],
+                context=None,
+                user_id="default_user"
+            )
             self.last_command = content
         except Exception as e:
             print(f"Command sequences error: {e}")
@@ -179,10 +187,12 @@ class LearningDataRouter:
     def _route_to_command_predictor(self, content: str, success: bool):
         """Route to command success predictor"""
         try:
-            self.command_predictor.record_command(
+            # Use record_execution instead of record_command
+            self.command_predictor.record_execution(
                 command=content[:50],
                 success=success,
-                context="default"
+                context=None,
+                predicted_success=None
             )
         except Exception as e:
             print(f"Command predictor error: {e}")
@@ -196,11 +206,13 @@ class LearningDataRouter:
                 context_text = " ".join([m['content'][:30] for m in recent])
                 
                 if speaker == 'user':
-                    self.context_generator.add_context(
-                        query=content[:50],
-                        context=context_text,
-                        response="pending",
-                        user_id="default_user"
+                    # Use update_context
+                    self.context_generator.update_context(
+                        user_message=content[:50],
+                        context_data={
+                            'previous_context': context_text,
+                            'Speaker': 'user'
+                        }
                     )
         except Exception as e:
             print(f"Context generator error: {e}")
@@ -208,10 +220,10 @@ class LearningDataRouter:
     def _route_to_smart_commands(self, content: str, category: str, success: bool):
         """Route to smart command predictor"""
         try:
-            self.smart_commands.add_command_example(
-                user_id="default_user",
+            # Use log_command
+            self.smart_commands.log_command(
                 command=content[:50],
-                context=category,
+                context={'category': category}, 
                 success=success
             )
         except Exception as e:
