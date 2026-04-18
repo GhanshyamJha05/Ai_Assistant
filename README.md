@@ -199,7 +199,7 @@ python start_backend.bat  # Windows
 python ai_assistant/services/modern_web_backend.py
 
 # Start React frontend (in new terminal)
-cd project
+cd src/project
 npm install
 npm run dev
 
@@ -231,12 +231,12 @@ Your React frontend now works as a **Progressive Web App (PWA)** - install it on
 
 **Windows Quick Start:**
 ```bash
-start_react_mobile.bat  # One-click start!
+scripts/launchers/start_react_mobile.bat  # One-click start!
 ```
 
 **Manual Start:**
 ```bash
-cd project
+cd src/project
 npm install  # First time only
 npm run dev  # Starts on network: http://YOUR_IP:5173
 ```
@@ -255,7 +255,7 @@ npm run dev  # Starts on network: http://YOUR_IP:5173
 - ✅ **Network status indicator** - see when offline
 - ✅ **iOS + Android** - works on all mobile browsers
 
-📖 **Detailed Guide:** [project/MOBILE_README.md](project/MOBILE_README.md)
+📖 **Detailed Guide:** [src/project/MOBILE_README.md](src/project/MOBILE_README.md)
 📋 **Technical Summary:** [REACT_MOBILE_SUMMARY.md](REACT_MOBILE_SUMMARY.md)
 
 ---
@@ -320,14 +320,14 @@ Crucially, these two backends **operate independently**. The main Flask applicat
 ┌────▼──────────┐ ┌──────▼──────────────┐ ┌──────────▼───────────┐
 │ React + Vite  │ │ Flask + SocketIO    │ │  FastAPI (Uvicorn)   │
 │  (Frontend)   │ │ (User-Facing Backend) │ │ (Learning & Analytics │
-│ (project/)    │ │(modern_web_backend.py)│ │         API)         │
+│ (src/project/)│ │(modern_web_backend.py)│ │         API)         │
 └──────┬────────┘ └──────────┬──────────┘ │ (learning_api.py)    │
        │                      │            └──────────┬───────────┘
        └───────────┬──────────┘                       │
                    |                                  |
            ┌───────▼──────────────────────────────────▼────────┐
            │     Core AI / ML Systems (Shared Python Library)    │
-           │           (27+ Learning Modules in /ai_assistant/ai) │
+           │        (27+ Learning Modules in src/ai_assistant/ai) │
            └──────────────────────────┬──────────────────────────┘
                                       │
                  ┌────────────────────┴────────────────────┐
@@ -636,167 +636,52 @@ curl -X POST http://localhost:8000/api/voice/recognize \
 ```
 assitant/
 ├── main.py                          # Main entry point with interface selection
-├── pyproject.toml                   # Project metadata and configuration
-├── requirements.txt                 # Python dependencies
-├── pytest.ini                       # Testing configuration
-├── api_keys.json                    # API keys (gitignored)
-├── start_backend.bat                # Quick start backend (Windows)
-├── check_systems_status.py          # System status checker
-├── view_feedback.py                 # View learning feedback
+├── check_deps.py                    # Dependency checker
+├── modern_web_backend.py            # Local backend entry
+├── test_voice_enhancement.py        # Voice testing script
+├── fix_syntax.py                    # Syntax fixing utility
 │
-├── ai_assistant/                    # Main package
-│   ├── __init__.py                  # Package initialization
+├── src/                             # Main Source Code Directory
+│   ├── ai_assistant/                # Core AI logic package
+│   │   ├── ai/                      # Real-time LLM operations
+│   │   ├── automation/              # Windows and software automation
+│   │   ├── core/                    # Core configs
+│   │   ├── integrations/            # 3rd party APIs (Spotify, calendar, etc.)
+│   │   ├── modules/                 # System modules
+│   │   ├── voice/                   # Voice recognition and synthesis
+│   │   ├── vision/                  # Vision API utilities
+│   │   └── workflow/                # Multi-step tasks
 │   │
-│   ├── ai/                          # AI & Machine Learning
-│   │   ├── conversational_ai.py     # Main conversation engine
-│   │   ├── llm_provider.py          # LLM abstraction layer
-│   │   ├── memory.py                # Context and memory management
-│   │   ├── advanced_feedback_learning.py  # Adaptive learning system
-│   │   ├── graph_neural_networks.py # GNN-based learning
-│   │   ├── intent_classification.py # Intent understanding
-│   │   └── knowledge_graph.py       # Relationship mapping
+│   ├── project/                     # Frontend React UI
+│   │   ├── src/                     # React components
+│   │   ├── public/                  # Static web assets
+│   │   ├── package.json             # NPM dependencies
+│   │   └── vite.config.ts           # Vite build config
 │   │
-│   ├── voice/                       # Voice Processing
-│   │   ├── advanced_speech_recognizer.py  # ASR (Whisper, Google, Vosk)
-│   │   ├── neural_voice_engine.py   # TTS (Edge-TTS, Google, Coqui)
-│   │   ├── wake_word_detector.py    # Wake word detection
-│   │   ├── voice_activity_detection.py   # VAD with spectral analysis
-│   │   ├── speaker_verification.py  # Voice profile management
-│   │   └── advanced_voice.py        # Unified voice interface
-│   │
-│   ├── integrations/                # External Services
-│   │   ├── google_calendar.py       # Calendar integration
-│   │   ├── email_handler.py         # Email automation
-│   │   ├── spotify_integration.py   # Spotify control
-│   │   ├── youtube_music.py         # YouTube Music
-│   │   ├── web_search_integration.py # Web search
-│   │   ├── learning_integration.py  # Learning system integration
-│   │   ├── learning_automation.py   # Learning automation
-│   │   └── google_assistant_voice_integration.py  # Voice integration
-│   │
-│   ├── automation/                  # System Automation
-│   │   ├── smart_automation.py      # Intelligent automation
-│   │   ├── app_discovery.py         # Application detection (500+ apps)
-│   │   ├── windows_control.py       # Windows automation
-│   │   └── task_scheduler.py        # Task scheduling
-│   │
-│   ├── services/                    # Backend Services
-│   │   ├── modern_web_backend.py    # Modern Flask backend server
-│   │   └── learning_integration.py  # Learning service integration
-│   │
-│   ├── interfaces/                  # User Interfaces
-│   │   ├── modern_interfaces.py     # Interface management
-│   │   ├── websocket_handlers.py    # WebSocket communication
-│   │   └── rest_api.py              # REST API endpoints
-│   │
-│   ├── apps/                        # Application Entry Points
-│   │   ├── modern_web_backend.py    # Flask web server
-│   │   ├── app.py                   # CLI application
-│   │   └── yourdaddy_app.py         # Desktop GUI
-│   │
-│   ├── modules/                     # Utility Modules
-│   │   ├── conversational_ai.py     # Enhanced conversation
-│   │   ├── multilingual.py          # Language support
-│   │   ├── multimodal.py            # Multimodal processing
-│   │   ├── youtube_ops.py           # YouTube operations
-│   │   ├── app_discovery.py         # App discovery module
-│   │   └── modern_interfaces.py     # Interface utilities
-│   │
-│   ├── core/                        # Core Functionality
-│   │   ├── core.py                  # Core system
-│   │   ├── system.py                # System utilities
-│   │   └── config.py                # Configuration management
-│   │
-│   ├── auth/                        # Authentication
-│   │   ├── pin_auth.py              # PIN authentication
-│   │   └── security.py              # Security utilities
-│   │
-│   ├── database/                    # Data Persistence
-│   │   ├── conversation_db.py       # Conversation storage
-│   │   ├── feedback_db.py           # Feedback data
-│   │   └── memory_db.py             # Memory management
-│   │
-│   ├── utils/                       # Utilities
-│   │   ├── logging_config.py        # Logging setup
-│   │   ├── file_utils.py            # File operations
-│   │   └── validators.py            # Input validation
-│   │
-│   └── services/                    # Background Services
-│       ├── scheduler_service.py     # Task scheduling
-│       └── monitoring_service.py    # System monitoring
+│   ├── config/                      # Config parsers and defaults
+│   ├── data/                        # Core data interfaces
+│   ├── launchers/                   # Python launcher scripts
+│   ├── user_data/                   # User specific resources
+│   ├── utils/                       # Common utility functions
+│   └── web_assets/                  # Assorted web files
 │
-├── config/                          # Configuration Files
-│   ├── app_integration.env          # App configuration
-│   ├── multimodal_config.json       # Multimodal settings
-│   ├── user_settings.json           # User preferences
-│   └── discovered_apps.json         # Discovered applications
+├── scripts/                         # Utility & Setup Scripts
+│   ├── setup/                       # Installation wizards and keystores
+│   ├── launchers/                   # Bash and Batch starting scripts
+│   ├── analysis/                    # Python scripts for analytics
+│   ├── debug/                       # Logging operations
+│   ├── learning/                    # Memory / Learning ops
+│   ├── diagnostics/                 # Diagnostics tools
+│   └── validation/                  # Pre-flight checks
 │
-├── scripts/                         # Utility Scripts
-│   ├── setup/                       # Setup scripts
-│   │   ├── setup_google_assistant_voice.py
-│   │   ├── setup_automation.py
-│   │   └── install_dependencies.py
-│   ├── analysis/                    # Analysis tools
-│   └── debug/                       # Debugging utilities
-│
-├── tests/                           # Test Suite
-│   ├── test_ai_quick.py             # Quick AI tests
-│   ├── test_advanced_learning.py    # Learning system tests
-│   ├── test_all_27_systems.py       # Integration tests
-│   ├── test_voice_recognition.py    # Voice tests
-│   └── test_api_endpoints.py        # API tests
-│
-├── project/                         # Frontend Project
-│   ├── src/                         # React TypeScript source
-│   │   ├── components/              # React components
-│   │   │   ├── ApplicationGrid.tsx  # App grid interface
-│   │   │   ├── VoiceInterface.tsx   # Voice control UI
-│   │   │   └── ConversationSpace.tsx # Chat interface
-│   │   ├── App.tsx                  # Main app component
-│   │   └── main.tsx                 # Entry point
-│   ├── public/                      # Static assets
-│   ├── package.json                 # npm dependencies
-│   ├── vite.config.ts               # Vite configuration
-│   └── tsconfig.json                # TypeScript config
-│
-├── static/                          # Static Web Files
-│   ├── learning_dashboard.html      # Learning metrics dashboard
-│   └── assets/                      # Images, CSS, JS
-│
-├── templates/                       # HTML Templates
-│   ├── enhanced_chat.html           # Enhanced chat interface
-│   └── index.html                   # Main web interface
-│
-├── docs/                            # Documentation
-│   ├── API_REFERENCE_COMPLETE.md    # Complete API reference
-│   ├── ADVANCED_LEARNING_SYSTEMS.md # Learning system docs
-│   ├── APP_INTEGRATION_SECURITY.md  # Security documentation
-│   ├── DATABASE_SCHEMAS.md          # Database schemas
-│   └── TROUBLESHOOTING.md           # Troubleshooting guide
-│
-├── data/                            # Data Storage
-│   ├── conversations/               # Conversation history
-│   ├── feedback/                    # User feedback data
-│   └── models/                      # Offline models
-│
-└── logs/                            # Application Logs
-    ├── app.log                      # Main application log
-    ├── voice.log                    # Voice system log
-    └── error.log                    # Error log
-├── docs/                            # Documentation
-│   ├── README.md                    # Comprehensive docs
-│   ├── API_REFERENCE_COMPLETE.md    # API documentation
-│   ├── CHANGELOG.md                 # Version history
-│   └── INTEGRATION_GUIDE.md         # Integration guide
-│
-├── data/                            # Runtime Data
-├── logs/                            # Application Logs
-├── static/                          # Static Web Assets
-├── templates/                       # HTML Templates
-├── user_data/                       # User-Specific Data
-├── offline_cache/                   # Offline Model Cache
-└── model/                           # ML Models
-
+├── tests/                           # Component and Integration Test Suite
+├── config/                          # Workspace configuration files
+├── data/                            # Core Runtime Datastores
+├── databases/                       # SQLite backend files
+├── model/                           # Local offline ML models
+├── docs/                            # Extensive Documentations
+├── logs/                            # Application Event Logs
+└── deploy/                          # Deployment configurations
 ```
 
 ---
