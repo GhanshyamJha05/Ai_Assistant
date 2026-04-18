@@ -25,6 +25,7 @@ export interface LearningStats {
     database: string;
     systems: string;
     conversations: string;
+    details?: any;
 }
 
 export interface SystemLog {
@@ -48,7 +49,7 @@ export interface ConversationSession {
     voiceCommands: VoiceCommand[];
 }
 
-type ViewType = 'dashboard' | 'apps' | 'chat' | 'voice' | 'settings' | 'ai-learning' | 'database' | 'systems' | 'conversations' | null;
+type ViewType = 'dashboard' | 'apps' | 'chat' | 'voice' | 'settings' | 'ai-learning' | 'database' | 'systems' | 'conversations' | 'integrations' | null;
 
 interface DashboardContextType {
     socket: Socket | null;

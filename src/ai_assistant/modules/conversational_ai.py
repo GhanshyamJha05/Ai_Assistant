@@ -134,7 +134,25 @@ class AdvancedConversationalAI:
             print(f"⚠️ Intent Router init failed: {e}")
             self.intent_router = None
 
-    
+        # Initialize MCP Enhancer
+        try:
+            import asyncio
+            from ai_assistant.integrations.mcp_conversational import enhance_with_mcp
+            
+            def _apply_mcp_enhancement():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(enhance_with_mcp(self))
+                    loop.close()
+                except Exception as e:
+                    print(f"⚠️ Failed to apply MCP enhancement: {e}")
+            
+            # Run in background to not block initialization
+            threading.Thread(target=_apply_mcp_enhancement, daemon=True).start()
+        except Exception as e:
+            print(f"⚠️ MCP loading error: {e}")
+
     def _init_llm_provider(self):
         """Initialize the LLM provider for generating real-time AI responses."""
         try:

@@ -29,9 +29,9 @@ const QuickOptions = () => {
     },
     {
       icon: MoreHorizontal,
-      label: 'More',
+      label: 'Integrations',
       onClick: () => {
-        setSelectedView('dashboard');
+        setSelectedView('integrations');
       }
     },
   ];

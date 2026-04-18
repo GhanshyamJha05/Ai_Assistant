@@ -11,6 +11,7 @@ import ConversationTracker from './components/RightColumn/ConversationTracker';
 import DetailView from './components/DetailView';
 import DashboardDetail from './components/DetailViews/DashboardDetail';
 import AppsDetail from './components/DetailViews/AppsDetail';
+import IntegrationsDetail from './components/DetailViews/IntegrationsDetail';
 import ChatDetail from './components/DetailViews/ChatDetail';
 import VoiceDetail from './components/DetailViews/VoiceDetail';
 import SettingsDetail from './components/DetailViews/SettingsDetail';
@@ -32,6 +33,8 @@ function AppContent() {
         return { title: 'System Dashboard', content: <DashboardDetail /> };
       case 'apps':
         return { title: 'Integrated Applications', content: <AppsDetail /> };
+      case 'integrations':
+        return { title: 'Web Services & APIs', content: <IntegrationsDetail /> };
       case 'chat':
         return { title: 'Chat History', content: <ChatDetail /> };
       case 'voice':

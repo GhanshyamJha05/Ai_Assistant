@@ -21,12 +21,6 @@ except ImportError:
     LLM_PROVIDER_AVAILABLE = False
 
 try:
-    from ai_assistant.services.learning_integration import get_learning_stats
-    LEARNING_INTEGRATION_AVAILABLE = True
-except ImportError:
-    LEARNING_INTEGRATION_AVAILABLE = False
-
-try:
     from ai_assistant.modules.conversational_ai import AdvancedConversationalAI
     CONVERSATIONAL_AI_AVAILABLE = True
 except ImportError:
@@ -139,9 +133,7 @@ def handle_command(data):
                 conv_ai = AdvancedConversationalAI(automation_callback=automation_callback)
                 
                 # Process through conversational AI (has intent detection built-in)
-                provider = data.get('provider')
-                model = data.get('model')
-                response_text = conv_ai.process_message(command_text, provider=provider, model=model)
+                response_text = conv_ai.process_message(command_text)
                 
                 # Check if it actually executed something or just returned generic response
                 if response_text and not any(phrase in response_text.lower() for phrase in [
@@ -164,8 +156,8 @@ def handle_command(data):
                     
                     # Log learning
                     if learning_router:
-                        learning_router.route_conversation(speaker='user', content=command_text, category='command', input_mode=source)
-                        learning_router.route_conversation(speaker='assistant', content=response_text, category='response', input_mode=source)
+                        learning_router.log_user_query(command_text, source=source)
+                        learning_router.log_ai_response(command_text, response_text)
                     
                     return  # Successfully handled
                     
@@ -230,8 +222,8 @@ def handle_command(data):
                 
                 # Log learning
                 if learning_router:
-                    learning_router.route_conversation(speaker='user', content=command_text, category='command', input_mode=source)
-                    learning_router.route_conversation(speaker='assistant', content=response_text, category='response', input_mode=source)
+                    learning_router.log_user_query(command_text, source=source)
+                    learning_router.log_ai_response(command_text, response_text)
                 
                 # Emit response (safe_emit will catch any socket errors)
                 safe_emit('command_response', {
@@ -318,51 +310,6 @@ def broadcast_system_stats():
                     'network_speed': 0  # Placeholder
                 }
                 _socketio.emit('system_stats_update', stats)
-                
-                # Broadcast Learning Stats
-                try:
-                    # 1. Get detailed system stats
-                    detailed_stats = {}
-                    active_systems_count = 0
-                    total_systems = 27  # Total known systems including core ones
-                    
-                    if LEARNING_INTEGRATION_AVAILABLE:
-                        detailed_stats = get_learning_stats()
-                        # Count active (non-error) systems from the integration list
-                        # The list in learning_integration has ~25 systems. 
-                        # We also count the router itself and core LLM as systems.
-                        active_systems_count = sum(1 for k, v in detailed_stats.items() if "error" not in v)
-                        # Add base offset for core systems (Router, Pipeline, etc.) not in that list
-                        active_systems_count += 2 
-                    
-                    # 2. Get routing stats (conversations, etc)
-                    routing_stats = {}
-                    if learning_router:
-                        routing_stats = learning_router.get_routing_stats()
-                    
-                    # 3. Calculate metrics
-                    total_conversations = routing_stats.get('total_conversations', 0)
-                    
-                    # Estimate DB size based on nodes/edges if available, else usage
-                    db_size_mb = 1.2 # Base size
-                    if 'knowledge_graph' in detailed_stats and 'node_count' in detailed_stats['knowledge_graph']:
-                        # Crude estimate: 10KB per node/edge + overhead
-                        nodes = detailed_stats['knowledge_graph'].get('node_count', 0)
-                        edges = detailed_stats['knowledge_graph'].get('edge_count', 0)
-                        db_size_mb += (nodes + edges) * 0.01
-                    
-                    # Format for frontend
-                    learning_stats = {
-                        'database': f"{db_size_mb:.1f}TB", # Showing as TB for UI consistency with design, or change to GB
-                        'systems': f"{active_systems_count}/{total_systems}",
-                        'conversations': f"{total_conversations}",
-                        'details': detailed_stats # Send full details for advanced views
-                    }
-                    _socketio.emit('learning_stats_update', learning_stats)
-                    
-                except Exception as le:
-                    print(f"Learning stats error: {le}")
-                        
         except Exception as e:
             print(f'Stats broadcast error: {e}')
         time.sleep(5)  # Update every 5 seconds
