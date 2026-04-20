@@ -146,11 +146,19 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.warning(f"⚠️ Speech Recognition failed: {e}")
         
-        
-        # Vosk (offline) - DISABLED to eliminate C++ dependency issues
-        # Use Web Speech API or Whisper instead
+        # Vosk (offline)
         self.vosk_manager = None
-        logger.info("ℹ️ Vosk disabled - using Web Speech API for recognition")
+        if VOSK_AVAILABLE:
+            try:
+                self._legacy_vosk_init()
+                if self.vosk_models:
+                    logger.info(f"✅ Vosk offline models loaded: {list(self.vosk_models.keys())}")
+                else:
+                    logger.info("ℹ️ Vosk available but no local model files found")
+            except Exception as e:
+                logger.warning(f"⚠️ Vosk initialization failed, continuing without it: {e}")
+        else:
+            logger.info("ℹ️ Vosk not installed - offline ASR will use Sphinx fallback if available")
         
         
         # Whisper API
@@ -163,9 +171,19 @@ class AdvancedSpeechRecognizer:
     
     def _legacy_vosk_init(self):
         """Legacy Vosk initialization (fallback if manager unavailable)"""
+        def _resolve_model_path(model_dir_name: str) -> Optional[Path]:
+            candidates = [
+                Path("model") / model_dir_name,
+                Path(__file__).resolve().parents[3] / "model" / model_dir_name,
+            ]
+            for candidate in candidates:
+                if candidate.exists():
+                    return candidate
+            return None
+
         # Load English model
-        en_model_path = Path("model/vosk-model-small-en-us-0.15")
-        if en_model_path.exists():
+        en_model_path = _resolve_model_path("vosk-model-small-en-us-0.15")
+        if en_model_path is not None:
             try:
                 model = Model(str(en_model_path))
                 self.vosk_models['en'] = model
@@ -173,11 +191,11 @@ class AdvancedSpeechRecognizer:
             except Exception as e:
                 logger.error(f"❌ Failed to load English model: {e}")
         else:
-            logger.warning(f"⚠️ Vosk English model not found at {en_model_path}")
+            logger.warning("⚠️ Vosk English model not found in expected model directories")
         
         # Load Hindi model (optional)
-        hi_model_path = Path("model/vosk-model-small-hi-0.22")
-        if hi_model_path.exists():
+        hi_model_path = _resolve_model_path("vosk-model-small-hi-0.22")
+        if hi_model_path is not None:
             try:
                 model = Model(str(hi_model_path))
                 self.vosk_models['hi'] = model
@@ -390,18 +408,25 @@ class AdvancedSpeechRecognizer:
                 phrase_time_limit=15.0
             )
             
-            # Recognize
-            text = self.sr_recognizer.recognize_google(audio, language=language)
-            logger.info(f"✅ Speech Recognition recognized: {text}")
+            # Try Google backend first.
+            try:
+                text = self.sr_recognizer.recognize_google(audio, language=language)
+                logger.info(f"✅ Speech Recognition (Google) recognized: {text}")
+                return text, 0.85
+            except sr.RequestError as e:
+                logger.warning(f"Google backend unavailable, trying offline Sphinx: {e}")
+            except sr.UnknownValueError:
+                logger.warning("Google backend could not understand audio, trying Sphinx")
+
+            # Offline fallback (PocketSphinx)
+            try:
+                text = self.sr_recognizer.recognize_sphinx(audio)
+                logger.info(f"✅ Speech Recognition (Sphinx) recognized: {text}")
+                return text, 0.70
+            except Exception as sphinx_error:
+                logger.warning(f"Sphinx fallback failed: {sphinx_error}")
+                return None, 0.0
             
-            return text, 0.85  # Estimated confidence
-            
-        except sr.UnknownValueError:
-            logger.warning("Could not understand audio")
-            return None, 0.0
-        except sr.RequestError as e:
-            logger.error(f"Speech Recognition API error: {e}")
-            return None, 0.0
         except Exception as e:
             logger.error(f"Recognition failed: {e}")
             return None, 0.0
@@ -501,9 +526,12 @@ class AdvancedSpeechRecognizer:
                 models_to_try.append(("whisper_api", audio_input, whisper_lang))
             if self.google_cloud_key:
                 models_to_try.append(("google_cloud", audio_input, google_lang))
+
+        if self.sr_recognizer:
             models_to_try.append(("speech_recognition", audio_input, google_lang))
-        
-        models_to_try.append(("vosk", audio_input, vosk_lang))
+
+        if self.vosk_manager or self.vosk_models:
+            models_to_try.append(("vosk", audio_input, vosk_lang))
         
         for model_info in models_to_try:
             model_name = model_info[0]

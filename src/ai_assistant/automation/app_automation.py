@@ -20,40 +20,66 @@ from typing import Optional, List, Dict, Any
 import subprocess
 import tempfile
 
-# Windows automation
-try:
-    import pyautogui
-    import pywinauto
-    from pywinauto import Application
-    WINDOWS_AUTO_AVAILABLE = True
-except ImportError:
-    WINDOWS_AUTO_AVAILABLE = False
-    print("⚠️ Windows automation not available")
+# Windows automation (lazy-loaded to avoid import-time hangs on some systems)
+pyautogui = None
+WINDOWS_AUTO_AVAILABLE = False
 
 # OCR for reading notes
 try:
     import pytesseract
     from PIL import Image, ImageGrab
     OCR_AVAILABLE = True
-except ImportError:
+except Exception as e:
     OCR_AVAILABLE = False
-    print("⚠️ OCR not available")
+    print(f"⚠️ OCR not available: {e}")
 
 # Import existing WhatsApp module
 try:
     from ai_assistant.modules.whatsapp import send_whatsapp_message
     WHATSAPP_MODULE_AVAILABLE = True
-except ImportError:
+except Exception:
     WHATSAPP_MODULE_AVAILABLE = False
 
 # TTS for reciting notes
 try:
     import pyttsx3
     TTS_AVAILABLE = True
-except ImportError:
+except Exception as e:
     TTS_AVAILABLE = False
+    print(f"⚠️ TTS not available: {e}")
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_pyautogui() -> bool:
+    """Lazy-load pyautogui only when an action requires it."""
+    global pyautogui, WINDOWS_AUTO_AVAILABLE
+
+    if pyautogui is not None:
+        WINDOWS_AUTO_AVAILABLE = True
+        return True
+
+    try:
+        import pyautogui as _pyautogui
+
+        pyautogui = _pyautogui
+        WINDOWS_AUTO_AVAILABLE = True
+        return True
+    except Exception as e:
+        WINDOWS_AUTO_AVAILABLE = False
+        logger.error(f"❌ pyautogui unavailable: {e}")
+        return False
+
+
+def _get_desktop_class():
+    """Lazy-load pywinauto Desktop class only when window focus is needed."""
+    try:
+        from pywinauto import Desktop
+
+        return Desktop
+    except Exception as e:
+        logger.error(f"❌ pywinauto unavailable: {e}")
+        return None
 
 
 class AppAutomation:
@@ -109,7 +135,7 @@ class AppAutomation:
             
     def type_text(self, text: str, interval: float = 0.05) -> bool:
         """Type text using keyboard simulation"""
-        if not WINDOWS_AUTO_AVAILABLE:
+        if not _ensure_pyautogui():
             return False
         try:
             logger.info(f"⌨️ Typing: {text}")
@@ -121,7 +147,7 @@ class AppAutomation:
             
     def press_key(self, key_name: str) -> bool:
         """Press a keyboard key"""
-        if not WINDOWS_AUTO_AVAILABLE:
+        if not _ensure_pyautogui():
             return False
         try:
             logger.info(f"⌨️ Pressing key: {key_name}")
@@ -133,7 +159,7 @@ class AppAutomation:
 
     def click(self, x: int = None, y: int = None) -> bool:
         """Click mouse (at current position or specific coords)"""
-        if not WINDOWS_AUTO_AVAILABLE:
+        if not _ensure_pyautogui():
             return False
         try:
             if x is not None and y is not None:
@@ -147,18 +173,72 @@ class AppAutomation:
     
     def close_app(self, app_name: str) -> bool:
         """Close an application"""
-        # Would implement app closing logic
-        pass
+        if not app_name:
+            logger.error("❌ close_app called without an app name")
+            return False
+
+        logger.info(f"🛑 Closing app: {app_name}")
+
+        # Use taskkill first to avoid UI Automation hangs on some systems.
+        try:
+            token = app_name.strip().strip('"').split()[0]
+            process_candidates = [token]
+            if not token.lower().endswith('.exe'):
+                process_candidates.append(f"{token}.exe")
+
+            any_closed = False
+            process_outputs = []
+            for process_name in process_candidates:
+                result = subprocess.run(
+                    ["taskkill", "/IM", process_name, "/F"],
+                    capture_output=True,
+                    text=True,
+                )
+                process_outputs.extend([result.stdout or "", result.stderr or ""])
+                if result.returncode == 0:
+                    logger.info(f"✅ Force-closed process: {process_name}")
+                    any_closed = True
+
+            # Try title filter as a secondary strategy.
+            title_result = subprocess.run(
+                ["taskkill", "/FI", f"WINDOWTITLE eq *{app_name}*", "/F"],
+                capture_output=True,
+                text=True,
+            )
+            if title_result.returncode == 0:
+                logger.info(f"✅ Closed by window title filter: {app_name}")
+                any_closed = True
+
+            if any_closed:
+                return True
+
+            combined_output = " ".join(
+                [*process_outputs, title_result.stdout or "", title_result.stderr or ""]
+            ).lower()
+            if (
+                "no tasks" in combined_output
+                or "no running" in combined_output
+                or "not found" in combined_output
+                or "no instances" in combined_output
+            ):
+                logger.info(f"ℹ️ App already closed or not found: {app_name}")
+                return True
+
+            logger.warning(f"⚠️ Could not close app: {app_name}")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Failed to close app '{app_name}': {e}")
+            return False
     
     def focus_window(self, window_title: str) -> bool:
         """Focus a window by title"""
-        if not WINDOWS_AUTO_AVAILABLE:
+        desktop_class = _get_desktop_class()
+        if desktop_class is None:
             return False
         
         try:
             # Find and focus window
-            from pywinauto import Desktop
-            windows = Desktop(backend="uia").windows()
+            windows = desktop_class(backend="uia").windows()
             
             for window in windows:
                 if window_title.lower() in window.window_text().lower():
@@ -191,6 +271,10 @@ class StickyNotesAutomation(AppAutomation):
     def open_sticky_notes(self) -> bool:
         """Open Sticky Notes app"""
         logger.info("📝 Opening Sticky Notes...")
+
+        if not _ensure_pyautogui():
+            logger.error("❌ Windows automation not available for Sticky Notes")
+            return False
         
         # Try to open via start menu search
         try:
@@ -264,6 +348,10 @@ class StickyNotesAutomation(AppAutomation):
             Success status
         """
         logger.info(f"📝 Creating note: {content[:50]}...")
+
+        if not _ensure_pyautogui():
+            logger.error("❌ Windows automation not available for creating notes")
+            return False
         
         try:
             # Open or focus Sticky Notes
@@ -336,7 +424,7 @@ class WhatsAppAutomation(AppAutomation):
             logger.error(f"❌ Attachment not found: {file_path}")
             return False
 
-        if not WINDOWS_AUTO_AVAILABLE:
+        if not _ensure_pyautogui():
             logger.error("❌ Windows automation (pyautogui/pywinauto) not available")
             return False
             
@@ -435,8 +523,15 @@ class WhatsAppAutomation(AppAutomation):
             # Then Ctrl+V in WhatsApp.
             
             escaped_path = file_path.replace("'", "''")
-            ps_script = f"Set-Clipboard -Path '{file_path}'" 
-            subprocess.run(["powershell", "-Command", ps_script], capture_output=True)
+            ps_script = f"Set-Clipboard -Path '{escaped_path}'"
+            clipboard_result = subprocess.run(
+                ["powershell", "-Command", ps_script],
+                capture_output=True,
+                text=True,
+            )
+            if clipboard_result.returncode != 0:
+                logger.error(f"❌ Failed to place attachment on clipboard: {clipboard_result.stderr}")
+                return False
             
             time.sleep(1)
             

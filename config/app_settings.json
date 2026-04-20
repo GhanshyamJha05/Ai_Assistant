@@ -27,8 +27,8 @@
   },
   "ai": {
     "contextWindow": 4096,
-    "defaultModel": "gpt-3.5-turbo",
-    "defaultProvider": "openai",
+    "defaultModel": "gemini-1.5-flash",
+    "defaultProvider": "gemini",
     "localLlm": {
       "enabled": false,
       "modelPath": "",

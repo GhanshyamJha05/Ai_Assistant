@@ -11,18 +11,32 @@ Features:
 - Multi-tab management
 """
 
+from __future__ import annotations
+
 import os
 import time
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support.ui import Select
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    SELENIUM_AVAILABLE = True
+except Exception:
+    webdriver = None
+    By = None
+    Keys = None
+    WebDriverWait = None
+    Select = None
+    EC = None
+    TimeoutException = Exception
+    NoSuchElementException = Exception
+    SELENIUM_AVAILABLE = False
 from PIL import Image
 import io
 
@@ -52,8 +66,8 @@ class BrowserAutomation:
             config: Browser configuration
         """
         self.config = config or BrowserConfig()
-        self.driver: Optional[webdriver.Chrome] = None
-        self.wait: Optional[WebDriverWait] = None
+        self.driver: Optional[Any] = None
+        self.wait: Optional[Any] = None
         self.current_url: str = ""
         self.screenshot_dir = "screenshots"
         os.makedirs(self.screenshot_dir, exist_ok=True)
@@ -62,6 +76,9 @@ class BrowserAutomation:
     
     def start_browser(self):
         """Start the browser"""
+        if not SELENIUM_AVAILABLE:
+            raise RuntimeError("Selenium is not installed. Install with: pip install selenium")
+
         if self.driver:
             logger.warning("Browser already started")
             return
@@ -88,9 +105,23 @@ class BrowserAutomation:
         try:
             self.driver = webdriver.Chrome(options=options)
             self.wait = WebDriverWait(self.driver, self.config.timeout)
-            logger.info("✅ Browser started successfully")
-        except Exception as e:
-            logger.error(f"❌ Failed to start browser: {e}")
+            logger.info("✅ Chrome started successfully")
+            return
+        except Exception as chrome_error:
+            logger.warning(f"⚠️ Chrome start failed, trying Edge fallback: {chrome_error}")
+
+        try:
+            edge_options = webdriver.EdgeOptions()
+            if self.config.headless:
+                edge_options.add_argument("--headless")
+            edge_options.add_argument(
+                f"--window-size={self.config.window_size[0]},{self.config.window_size[1]}"
+            )
+            self.driver = webdriver.Edge(options=edge_options)
+            self.wait = WebDriverWait(self.driver, self.config.timeout)
+            logger.info("✅ Edge started successfully")
+        except Exception as edge_error:
+            logger.error(f"❌ Failed to start browser (Chrome and Edge): {edge_error}")
             raise
     
     def navigate(self, url: str) -> bool:
@@ -271,9 +302,14 @@ class BrowserAutomation:
             self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
             time.sleep(0.5)
             
-            # Wait for element to be clickable
-            element = self.wait.until(EC.element_to_be_clickable(element))
-            element.click()
+            # Wait for element to be interactable.
+            self.wait.until(lambda _driver: element.is_displayed() and element.is_enabled())
+
+            try:
+                element.click()
+            except Exception:
+                # JS fallback helps with overlay/intercepted click issues.
+                self.driver.execute_script("arguments[0].click();", element)
             
             logger.info(f"✅ Clicked: {element_description}")
             time.sleep(1)  # Wait for action to complete
@@ -394,6 +430,10 @@ class BrowserAutomation:
         Returns:
             Path to screenshot
         """
+        if not self.driver:
+            logger.warning("⚠️ Cannot take screenshot: browser is not started")
+            return ""
+
         if not filename:
             filename = f"screenshot_{int(time.time())}.png"
         
@@ -405,7 +445,12 @@ class BrowserAutomation:
     
     def _save_screenshot(self, prefix: str):
         """Save error screenshot"""
-        self.take_screenshot(f"{prefix}_{int(time.time())}.png")
+        if not self.driver:
+            return
+        try:
+            self.take_screenshot(f"{prefix}_{int(time.time())}.png")
+        except Exception as e:
+            logger.debug(f"Failed to save diagnostic screenshot: {e}")
     
     def get_page_text(self) -> str:
         """Get all visible text from page"""

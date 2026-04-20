@@ -82,21 +82,66 @@ class SystemAutomation:
         """
         action = "enable" if enable else "disable"
         logger.info(f"📶 Toggling WiFi: {action}")
-        
+
+        if platform.system().lower() != "windows":
+            logger.error("❌ WiFi toggle is currently implemented for Windows only")
+            return False
+
+        desired_state = "enabled" if enable else "disabled"
+
         try:
-            # Use netsh interface
-            # Note: Requires knowing the interface name, usually "Wi-Fi"
-            cmd = f'netsh interface set interface "Wi-Fi" {action.upper()}'
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            
-            if result.returncode == 0:
+            # Discover likely Wi-Fi adapter names first.
+            discover = subprocess.run(
+                ["netsh", "interface", "show", "interface"],
+                capture_output=True,
+                text=True,
+            )
+
+            candidate_names = []
+            if discover.returncode == 0 and discover.stdout:
+                for line in discover.stdout.splitlines():
+                    lower = line.lower()
+                    if any(tag in lower for tag in ["wi-fi", "wifi", "wireless", "wlan"]):
+                        # Interface name is typically the trailing token(s).
+                        parts = line.split()
+                        if parts:
+                            candidate_names.append(" ".join(parts[3:]) if len(parts) > 3 else parts[-1])
+
+            if not candidate_names:
+                candidate_names = ["Wi-Fi", "WiFi", "Wireless Network Connection"]
+
+            for name in candidate_names:
+                result = subprocess.run(
+                    ["netsh", "interface", "set", "interface", f"name={name}", f"admin={desired_state}"],
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    logger.info(f"✅ WiFi {desired_state} via adapter '{name}'")
+                    return True
+
+            # Fallback PowerShell command.
+            ps_action = "Enable" if enable else "Disable"
+            ps_cmd = (
+                f"Get-NetAdapter | Where-Object {{$_.InterfaceDescription -match 'Wi-Fi|Wireless|WLAN' "
+                f"-or $_.Name -match 'Wi-Fi|WiFi|Wireless|WLAN'}} | "
+                f"{ps_action}-NetAdapter -Confirm:$false"
+            )
+            ps_result = subprocess.run(
+                ["powershell", "-Command", ps_cmd],
+                capture_output=True,
+                text=True,
+            )
+            if ps_result.returncode == 0:
+                logger.info(f"✅ WiFi {desired_state} via PowerShell fallback")
                 return True
-            else:
-                # If "Wi-Fi" failed, try to list interfaces and guess? 
-                # For now just log error
-                logger.error(f"❌ WiFi toggle failed: {result.stderr}")
-                return False
-                
+
+            logger.error(
+                "❌ WiFi toggle failed via netsh and PowerShell. "
+                f"PowerShell error: {ps_result.stderr or ps_result.stdout}"
+            )
+            return False
+
         except Exception as e:
             logger.error(f"❌ WiFi toggle error: {e}")
             return False
@@ -116,6 +161,11 @@ class SystemAutomation:
         if VOLUME_AVAILABLE:
             return set_system_volume(level)
         return "Volume module not available"
+
+    def get_volume(self) -> str:
+        if VOLUME_AVAILABLE:
+            return get_system_volume()
+        return "Volume module not available"
         
     def volume_up(self, amount: int = 10) -> str:
         if VOLUME_AVAILABLE:
@@ -125,4 +175,14 @@ class SystemAutomation:
     def volume_down(self, amount: int = 10) -> str:
         if VOLUME_AVAILABLE:
             return volume_down(amount)
+        return "Volume module not available"
+
+    def mute(self) -> str:
+        if VOLUME_AVAILABLE:
+            return mute_volume()
+        return "Volume module not available"
+
+    def unmute(self) -> str:
+        if VOLUME_AVAILABLE:
+            return unmute_volume()
         return "Volume module not available"

@@ -15,6 +15,8 @@ Features:
 - Adaptive scheduling based on historical performance
 """
 
+from __future__ import annotations
+
 import time
 import threading
 import logging
@@ -27,11 +29,23 @@ from enum import Enum, IntEnum
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import uuid
-import cron_descriptor
-from croniter import croniter
-import pytz
+try:
+    import cron_descriptor
+except ImportError:
+    cron_descriptor = None
+
+try:
+    from croniter import croniter
+except ImportError:
+    croniter = None
+
+try:
+    import pytz
+except ImportError:
+    pytz = None
 import calendar
 import bisect
+from collections import defaultdict, deque
 
 try:
     import holidays
@@ -154,6 +168,10 @@ class CronParser:
     
     def parse_pattern(self, pattern: str, base_time: datetime = None) -> Optional[croniter]:
         """Parse cron pattern and return croniter object"""
+        if croniter is None:
+            self.logger.error("croniter is not installed; cron patterns are unavailable")
+            return None
+
         try:
             # Replace macros
             if pattern in self.MACROS:
@@ -268,7 +286,7 @@ class CronParser:
             next_time = cron_iter.get_next(datetime)
             
             # Apply timezone
-            if timezone_str != "UTC":
+            if timezone_str != "UTC" and pytz is not None:
                 tz = pytz.timezone(timezone_str)
                 next_time = tz.localize(next_time) if next_time.tzinfo is None else next_time.astimezone(tz)
             
@@ -283,7 +301,10 @@ class CronParser:
         try:
             if pattern in self.MACROS:
                 pattern = self.MACROS[pattern]
-            
+
+            if cron_descriptor is None:
+                return f"Cron pattern: {pattern}"
+
             return cron_descriptor.get_description(pattern)
             
         except Exception:
@@ -363,7 +384,7 @@ class ScheduleEvaluator:
         """Check if current time is within business hours"""
         try:
             # Convert to specified timezone
-            if timezone_str != "UTC":
+            if timezone_str != "UTC" and pytz is not None:
                 tz = pytz.timezone(timezone_str)
                 local_time = current_time.astimezone(tz)
             else:
