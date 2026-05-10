@@ -33,12 +33,9 @@ except Exception as e:
     OCR_AVAILABLE = False
     print(f"⚠️ OCR not available: {e}")
 
-# Import existing WhatsApp module
-try:
-    from ai_assistant.modules.whatsapp import send_whatsapp_message
-    WHATSAPP_MODULE_AVAILABLE = True
-except Exception:
-    WHATSAPP_MODULE_AVAILABLE = False
+# WhatsApp helpers are lazy-loaded to avoid heavy optional import chains.
+send_whatsapp_message = None
+WHATSAPP_MODULE_AVAILABLE = False
 
 # TTS for reciting notes
 try:
@@ -80,6 +77,26 @@ def _get_desktop_class():
     except Exception as e:
         logger.error(f"❌ pywinauto unavailable: {e}")
         return None
+
+
+def _ensure_whatsapp_module() -> bool:
+    """Lazy-load WhatsApp helper module only when message features are used."""
+    global send_whatsapp_message, WHATSAPP_MODULE_AVAILABLE
+
+    if send_whatsapp_message is not None:
+        WHATSAPP_MODULE_AVAILABLE = True
+        return True
+
+    try:
+        from ai_assistant.modules.whatsapp import send_whatsapp_message as _send_whatsapp_message
+
+        send_whatsapp_message = _send_whatsapp_message
+        WHATSAPP_MODULE_AVAILABLE = True
+        return True
+    except Exception as e:
+        WHATSAPP_MODULE_AVAILABLE = False
+        logger.error(f"❌ WhatsApp module unavailable: {e}")
+        return False
 
 
 class AppAutomation:
@@ -179,6 +196,18 @@ class AppAutomation:
 
         logger.info(f"🛑 Closing app: {app_name}")
 
+        def _run_taskkill(args: List[str]) -> subprocess.CompletedProcess:
+            try:
+                return subprocess.run(
+                    args,
+                    capture_output=True,
+                    text=True,
+                    timeout=6,
+                )
+            except subprocess.TimeoutExpired:
+                logger.warning(f"⚠️ taskkill timed out: {' '.join(args)}")
+                return subprocess.CompletedProcess(args=args, returncode=1, stdout="", stderr="timeout")
+
         # Use taskkill first to avoid UI Automation hangs on some systems.
         try:
             token = app_name.strip().strip('"').split()[0]
@@ -189,22 +218,14 @@ class AppAutomation:
             any_closed = False
             process_outputs = []
             for process_name in process_candidates:
-                result = subprocess.run(
-                    ["taskkill", "/IM", process_name, "/F"],
-                    capture_output=True,
-                    text=True,
-                )
+                result = _run_taskkill(["taskkill", "/IM", process_name, "/F"])
                 process_outputs.extend([result.stdout or "", result.stderr or ""])
                 if result.returncode == 0:
                     logger.info(f"✅ Force-closed process: {process_name}")
                     any_closed = True
 
             # Try title filter as a secondary strategy.
-            title_result = subprocess.run(
-                ["taskkill", "/FI", f"WINDOWTITLE eq *{app_name}*", "/F"],
-                capture_output=True,
-                text=True,
-            )
+            title_result = _run_taskkill(["taskkill", "/FI", f"WINDOWTITLE eq *{app_name}*", "/F"])
             if title_result.returncode == 0:
                 logger.info(f"✅ Closed by window title filter: {app_name}")
                 any_closed = True
@@ -394,7 +415,7 @@ class WhatsAppAutomation(AppAutomation):
         logger.info(f"💬 Sending WhatsApp to {contact}")
         
         # Use existing WhatsApp module
-        if WHATSAPP_MODULE_AVAILABLE:
+        if _ensure_whatsapp_module():
             try:
                 result = send_whatsapp_message(contact, message)
                 logger.info(f"✅ WhatsApp result: {result}")

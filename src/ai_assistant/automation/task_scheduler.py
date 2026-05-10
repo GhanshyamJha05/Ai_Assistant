@@ -582,6 +582,7 @@ class AdvancedTaskScheduler:
         self.scheduler_thread = None
         self.executor_thread = None
         self._lock = threading.RLock()
+        self._stop_event = threading.Event()
         
         # Statistics
         self.stats = {
@@ -600,6 +601,7 @@ class AdvancedTaskScheduler:
         if self.running:
             return
         
+        self._stop_event.clear()
         self.running = True
         
         # Start scheduler thread
@@ -618,13 +620,17 @@ class AdvancedTaskScheduler:
             return
         
         self.running = False
+        self._stop_event.set()
         
         # Wait for threads to finish
         if self.scheduler_thread:
-            self.scheduler_thread.join(timeout=5.0)
+            self.scheduler_thread.join(timeout=10.0)
         
         if self.executor_thread:
-            self.executor_thread.join(timeout=5.0)
+            self.executor_thread.join(timeout=10.0)
+
+        self.scheduler_thread = None
+        self.executor_thread = None
         
         self.logger.info("Advanced task scheduler stopped")
     
@@ -780,7 +786,7 @@ class AdvancedTaskScheduler:
     
     def _scheduler_loop(self):
         """Main scheduler loop"""
-        while self.running:
+        while self.running and not self._stop_event.is_set():
             try:
                 current_time = datetime.now()
                 
@@ -790,15 +796,15 @@ class AdvancedTaskScheduler:
                 # Clean up expired tasks
                 self._cleanup_expired_tasks(current_time)
                 
-                time.sleep(60)  # Check every minute
+                self._stop_event.wait(60)  # Check every minute or stop immediately
                 
             except Exception as e:
                 self.logger.error(f"Scheduler loop error: {e}")
-                time.sleep(10)
+                self._stop_event.wait(10)
     
     def _executor_loop(self):
         """Main executor loop"""
-        while self.running:
+        while self.running and not self._stop_event.is_set():
             try:
                 current_time = datetime.now()
                 
@@ -825,11 +831,11 @@ class AdvancedTaskScheduler:
                 for task, scheduled_time in ready_tasks:
                     self._execute_task(task, scheduled_time, current_time)
                 
-                time.sleep(1)  # Check every second
+                self._stop_event.wait(1)  # Check every second or stop immediately
                 
             except Exception as e:
                 self.logger.error(f"Executor loop error: {e}")
-                time.sleep(5)
+                self._stop_event.wait(5)
     
     def _execute_task(self, task: ScheduledTask, scheduled_time: datetime, actual_time: datetime):
         """Execute scheduled task"""
