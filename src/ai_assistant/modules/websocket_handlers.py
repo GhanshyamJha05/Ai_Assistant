@@ -21,6 +21,26 @@ chat_sessions = {}
 chat_session_lock = None
 socketio = None
 
+# Fast in-memory cache for AI Settings
+_ai_settings_cache = {}
+_ai_settings_mtime = 0
+
+def get_cached_ai_settings():
+    """Retrieve AI settings from file only if modified, else from memory cache."""
+    global _ai_settings_cache, _ai_settings_mtime
+    try:
+        import os, json
+        settings_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'config', 'app_settings.json')
+        if os.path.exists(settings_path):
+            current_mtime = os.path.getmtime(settings_path)
+            if current_mtime > _ai_settings_mtime:
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                    _ai_settings_cache = settings.get('ai', {})
+                    _ai_settings_mtime = current_mtime
+    except Exception as e:
+        logger.warning(f"Cache read error for app_settings.json: {e}")
+    return _ai_settings_cache
 
 def create_enhanced_websocket_handlers(app, socketio_instance, chat_session_lock_instance):
     """
@@ -64,7 +84,21 @@ def setup_streaming_with_tools():
                 if session_id not in chat_sessions:
                     try:
                         from modules.chat_with_tools import ChatWithToolCalling
-                        chat_sessions[session_id] = ChatWithToolCalling()
+                        
+                        preferred_provider = data.get('provider')
+                        preferred_model = data.get('model')
+                        
+                        if not preferred_provider or not preferred_model:
+                            ai_settings = get_cached_ai_settings()
+                            if not preferred_provider:
+                                preferred_provider = ai_settings.get('defaultProvider')
+                            if not preferred_model:
+                                preferred_model = ai_settings.get('defaultModel')
+                                    
+                        preferred_provider = preferred_provider or 'openai'
+                        preferred_model = preferred_model or 'gpt-3.5-turbo'
+                        
+                        chat_sessions[session_id] = ChatWithToolCalling(llm_provider=preferred_provider, model=preferred_model)
                         chat_sessions[session_id].add_system_prompt(
                             "You are a helpful AI assistant with access to tools. "
                             "Use tools when needed to provide accurate information."
@@ -171,7 +205,21 @@ def setup_semantic_chat():
                 if session_id not in chat_sessions:
                     try:
                         from modules.chat_with_tools import ChatWithToolCalling
-                        chat_sessions[session_id] = ChatWithToolCalling()
+                        
+                        preferred_provider = data.get('provider')
+                        preferred_model = data.get('model')
+                        
+                        if not preferred_provider or not preferred_model:
+                            ai_settings = get_cached_ai_settings()
+                            if not preferred_provider:
+                                preferred_provider = ai_settings.get('defaultProvider')
+                            if not preferred_model:
+                                preferred_model = ai_settings.get('defaultModel')
+                                    
+                        preferred_provider = preferred_provider or 'openai'
+                        preferred_model = preferred_model or 'gpt-3.5-turbo'
+                        
+                        chat_sessions[session_id] = ChatWithToolCalling(llm_provider=preferred_provider, model=preferred_model)
                     except ImportError:
                         emit('error', {'error': 'Chat module not available'})
                         return

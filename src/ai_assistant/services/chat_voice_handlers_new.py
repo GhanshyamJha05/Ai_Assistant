@@ -60,6 +60,27 @@ def set_socketio(sio):
 # WebSocket Event Handlers (as regular functions)
 # ==============================================
 
+# Fast in-memory cache for AI Settings
+_ai_settings_cache = {}
+_ai_settings_mtime = 0
+
+def get_cached_ai_settings():
+    """Retrieve AI settings from file only if modified, else from memory cache."""
+    global _ai_settings_cache, _ai_settings_mtime
+    try:
+        import os, json
+        settings_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'config', 'app_settings.json')
+        if os.path.exists(settings_path):
+            current_mtime = os.path.getmtime(settings_path)
+            if current_mtime > _ai_settings_mtime:
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                    _ai_settings_cache = settings.get('ai', {})
+                    _ai_settings_mtime = current_mtime
+    except Exception as e:
+        print(f"⚠️ Cache read error for app_settings.json: {e}")
+    return _ai_settings_cache
+
 def handle_connect():
     """Handle client connection"""
     print(f'✅ Client connected: {request.sid}')
@@ -176,6 +197,15 @@ def handle_command(data):
                 # Extract provider/model preference from request
                 preferred_provider = data.get('provider')
                 preferred_model = data.get('model')
+                
+                # If provider or model is not sent by frontend, check cached app_settings
+                if not preferred_provider or not preferred_model:
+                    ai_settings = get_cached_ai_settings()
+                    if not preferred_provider:
+                        preferred_provider = ai_settings.get('defaultProvider', 'openai')
+                    if not preferred_model:
+                        preferred_model = ai_settings.get('defaultModel', 'gpt-3.5-turbo')
+                
                 
                 print(f"🔧 Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
 
