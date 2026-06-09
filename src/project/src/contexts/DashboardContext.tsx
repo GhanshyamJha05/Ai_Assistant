@@ -277,7 +277,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Initialize Socket.IO connection
     useEffect(() => {
-        const newSocket = io('http://127.0.0.1:5000');
+        const newSocket = io('http://127.0.0.1:5000', {
+            path: '/socket.io',
+            transports: ['polling'],
+            withCredentials: true,
+            autoConnect: true,
+        });
 
         newSocket.on('connect', () => {
             console.log('Connected to backend');

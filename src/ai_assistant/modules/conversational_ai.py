@@ -20,6 +20,7 @@ import sqlite3
 import os
 import re
 import webbrowser
+import subprocess
 from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
 try:
     from ai_assistant.modules.intent_router import IntentRouter
@@ -860,6 +861,41 @@ class AdvancedConversationalAI:
         except Exception as e:
             return f"❌ Error: {str(e)}"
 
+    def _verify_execution_visually(self, command_text: str, expected_app_name: str) -> str:
+        """Uses Gemini Vision to verify if a command actually succeeded on screen."""
+        if not self.vision_provider:
+            return "⚠️ (Visual verification skipped: Vision Provider not initialized. Set GEMINI_API_KEY)"
+    
+        print(f"👀 Verifying execution of: {expected_app_name}...")
+        
+        # 1. Wait a moment for the application/UI to load
+        time.sleep(3.0) 
+        
+        try:
+            # 2. Capture the current screen
+            from PIL import ImageGrab
+            screenshot = ImageGrab.grab()
+            
+            # 3. Create a strict, binary validation prompt for the VLM
+            verification_prompt = (
+                f"I just commanded the computer to '{command_text}'. "
+                f"You are a strict validation system. Look at this current screenshot of the desktop. "
+                f"Can you clearly see that '{expected_app_name}' is open or the action was successful? "
+                f"Reply with EXACTLY ONE WORD: 'SUCCESS' if you see it, or 'FAILURE' if you do not."
+            )
+            
+            # 4. Ask Gemini Vision to analyze it
+            result = self.vision_provider.analyze_image(image=screenshot, prompt=verification_prompt)
+            text_result = result.get("text", "").strip().upper()
+            
+            if "SUCCESS" in text_result:
+                return "✅ (Visually Verified by AI)"
+            else:
+                return "❌ (Warning: App did not appear on screen. It might be loading slowly or failed.)"
+                
+        except Exception as e:
+            return f"⚠️ (Visual verification error: {str(e)})"
+
     def _execute_open_command(self, query: str, query_lower: str) -> str:
         """Execute open application commands."""
         # Extract app name - remove command words
@@ -958,7 +994,6 @@ class AdvancedConversationalAI:
                 url = 'https://' + url.replace('www.', '')
             try:
                 webbrowser.open(url)
-                webbrowser.open(url)
                 return self._format_success(f"✅ Opening {url} in your browser", f"open {url}")
 
             except Exception as e:
@@ -981,7 +1016,6 @@ class AdvancedConversationalAI:
             if target.startswith('http'):
                 try:
                     webbrowser.open(target)
-                    webbrowser.open(target)
                     return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
 
                 except Exception as e:
@@ -990,8 +1024,9 @@ class AdvancedConversationalAI:
             # Otherwise it's an executable
             try:
                 subprocess.Popen(target, shell=True)
-                subprocess.Popen(target, shell=True)
-                return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+                success_msg = self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+                verification_status = self._verify_execution_visually(f"open {app_name}", app_name)
+                return f"{success_msg}\n{verification_status}"
 
             except:
                 pass  # Try automation callback below
@@ -1002,8 +1037,9 @@ class AdvancedConversationalAI:
             else:
                 app_name_exe = app_name
             subprocess.Popen(app_name_exe, shell=True)
-            subprocess.Popen(app_name_exe, shell=True)
-            return self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+            success_msg = self._format_success(f"✅ Opening {app_name.title()}", f"open {app_name}")
+            verification_status = self._verify_execution_visually(f"open {app_name}", app_name)
+            return f"{success_msg}\n{verification_status}"
 
         except:
             return f"❌ Could not find application '{app_name}'. Try being more specific or check if it's installed."
