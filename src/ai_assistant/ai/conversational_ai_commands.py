@@ -113,15 +113,15 @@ def _execute_open_command(self, query: str, query_lower: str) -> str:
         except:
             pass
     
-    # Try direct execution
+    # Try direct execution using Windows 'start'
     try:
         exe_name = app_mappings.get(app_name, app_name + '.exe')
-        subprocess.Popen(exe_name, shell=True)
+        subprocess.Popen(f'start "" "{exe_name}"', shell=True)
         return f"✅ Opening {app_name.title()}"
     except Exception as e:
         # Try as command
         try:
-            subprocess.Popen(app_name, shell=True)
+            subprocess.Popen(f'start "" "{app_name}"', shell=True)
             return f"✅ Launching {app_name}"
         except:
             return f"❌ Could not find '{app_name}' on your system. Try saying the full application name or check if it's installed."
@@ -143,7 +143,7 @@ def _execute_close_command(self, query: str, query_lower: str) -> str:
             pass
     
     try:
-        subprocess.run(['taskkill', '/IM', app_name + '.exe', '/F'], 
+        subprocess.run(f'taskkill /IM "{app_name}.exe" /F', 
                      capture_output=True, shell=True, timeout=5)
         return f"✅ Closed {app_name}"
     except:
@@ -213,7 +213,7 @@ def _execute_create_document(self, query: str, query_lower: str) -> str:
     if 'ppt' in query_lower or 'powerpoint' in query_lower or 'presentation' in query_lower:
         doc_type = 'PowerPoint presentation'
         try:
-            subprocess.Popen('POWERPNT.EXE', shell=True)
+            subprocess.Popen('start powerpnt', shell=True)
             return f"📊 Opening PowerPoint to create your presentation"
         except:
             return "❌ PowerPoint not found. Please install Microsoft Office."
@@ -223,7 +223,7 @@ def _execute_create_document(self, query: str, query_lower: str) -> str:
     
     elif 'document' in query_lower:
         try:
-            subprocess.Popen('WINWORD.EXE', shell=True)
+            subprocess.Popen('start winword', shell=True)
             return "📝 Opening Word to create your document"
         except:
             return "❌ Word not found. Please install Microsoft Office."
@@ -259,26 +259,37 @@ def _execute_volume_command(self, query: str, query_lower: str) -> str:
 
 def _execute_settings_command(self, query: str, query_lower: str) -> str:
     """Execute system settings commands."""
+    import os
     import subprocess
     
     try:
         if 'wifi' in query_lower or 'network' in query_lower:
-            subprocess.Popen('ms-settings:network', shell=True)
-            return "⚙️ Opening Network Settings"
+            uri = 'ms-settings:network'
+            msg = "⚙️ Opening Network Settings"
         elif 'bluetooth' in query_lower:
-            subprocess.Popen('ms-settings:bluetooth', shell=True)
-            return "⚙️ Opening Bluetooth Settings"
+            uri = 'ms-settings:bluetooth'
+            msg = "⚙️ Opening Bluetooth Settings"
         elif 'display' in query_lower or 'screen' in query_lower:
-            subprocess.Popen('ms-settings:display', shell=True)
-            return "⚙️ Opening Display Settings"
+            uri = 'ms-settings:display'
+            msg = "⚙️ Opening Display Settings"
         elif 'sound' in query_lower or 'audio' in query_lower:
-            subprocess.Popen('ms-settings:sound', shell=True)
-            return "⚙️ Opening Sound Settings"
+            uri = 'ms-settings:sound'
+            msg = "⚙️ Opening Sound Settings"
         elif 'system' in query_lower:
-            subprocess.Popen('ms-settings:about', shell=True)
-            return "⚙️ Opening System Settings"
+            uri = 'ms-settings:about'
+            msg = "⚙️ Opening System Settings"
+        elif 'account' in query_lower:
+            uri = 'ms-settings:emailandaccounts'
+            msg = "⚙️ Opening Accounts Settings"
         else:
-            subprocess.Popen('ms-settings:', shell=True)
-            return "⚙️ Opening Windows Settings"
+            uri = 'ms-settings:'
+            msg = "⚙️ Opening Windows Settings"
+            
+        if os.name == 'nt':
+            os.startfile(uri)
+        else:
+            subprocess.Popen(f'start {uri}', shell=True)
+            
+        return msg
     except Exception as e:
         return f"❌ Could not open settings: {str(e)}"
