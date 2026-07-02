@@ -1,0 +1,46 @@
+text,intent,lang
+shut down the computer,SYSTEM_SHUTDOWN,English
+turn off the pc,SYSTEM_SHUTDOWN,English
+power off the system,SYSTEM_SHUTDOWN,English
+computer band kar do,SYSTEM_SHUTDOWN,Hindi
+pc off kar do,SYSTEM_SHUTDOWN,Hindi
+system band kardo,SYSTEM_SHUTDOWN,Hindi
+computerwa band kar da,SYSTEM_SHUTDOWN,Bhojpuri
+systemwa off kar da,SYSTEM_SHUTDOWN,Bhojpuri
+pc band kara,SYSTEM_SHUTDOWN,Bhojpuri
+increase the volume,VOLUME_UP,English
+volume up,VOLUME_UP,English
+make it louder,VOLUME_UP,English
+awaaz badha do,VOLUME_UP,Hindi
+volume tez karo,VOLUME_UP,Hindi
+sound badhao,VOLUME_UP,Hindi
+awaaz tej kara,VOLUME_UP,Bhojpuri
+volume badha da,VOLUME_UP,Bhojpuri
+josh me aawaz kara,VOLUME_UP,Bhojpuri
+decrease the volume,VOLUME_DOWN,English
+volume down,VOLUME_DOWN,English
+make it quieter,VOLUME_DOWN,English
+awaaz kam karo,VOLUME_DOWN,Hindi
+volume dheere karo,VOLUME_DOWN,Hindi
+sound kam kar do,VOLUME_DOWN,Hindi
+awaaz kam kara,VOLUME_DOWN,Bhojpuri
+volume dheere kara,VOLUME_DOWN,Bhojpuri
+soundwa kam kar da,VOLUME_DOWN,Bhojpuri
+open google chrome,OPEN_BROWSER,English
+start the browser,OPEN_BROWSER,English
+launch internet,OPEN_BROWSER,English
+chrome kholo,OPEN_BROWSER,Hindi
+browser start karo,OPEN_BROWSER,Hindi
+internet kholo,OPEN_BROWSER,Hindi
+chrome khol da,OPEN_BROWSER,Bhojpuri
+browserwa chalu kara,OPEN_BROWSER,Bhojpuri
+internetwa khol da,OPEN_BROWSER,Bhojpuri
+what is the weather like,GET_WEATHER,English
+check the weather,GET_WEATHER,English
+is it raining outside,GET_WEATHER,English
+mausam kaisa hai,GET_WEATHER,Hindi
+bahar ka mausam batao,GET_WEATHER,Hindi
+kya barish ho rahi hai,GET_WEATHER,Hindi
+mausam kaisan ba,GET_WEATHER,Bhojpuri
+baharwa ke mausam batawa,GET_WEATHER,Bhojpuri
+ka paani barsat ba,GET_WEATHER,Bhojpuri

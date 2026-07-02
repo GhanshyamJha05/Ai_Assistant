@@ -28,6 +28,13 @@ except ImportError:
     FEEDPARSER_AVAILABLE = False
     print("⚠️ feedparser not found. RSS features will be disabled.")
 
+try:
+    from scrapling.fetchers import StealthyFetcher
+    SCRAPLING_AVAILABLE = True
+except ImportError:
+    SCRAPLING_AVAILABLE = False
+    print("⚠️ Scrapling not found. Advanced web scraping features will be disabled.")
+
 class WebScrapingManager:
     """
     Advanced web scraping and data aggregation manager
@@ -585,9 +592,71 @@ def get_product_price(product_name: str, marketplace: str = "amazon") -> str:
     except Exception as e:
         return f"❌ Price tracking error: {str(e)}"
 
+def advanced_scrape_website(url: str, extract_text: bool = True, max_length: int = 1000) -> str:
+    """
+    Extract and summarize content from a website using Scrapling StealthyFetcher
+    to bypass anti-bot mechanisms.
+    Args:
+        url: Website URL to scrape
+        extract_text: Whether to extract readable text
+        max_length: Maximum length of extracted text
+    """
+    if not SCRAPLING_AVAILABLE:
+        return "❌ Scrapling framework is not installed. Use standard scrape_website_content instead."
+        
+    try:
+        # Use Scrapling's StealthyFetcher to fetch the page and evade anti-bot checks
+        # Using network_idle ensures we wait for any Cloudflare/bot checks to finish
+        page = StealthyFetcher.fetch(url, headless=True, network_idle=True)
+        
+        result = f"🌐 Advanced Website Content\n"
+        result += f"🔗 URL: {url}\n\n"
+        
+        if extract_text:
+            # We can use scrapling's parser or fallback to beautifulsoup logic
+            # Let's use BeautifulSoup on the returned HTML for consistent extraction behavior
+            soup = BeautifulSoup(page.text, 'html.parser')
+            
+            title = soup.find('title')
+            title_text = title.get_text(strip=True) if title else "No title found"
+            result = f"🌐 Advanced Website Content: {title_text}\n🔗 URL: {url}\n\n"
+            
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            text = soup.get_text()
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            text = ' '.join(chunk for chunk in chunks if chunk)
+            
+            if len(text) > max_length:
+                text = text[:max_length] + "..."
+            
+            result += f"📄 Content Preview:\n{text}"
+        else:
+            soup = BeautifulSoup(page.text, 'html.parser')
+            title = soup.find('title')
+            title_text = title.get_text(strip=True) if title else "No title found"
+            result = f"🌐 Advanced Website Content: {title_text}\n🔗 URL: {url}\n\n"
+            
+            description = soup.find('meta', attrs={'name': 'description'})
+            if description:
+                result += f"📝 Description: {description.get('content', 'No description')}"
+            
+            images = len(soup.find_all('img'))
+            links = len(soup.find_all('a'))
+            
+            result += f"\n📊 Page Stats: {images} images, {links} links"
+            
+        return result
+        
+    except Exception as e:
+        return f"❌ Advanced website scraping error: {str(e)}"
+
 # Export all functions for the main application
 __all__ = [
     'get_weather_info', 'get_weather_forecast', 'get_latest_news', 'search_web',
     'get_stock_price', 'get_crypto_price', 'scrape_website_content',
-    'get_trending_topics', 'monitor_rss_feeds', 'get_product_price'
+    'get_trending_topics', 'monitor_rss_feeds', 'get_product_price',
+    'advanced_scrape_website'
 ]

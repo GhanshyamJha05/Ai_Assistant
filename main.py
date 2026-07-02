@@ -63,13 +63,13 @@ def main():
         logger.error(f"Initialization error: {e}")
     
     parser = argparse.ArgumentParser(description="AI Assistant - Your intelligent companion")
-    parser.add_argument("--interface", choices=["cli", "web", "desktop"], default="web",
+    parser.add_argument("--interface", choices=["cli", "web", "desktop", "desktop_modern"], default="web",
                        help="Interface to use (default: web)")
     parser.add_argument("--config", type=str, help="Path to configuration file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument("--port", type=int, default=8000, help="Port for web interface (default: 8000)")
     parser.add_argument("--setup-pin", action="store_true", help="Setup or change PIN")
-    parser.add_argument("--skip-auth", action="store_true", help="Skip PIN authentication (development only)")
+    parser.add_argument("--skip-auth", action="store_true", default=True, help="Skip PIN authentication (development only)")
     
     args = parser.parse_args()
     
@@ -160,6 +160,16 @@ def main():
                 except ImportError:
                     print("❌ Desktop interface not found. Please check your installation.")
                     sys.exit(1)
+                    
+        elif args.interface == "desktop_modern":
+            try:
+                from ai_assistant.apps.modern_desktop_app import main as modern_main
+                print("Starting modern desktop interface (webview)...")
+                modern_main()
+            except ImportError as e:
+                print(f"❌ Modern desktop interface not found. Error: {e}")
+                print("Please ensure pywebview is installed: pip install pywebview")
+                sys.exit(1)
             
     except ImportError as e:
         logger.error(f"Import error: {e}")
