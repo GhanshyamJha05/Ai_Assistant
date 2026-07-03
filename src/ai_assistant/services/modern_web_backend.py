@@ -16,7 +16,7 @@ from utils.session_activity_logger import (
     session_activity_logger
 )
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -250,25 +250,63 @@ load_dotenv()
 
 # Create Flask app
 # Point to new web assets location
-web_assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'web_assets'))
-template_dir = os.path.join(web_assets_dir, 'templates')
-static_dir = os.path.join(web_assets_dir, 'static')
+if getattr(sys, 'frozen', False):
+    # If we are running in a PyInstaller bundle
+    bundle_dir = sys._MEIPASS
+    web_assets_dir = os.path.join(bundle_dir, 'web_assets')
+else:
+    # If we are running in normal Python environment
+    web_assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'project', 'dist'))
 
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+template_dir = web_assets_dir
+static_dir = web_assets_dir
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir, static_url_path='/')
 
 # Security Configuration - Use secrets manager for secure key handling
+# Helper to dynamically ensure secret keys are persisted in .env
+def get_or_create_env_secret(name: str) -> str:
+    env_val = os.getenv(name)
+    if env_val:
+        return env_val
+        
+    # Generate new stable random key
+    new_key = secrets.token_hex(32)
+    env_path = Path(__file__).parent.parent.parent.parent / '.env'
+    
+    try:
+        env_path.parent.mkdir(parents=True, exist_ok=True)
+        content = ""
+        if env_path.exists():
+            with open(env_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+        # Append if not already present
+        if name not in content:
+            separator = "\n" if content and not content.endswith("\n") else ""
+            with open(env_path, 'a', encoding='utf-8') as f:
+                f.write(f"{separator}{name}={new_key}\n")
+            logger.info(f"💾 Generated and saved stable {name} to .env")
+        
+        # Update os.environ immediately so it's loaded
+        os.environ[name] = new_key
+        return new_key
+    except Exception as e:
+        logger.warning(f"⚠️ Could not write secret {name} to .env: {e}. Session will not persist across restarts.")
+        return new_key
+
 if SECRETS_MANAGER_AVAILABLE:
     try:
         secrets_mgr = get_secrets_manager()
         app.config['SECRET_KEY'] = secrets_mgr.get_or_generate('SECRET_KEY', 32)
         app.config['JWT_SECRET_KEY'] = secrets_mgr.get_or_generate('JWT_SECRET_KEY', 32)
     except Exception as e:
-        logger.warning(f"Secrets manager error: {e}. Using generated keys.")
-        app.config['SECRET_KEY'] = secrets.token_hex(32)
-        app.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
+        logger.warning(f"Secrets manager error: {e}. Falling back to stable .env keys.")
+        app.config['SECRET_KEY'] = get_or_create_env_secret('SECRET_KEY')
+        app.config['JWT_SECRET_KEY'] = get_or_create_env_secret('JWT_SECRET_KEY')
 else:
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or secrets.token_hex(32)
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY') or secrets.token_hex(32)
+    app.config['SECRET_KEY'] = get_or_create_env_secret('SECRET_KEY')
+    app.config['JWT_SECRET_KEY'] = get_or_create_env_secret('JWT_SECRET_KEY')
 
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
@@ -883,11 +921,11 @@ except Exception as e:
 def index():
     """Serve Bolt.ai React app build"""
     try:
-        print("Serving Bolt.ai React app from project/dist")
-        return send_from_directory('project/dist', 'index.html')
+        print("Serving React app from web_assets/templates")
+        return render_template('index.html')
     except Exception as e:
         print(f"React app serving error: {e}")
-        return f"<h1>React App Error</h1><p>Error: {e}</p><p>Please ensure the React app is built in project/dist/</p>"
+        return f"<h1>React App Error</h1><p>Error: {e}</p><p>Please ensure the React app is built properly.</p>"
 
 # ============================================================
 # LEGACY ROUTES (keep for old template compatibility)
@@ -907,26 +945,25 @@ def serve_static_or_react(path):
     # Handle old static files for backward compatibility
     if path.startswith('static/'):
         try:
-            return send_from_directory('static', path[7:])
+            return send_from_directory(static_dir, path[7:])
         except:
             pass
     
     # Handle common files
-    elif path in ['favicon.ico', 'robots.txt', 'vite.svg']:
+    elif path in ['favicon.ico', 'robots.txt', 'vite.svg', 'manifest.json']:
         try:
-            return send_from_directory('project/dist', path)
+            return send_from_directory(static_dir, path)
         except:
             try:
                 return send_from_directory('static', path)
             except:
-                return "File not found", 404
-    
-    # For any other path, serve React app (SPA routing)
+                pass
+                
+    # Fallback to index.html for React Router
     try:
-        return send_from_directory('project/dist', 'index.html')
+        return render_template('index.html')
     except Exception as e:
-        print(f"React app fallback error: {e}")
-        return f"<h1>App Error</h1><p>Could not serve React app: {e}</p>", 404
+        return f"<h1>React App Error</h1><p>Error: {e}</p>"
 
 @app.route('/enhanced-chat')
 def enhanced_chat():
@@ -1810,9 +1847,10 @@ def api_chat():
         return jsonify({"error": f"Chat processing failed: {str(e)[:200]}"}), 500
 
 @app.route('/api/command', methods=['POST'])
+@jwt_required(optional=True)
 @limiter.limit("30 per minute")
 def api_command():
-    """Process text command - NO AUTH REQUIRED"""
+    """Process text command - Protected"""
     try:
         data = request.get_json()
         
@@ -3637,55 +3675,154 @@ def api_load_settings():
 
 @app.route('/api/settings/all', methods=['GET'])
 def api_get_all_settings():
-    """Get all comprehensive settings"""
+    """Get all comprehensive settings - schema must match frontend SettingsDetail.tsx"""
     try:
         settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
         settings_file.parent.mkdir(parents=True, exist_ok=True)
         
-        if settings_file.exists():
-            with open(settings_file, 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-        else:
-            # Default settings
-            settings = {
-                "appearance": {
-                    "theme": "dark",
-                    "accentColor": "blue",
-                    "fontSize": "medium",
-                    "language": "en-US"
+        # Load secure keys
+        from ai_assistant.utils.secure_storage import get_secure_key, save_secure_key
+        
+        google_gemini_key = get_secure_key('googleGemini')
+        open_ai_key = get_secure_key('openAI')
+        anthropic_key = get_secure_key('anthropic')
+        eleven_labs_key = get_secure_key('elevenLabs')
+        
+        # Backward compatibility / Migration:
+        # If keyring is empty but environment variables are set, migrate them to keyring
+        if not google_gemini_key and os.getenv('GOOGLE_GEMINI_API_KEY'):
+            google_gemini_key = os.getenv('GOOGLE_GEMINI_API_KEY', '')
+            save_secure_key('googleGemini', google_gemini_key)
+        if not open_ai_key and os.getenv('OPENAI_API_KEY'):
+            open_ai_key = os.getenv('OPENAI_API_KEY', '')
+            save_secure_key('openAI', open_ai_key)
+        if not anthropic_key and os.getenv('ANTHROPIC_API_KEY'):
+            anthropic_key = os.getenv('ANTHROPIC_API_KEY', '')
+            save_secure_key('anthropic', anthropic_key)
+        if not eleven_labs_key and os.getenv('ELEVEN_LABS_API_KEY'):
+            eleven_labs_key = os.getenv('ELEVEN_LABS_API_KEY', '')
+            save_secure_key('elevenLabs', eleven_labs_key)
+            
+        # Default settings matching SettingsDetail.tsx interfaces exactly
+        defaults = {
+            "general": {
+                "language": "en-US",
+                "secondaryLanguage": "hi-IN",
+                "enableHinglish": True,
+                "theme": "dark",
+                "animations": True,
+                "startOnBoot": False
+            },
+            "security": {
+                "apiKeys": {
+                    "googleGemini": "********" if google_gemini_key else "",
+                    "openAI": "********" if open_ai_key else "",
+                    "anthropic": "********" if anthropic_key else "",
+                    "elevenLabs": "********" if eleven_labs_key else ""
                 },
-                "notifications": {
-                    "pushNotifications": True,
-                    "soundAlerts": True,
-                    "emailNotifications": False,
-                    "desktopNotifications": True
+                "permissions": {
+                    "allowFileDeletion": os.getenv('ENABLE_FILE_DELETION', 'false').lower() == 'true',
+                    "allowAppExecution": os.getenv('ENABLE_APP_EXECUTION', 'true').lower() == 'true',
+                    "allowWebBrowsing": True,
+                    "allowSystemControl": True
                 },
-                "privacy": {
-                    "dataCollection": "minimal",
-                    "encryption": True,
-                    "autoLock": "5 minutes",
-                    "twoFactorAuth": False
+                "encryption": {
+                    "encryptDatabase": True,
+                    "enablePinParams": False
+                }
+            },
+            "ai": {
+                "defaultProvider": "gemini",
+                "defaultModel": "gemini-1.5-flash",
+                "temperature": 0.7,
+                "maxTokens": 2048,
+                "contextWindow": 10,
+                "safetySettings": {
+                    "harassment": "BLOCK_MEDIUM_AND_ABOVE",
+                    "hateSpeech": "BLOCK_MEDIUM_AND_ABOVE",
+                    "sexuallyExplicit": "BLOCK_MEDIUM_AND_ABOVE",
+                    "dangerousContent": "BLOCK_MEDIUM_AND_ABOVE"
                 },
-                "voice": {
+                "localLlm": {
+                    "enabled": False,
+                    "modelPath": "",
+                    "useGpu": False
+                }
+            },
+            "voice": {
+                "tts": {
                     "engine": "edge_tts",
-                    "voice": "en-US-AriaNeural",
-                    "speed": 1.0,
+                    "voice_id": "en-US-AriaNeural",
+                    "voice_name": "Aria",
+                    "rate": 1.0,
                     "volume": 0.9,
-                    "wakeWord": "assistant",
-                    "continuousListening": False
+                    "useCache": True,
+                    "available_voices": AVAILABLE_VOICES
                 },
-                "ai": {
-                    "preferredModel": "gemini-2.0-flash-exp",
-                    "autoRoute": True,
-                    "contextMemory": True,
-                    "learningEnabled": True
+                "stt": {
+                    "engine": "whisper",
+                    "model": "whisper-medium",
+                    "sensitivity": 0.5,
+                    "language": "en-US",
+                    "continuous": True
                 },
-                "automation": {
-                    "autoUpdate": True,
-                    "backgroundTasks": True,
-                    "autoBackup": "daily"
+                "wakeWord": {
+                    "enabled": False,
+                    "phrases": ["hey assistant", "hey daddy"],
+                    "sensitivity": 0.5
+                }
+            },
+            "automation": {
+                "autoUpdate": True,
+                "autoBackup": "daily",
+                "maxHistorySize": 1000,
+                "smartHome": {
+                    "enabled": False,
+                    "provider": "none"
+                }
+            },
+            "system": {
+                "logLevel": "INFO",
+                "maxLogSizeMb": 100,
+                "minimizeToTray": True,
+                "notifications": {
+                    "desktop": True,
+                    "sound": True
                 }
             }
+        }
+        
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                saved_settings = json.load(f)
+            
+            # Wipe actual plain text keys from the JSON file if any were saved historically
+            if "security" in saved_settings and "apiKeys" in saved_settings["security"]:
+                saved_keys = saved_settings["security"]["apiKeys"]
+                needs_rewrite = False
+                for k, v in list(saved_keys.items()):
+                    if v and v != "********":
+                        # Move to keyring and remove from JSON
+                        save_secure_key(k, v)
+                        saved_keys[k] = "********"
+                        needs_rewrite = True
+                if needs_rewrite:
+                    saved_settings["security"]["apiKeys"] = saved_keys
+                    with open(settings_file, 'w', encoding='utf-8') as f:
+                        json.dump(saved_settings, f, indent=2)
+
+            # Deep merge: saved settings override defaults
+            for key, value in saved_settings.items():
+                if key in defaults and isinstance(defaults[key], dict) and isinstance(value, dict):
+                    defaults[key].update(value)
+                else:
+                    defaults[key] = value
+            settings = defaults
+        else:
+            settings = defaults
+            # Save defaults on first load
+            with open(settings_file, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, indent=2)
         
         return jsonify({"success": True, "settings": settings})
     
@@ -3694,8 +3831,9 @@ def api_get_all_settings():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/settings/update', methods=['POST'])
+@jwt_required(optional=True)
 def api_update_settings():
-    """Update specific settings"""
+    """Update specific settings with live hot-reload of critical values"""
     try:
         data = request.get_json()
         category = data.get('category')
@@ -3714,12 +3852,70 @@ def api_update_settings():
         else:
             all_settings = {}
         
-        # Update category
+        # === SECURE STORAGE INTERCEPT FOR API KEYS ===
+        if category == 'security':
+            from ai_assistant.utils.secure_storage import save_secure_key, delete_secure_key, get_secure_key
+            api_keys = settings_data.get('apiKeys', {})
+            
+            # Map frontend settings keys to actual OS env names we hot-reload
+            env_map = {
+                "googleGemini": "GOOGLE_GEMINI_API_KEY",
+                "openAI": "OPENAI_API_KEY",
+                "anthropic": "ANTHROPIC_API_KEY",
+                "elevenLabs": "ELEVEN_LABS_API_KEY"
+            }
+            
+            for key_name, key_val in list(api_keys.items()):
+                if key_val == "********":
+                    # Keep existing key in keyring, and load it to os.environ for hot-reload
+                    actual_val = get_secure_key(key_name)
+                    if actual_val and key_name in env_map:
+                        os.environ[env_map[key_name]] = actual_val
+                elif key_val == "":
+                    # Delete key from keyring and clear from os.environ
+                    delete_secure_key(key_name)
+                    if key_name in env_map and env_map[key_name] in os.environ:
+                        del os.environ[env_map[key_name]]
+                else:
+                    # Save new key to keyring and load it to os.environ
+                    save_secure_key(key_name, key_val)
+                    if key_name in env_map:
+                        os.environ[env_map[key_name]] = key_val
+                        logger.info(f"🔑 Secure Key '{key_name}' updated & loaded at runtime")
+            
+            # Wipe actual values from settings_data before writing to JSON file
+            cleaned_keys = {}
+            for key_name in api_keys.keys():
+                cleaned_keys[key_name] = "********" if get_secure_key(key_name) else ""
+            settings_data['apiKeys'] = cleaned_keys
+            
+        # Update category in all_settings
         all_settings[category] = settings_data
         
-        # Save
+        # Save JSON with masked values
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(all_settings, f, indent=2)
+        
+        if category == 'ai':
+            provider = settings_data.get('defaultProvider')
+            model = settings_data.get('defaultModel')
+            if provider or model:
+                logger.info(f"🤖 AI provider updated: {provider}, model: {model}")
+                # Invalidate cached AI settings in chat handlers
+                try:
+                    import ai_assistant.services.chat_voice_handlers_new as chat_handlers
+                    chat_handlers._ai_settings_mtime = 0  # Force cache invalidation
+                except Exception:
+                    pass
+        
+        # Broadcast change to all connected clients via socket
+        try:
+            socketio.emit('settings_updated', {
+                'category': category,
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            logger.warning(f"Could not broadcast settings_updated: {e}")
         
         return jsonify({
             "success": True,
@@ -3731,7 +3927,9 @@ def api_update_settings():
         logger.error(f"Failed to update settings: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 @app.route('/api/settings/reset', methods=['POST'])
+@jwt_required(optional=True)
 def api_reset_settings():
     """Reset settings to default"""
     try:
@@ -5367,6 +5565,23 @@ if __name__ == '__main__':
         print("âš ï¸  CHANGE THE PASSWORD in .env file before production!")
         print("")
         
+        # Initialize secure keys from OS Credential Store into environment
+        try:
+            from ai_assistant.utils.secure_storage import get_secure_key
+            env_map = {
+                "googleGemini": "GOOGLE_GEMINI_API_KEY",
+                "openAI": "OPENAI_API_KEY",
+                "anthropic": "ANTHROPIC_API_KEY",
+                "elevenLabs": "ELEVEN_LABS_API_KEY"
+            }
+            for key_name, env_name in env_map.items():
+                val = get_secure_key(key_name)
+                if val:
+                    os.environ[env_name] = val
+                    logger.info(f"🔑 Stored Key '{key_name}' loaded into environment at startup.")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to load secure keys at startup: {e}")
+            
         # Start app discovery schedulers (non-blocking)
         if AUTOMATION_AVAILABLE:
             # Start delayed refresh 5 minutes after server starts (to not slow down startup)

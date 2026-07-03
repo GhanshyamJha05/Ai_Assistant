@@ -24,7 +24,7 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
 
   return (
     <motion.div
-      className="glass-panel rounded-lg p-2 sm:p-2.5 flex items-center gap-2 sm:gap-2.5 hover:border-neon-cyan/30 transition-all duration-200 cursor-pointer"
+      className="glass-panel rounded-lg p-2 sm:p-3 flex flex-col items-center justify-center gap-1.5 sm:gap-2 hover:border-neon-cyan/30 transition-all duration-200 cursor-pointer h-full text-center"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay }}
@@ -32,11 +32,11 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
     >
-      <div className="p-1.5 sm:p-2 bg-neon-cyan/10 rounded-lg">
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-neon-cyan" strokeWidth={1.5} />
+      <div className="p-1.5 sm:p-2 bg-neon-cyan/10 rounded-lg mb-1">
+        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-neon-cyan" strokeWidth={1.5} />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] sm:text-[11px] text-[#9CA3AF] mb-0.5 truncate">{label}</p>
+      <div className="w-full min-w-0">
+        <p className="text-[10px] sm:text-xs text-[#9CA3AF] mb-0.5 truncate">{label}</p>
         <p className="text-sm sm:text-base font-semibold text-white truncate">
           <motion.span>{rounded}</motion.span>
         </p>
@@ -63,13 +63,13 @@ const AILearningDashboard = () => {
 
   return (
     <motion.div
-      className="space-y-2 sm:space-y-2.5 flex-shrink-0"
+      className="flex flex-col space-y-2 sm:space-y-2.5 flex-1 min-h-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <h3 className="text-xs sm:text-sm font-medium text-white px-1">AI Learning Dashboard</h3>
-      <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+      <h3 className="text-xs sm:text-sm font-medium text-white px-1 flex-shrink-0">AI Learning Dashboard</h3>
+      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 flex-1 min-h-0">
         {stats.map((stat, index) => (
           <StatCard key={stat.label} {...stat} delay={0.4 + index * 0.1} />
         ))}

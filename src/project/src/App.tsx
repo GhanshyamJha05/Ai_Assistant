@@ -83,7 +83,7 @@ function AppContent() {
         animate="visible"
       >
         {/* Mobile Tabs - Show on small screens */}
-        <div className="lg:hidden flex gap-2 mb-2 overflow-x-auto">
+        <div className="md:hidden flex gap-2 mb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('main')}
             className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${activeTab === 'main'
@@ -114,7 +114,7 @@ function AppContent() {
         </div>
 
         {/* Mobile Layout - Stack vertically */}
-        <div className="lg:hidden flex-1 overflow-y-auto space-y-3">
+        <div className="md:hidden flex-1 overflow-y-auto space-y-3">
           {/* Main Voice Control - Always visible on 'main' tab */}
           {activeTab === 'main' && (
             <motion.div
@@ -154,9 +154,9 @@ function AppContent() {
         </div>
 
         {/* Desktop Layout - 3 columns on large screens */}
-        <div className="hidden lg:grid grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
+        <div className="hidden md:grid grid-cols-12 gap-2 lg:gap-4 flex-1 overflow-hidden min-h-0">
           <motion.div
-            className="col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0"
+            className="col-span-3 lg:col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0 pr-1"
             variants={columnVariants}
           >
             <QuickOptions />
@@ -165,7 +165,7 @@ function AppContent() {
           </motion.div>
 
           <motion.div
-            className="col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0"
+            className="col-span-5 lg:col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0 px-1"
             variants={columnVariants}
           >
             <StatusBar />
@@ -177,7 +177,7 @@ function AppContent() {
           </motion.div>
 
           <motion.div
-            className="col-span-3 flex flex-col gap-3 overflow-hidden min-h-0"
+            className="col-span-4 lg:col-span-3 flex flex-col gap-3 overflow-hidden min-h-0 pl-1"
             variants={columnVariants}
           >
             <ConversationTracker />

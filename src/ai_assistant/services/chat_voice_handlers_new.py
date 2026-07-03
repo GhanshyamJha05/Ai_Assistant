@@ -306,8 +306,13 @@ def handle_command(data):
 def handle_voice_command(data):
     """Handle voice command specifically"""
     try:
-        transcript = data.get('transcript', '')
+        # FIX: Frontend sends 'text', not 'transcript'. Support both for compatibility.
+        transcript = data.get('text') or data.get('transcript', '')
         confidence = data.get('confidence', 0.0)
+        provider = data.get('provider')
+        model = data.get('model')
+        language = data.get('language', 'en-US')
+        offline_mode = data.get('offline_mode', False)
         
         if not transcript:
             emit('voice_response', {
@@ -316,10 +321,16 @@ def handle_voice_command(data):
             })
             return
         
-        print(f'🎤 Voice command: {transcript} (confidence: {confidence})')
+        print(f'🎤 Voice command: {transcript} (confidence: {confidence}, lang: {language})')
         
-        # Forward to command handler
-        handle_command({'command': transcript, 'source': 'voice'})
+        # Forward to command handler with all context
+        handle_command({
+            'command': transcript,
+            'source': 'voice',
+            'provider': provider,
+            'model': model,
+            'offline_mode': offline_mode
+        })
         
     except Exception as e:
         print(f'❌ Voice command error: {e}')
@@ -327,6 +338,7 @@ def handle_voice_command(data):
             'success': False,
             'error': str(e)
         })
+
 
 # System stats broadcaster
 def broadcast_system_stats():

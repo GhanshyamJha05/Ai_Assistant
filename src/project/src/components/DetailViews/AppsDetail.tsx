@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ExternalLink, Star, Clock, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { apiUrl } from '../../lib/api';
 
 interface DiscoveredApp {
   name: string;
@@ -23,7 +24,7 @@ const AppsDetail = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/apps');
+      const response = await fetch(apiUrl('/api/apps'));
       if (!response.ok) {
         throw new Error(`Failed to fetch apps: ${response.statusText}`);
       }
@@ -63,7 +64,7 @@ const AppsDetail = () => {
   const refreshApps = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/apps/refresh', {
+      const response = await fetch(apiUrl('/api/apps/refresh'), {
         method: 'POST',
       });
       if (!response.ok) {
@@ -88,10 +89,24 @@ const AppsDetail = () => {
 
   // Launch an app
   const launchApp = async (appName: string) => {
-    if (socket) {
-      socket.emit('command', { text: `open ${appName}` });
+    if (socket && socket.connected) {
+      // FIX: Backend reads data.get('command'), not data.get('text')
+      socket.emit('command', { command: `open ${appName}`, source: 'apps_panel' });
+    } else {
+      // Fallback to REST API
+      try {
+        const { apiUrl } = await import('../../lib/api');
+        await fetch(apiUrl('/api/apps/launch'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_name: appName }),
+        });
+      } catch (err) {
+        console.error('Failed to launch app:', err);
+      }
     }
   };
+
 
   // Load apps on mount
   useEffect(() => {

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useReducer } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { apiUrl } from '../../lib/api';
 
 // --- Interfaces matching app_settings.json ---
 
@@ -148,7 +149,7 @@ const SettingsDetail = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/api/settings/all');
+      const res = await fetch(apiUrl('/api/settings/all'));
       const data = await res.json();
       if (data.success) {
         setSettings(data.settings);
@@ -165,7 +166,7 @@ const SettingsDetail = () => {
 
     try {
       setSaving(true);
-      const response = await fetch('http://localhost:5000/api/settings/update', {
+      const response = await fetch(apiUrl('/api/settings/update'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,7 +193,7 @@ const SettingsDetail = () => {
   const resetSettings = async (category?: string) => {
     if (!confirm(`Are you sure you want to reset ${category || 'all'} settings?`)) return;
     try {
-      const response = await fetch('http://localhost:5000/api/settings/reset', {
+      const response = await fetch(apiUrl('/api/settings/reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category })

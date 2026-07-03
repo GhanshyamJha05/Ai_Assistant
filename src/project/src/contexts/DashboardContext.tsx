@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import io, { Socket } from 'socket.io-client';
+import { apiUrl, SOCKET_URL } from '../lib/api';
 
 export interface Message {
     id: number;
@@ -84,6 +85,7 @@ interface DashboardContextType {
     loadSession?: (sessionId: string) => void;
     deleteSession?: (sessionId: string) => void;
     startNewSession?: () => void;
+    isConnected: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -105,6 +107,7 @@ interface DashboardProviderProps {
 
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
     const [chatMessages, setChatMessages] = useState<Message[]>([]);
     const [voiceCommands, setVoiceCommands] = useState<VoiceCommand[]>([]);
     const [systemStats, setSystemStats] = useState<SystemStats>({
@@ -141,7 +144,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/settings/all');
+                const response = await fetch(apiUrl('/api/settings/all'));
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.settings && data.settings.ai) {
@@ -191,7 +194,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             });
         } else {
             // Fallback to API
-            fetch('http://127.0.0.1:5000/api/command', {
+            fetch(apiUrl('/api/command'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -277,21 +280,55 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Initialize Socket.IO connection
     useEffect(() => {
-        const newSocket = io('http://127.0.0.1:5000', {
+        const newSocket = io(SOCKET_URL, {
             path: '/socket.io',
-            transports: ['polling'],
+            transports: ['polling', 'websocket'],
             withCredentials: true,
             autoConnect: true,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
         });
 
         newSocket.on('connect', () => {
             console.log('Connected to backend');
+            setIsConnected(true);
             addSystemLog('success', 'Connected to backend server');
         });
 
         newSocket.on('disconnect', () => {
             console.log('Disconnected from backend');
+            setIsConnected(false);
             addSystemLog('error', 'Disconnected from backend server');
+        });
+
+        // Listen for live settings changes
+        newSocket.on('settings_updated', async (data: any) => {
+            console.log(`⚙️ Settings updated live: ${data.category}`, data);
+            addSystemLog('info', `${data.category} settings updated`);
+            
+            // Re-fetch all settings to update local state
+            try {
+                const response = await fetch(apiUrl('/api/settings/all'));
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.settings) {
+                        // Apply specific category changes if needed, or trigger full re-render
+                        if (data.category === 'ai' && result.settings.ai) {
+                            const provider = result.settings.ai.defaultProvider;
+                            const newMode = provider === 'local' ? 'offline' : 'online';
+                            if (newMode !== aiMode) {
+                                setAIMode(newMode);
+                                console.log(`🔄 AI Mode hot-switched to ${newMode}`);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to sync settings live:', err);
+            }
         });
 
         newSocket.on('command_response', (data: any) => {
@@ -591,7 +628,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                             // DIRECT FETCH FALLBACK (No addChatMessage for user, since addVoiceCommand already added it)
                             // This prevents double entries (one Voice Icon, one Chat Text)
-                            fetch('http://127.0.0.1:5000/api/command', {
+                            fetch(apiUrl('/api/command'), {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -923,7 +960,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     useEffect(() => {
         const loadLearningStats = async () => {
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/learning/stats/all');
+                const response = await fetch(apiUrl('/api/learning/stats/all'));
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -952,19 +989,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         loadLearningStats();
     }, []);
 
-    // Simulate system stats updates if not receiving from backend
+    // Stats simulation removed - show real data only when connected
+    // When disconnected, stats will just not update (last known values shown)
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (socket && !socket.connected) {
-                setSystemStats({
-                    cpu: Math.floor(Math.random() * 40 + 20),
-                    memory: Math.floor(Math.random() * 30 + 50),
-                    network: `${(Math.random() * 20 + 5).toFixed(1)} MB/s`,
-                });
-            }
-        }, 3000);
-
-        return () => clearInterval(interval);
+        // intentionally empty - fake stats removed
     }, [socket]);
 
     const addChatMessage = (text: string, type: 'user' | 'ai') => {
@@ -1204,7 +1232,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         try {
             // Update provider via backend API
-            const response = await fetch('http://localhost:5000/api/settings/update', {
+            const response = await fetch(apiUrl('/api/settings/update'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1552,6 +1580,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const value: DashboardContextType = {
         socket,
+        isConnected,
         chatMessages,
         voiceCommands,
         systemStats,

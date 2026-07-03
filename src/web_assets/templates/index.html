@@ -1,128 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YourDaddy Assistant - Web Interface</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">
-                <i class="fas fa-robot"></i>
-                YourDaddy Assistant
-            </h1>
-            <div class="status" id="status">
-                <a href="/dashboard" style="color: white; text-decoration: none; margin-right: 15px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); padding: 5px 10px; border-radius: 4px;">
-                    <i class="fas fa-tachometer-alt"></i> Open Command Center
-                </a>
-                <span class="status-dot"></span>
-                <span id="status-text">Ready</span>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <!-- Voice Interface -->
-            <section class="voice-section">
-                <div class="voice-controls">
-                    <button id="voice-btn" class="voice-btn" title="Voice input">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <div class="voice-status">
-                        <span id="voice-text">Click microphone to start voice commands</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Command Interface -->
-            <section class="command-section">
-                <div class="input-group">
-                    <input type="text" id="command-input" placeholder="Type your command here..." autocomplete="off">
-                    <button id="send-btn" title="Send message">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </section>
-
-            <!-- Output Display -->
-            <section class="output-section">
-                <div class="output-header">
-                    <h3>Assistant Response</h3>
-                    <button id="clear-btn" class="clear-btn">
-                        <i class="fas fa-trash"></i> Clear
-                    </button>
-                </div>
-                <div id="output" class="output-content">
-                    <div class="welcome-message">
-                        <i class="fas fa-robot"></i>
-                        <p>Hello! I'm your AI assistant. You can:</p>
-                        <ul>
-                            <li>🗣️ Use voice commands</li>
-                            <li>💬 Type text commands</li>
-                            <li>🚀 Open applications</li>
-                            <li>🔍 Search the web</li>
-                            <li>📝 Take notes</li>
-                            <li>🎵 Control music</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Quick Actions -->
-            <section class="actions-section">
-                <h3>Quick Actions</h3>
-                <div class="action-grid">
-                    <button class="action-btn" data-command="discover apps">
-                        <i class="fas fa-search"></i>
-                        Discover Apps
-                    </button>
-                    <button class="action-btn" data-command="system status">
-                        <i class="fas fa-chart-line"></i>
-                        System Status
-                    </button>
-                    <button class="action-btn" data-command="weather">
-                        <i class="fas fa-cloud-sun"></i>
-                        Weather
-                    </button>
-                    <button class="action-btn" data-command="news">
-                        <i class="fas fa-newspaper"></i>
-                        Latest News
-                    </button>
-                </div>
-            </section>
-
-            <!-- Recent Apps -->
-            <section class="apps-section">
-                <h3>Recent Applications</h3>
-                <div id="recent-apps" class="apps-grid">
-                    <!-- Apps will be populated by JavaScript -->
-                </div>
-            </section>
-        </main>
-
-        <footer class="footer">
-            <div class="footer-content">
-                <span>&copy; 2024 YourDaddy Assistant</span>
-                <div class="footer-links">
-                    <a href="#" onclick="showAbout()">About</a>
-                    <a href="#" onclick="showSettings()">Settings</a>
-                    <a href="#" onclick="showHelp()">Help</a>
-                </div>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Modals -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="modal-close">&times;</span>
-            <div id="modal-body"></div>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    <script src="/static/js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <!-- Mobile Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="YourDaddy AI" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="msapplication-TileColor" content="#1a1a1a" />
+    
+    <!-- App Title -->
+    <title>YourDaddy AI Assistant</title>
+    <meta name="description" content="Advanced AI Assistant with voice, automation, and multimodal capabilities" />
+    
+    <!-- Social Meta Tags -->
+    <meta property="og:title" content="YourDaddy AI Assistant" />
+    <meta property="og:description" content="Advanced AI Assistant with voice, automation, and multimodal capabilities" />
+    <meta property="og:image" content="https://bolt.new/static/og_default.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json" />
+    
+    <!-- Icons for iOS -->
+    <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
+    
+    <!-- Icons for Android -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="/static/index-D2VIkOxg.js"></script>
+    <link rel="modulepreload" crossorigin href="/static/vendor-YsBxPMQB.js">
+    <link rel="modulepreload" crossorigin href="/static/ui-DjaYiejI.js">
+    <link rel="stylesheet" crossorigin href="/static/index-BOLhZQI_.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

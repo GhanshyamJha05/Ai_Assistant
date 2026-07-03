@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Mail, Music, MessageCircle, Github, Link, Unlink, ExternalLink, RefreshCw, Key, Server } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { apiUrl } from '../../lib/api';
 
 // Define the integration types
 type IntegrationStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
@@ -79,13 +80,13 @@ const IntegrationsDetail = () => {
       setLoading(true);
       
       // Fetch normal API integration status
-      const res = await fetch('http://127.0.0.1:5000/api/integrations/status');
+      const res = await fetch(apiUrl('/api/integrations/status'));
       const data = await res.json();
       
       // Fetch MCP status
       let mcpServers: any[] = [];
       try {
-        const mcpRes = await fetch('http://127.0.0.1:5000/api/integrations/mcp');
+        const mcpRes = await fetch(apiUrl('/api/integrations/mcp'));
         const mcpData = await mcpRes.json();
         if (mcpData.success && mcpData.servers) {
           mcpServers = mcpData.servers;
@@ -157,7 +158,7 @@ const IntegrationsDetail = () => {
     );
 
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/integrations/connect', {
+      const res = await fetch(apiUrl('/api/integrations/connect'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ integration_id: id })

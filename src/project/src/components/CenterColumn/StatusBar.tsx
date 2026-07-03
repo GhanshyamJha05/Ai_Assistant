@@ -7,7 +7,7 @@ const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [batteryLevel, setBatteryLevel] = useState<number>(0);
   const [isCharging, setIsCharging] = useState(false);
-  const { isVoiceActive, socket } = useDashboard();
+  const { isVoiceActive, isConnected } = useDashboard();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -60,8 +60,6 @@ const StatusBar = () => {
       hour12: false,
     });
   };
-
-  const isConnected = socket?.connected || false;
 
   const getBatteryIcon = () => {
     if (isCharging) return '🔌';

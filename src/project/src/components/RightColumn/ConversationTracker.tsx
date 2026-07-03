@@ -59,7 +59,7 @@ const ConversationTracker = () => {
   return (
     <>
       <motion.div
-        className="glass-panel rounded-lg overflow-hidden flex-shrink-0 flex flex-col h-full"
+        className="glass-panel rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col w-full"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
