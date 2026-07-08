@@ -363,6 +363,7 @@ if __name__ == '__main__':
     # Run the Flask app
     port = int(os.getenv('INTEGRATION_API_PORT', 5001))
     debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    host = os.getenv('FLASK_HOST', '127.0.0.1')
     
-    logger.info(f"Starting App Integration API server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    logger.info(f"Starting App Integration API server on {host}:{port}")
+    app.run(host=host, port=port, debug=debug)

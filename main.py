@@ -17,6 +17,11 @@ import logging
 import traceback
 from pathlib import Path
 
+# Fix Windows console encoding for emojis
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
+    sys.stderr.reconfigure(encoding='utf-8') if hasattr(sys.stderr, 'reconfigure') else None
+
 # Setup basic logging first
 logging.basicConfig(
     level=logging.INFO,
@@ -63,8 +68,8 @@ def main():
         logger.error(f"Initialization error: {e}")
     
     parser = argparse.ArgumentParser(description="AI Assistant - Your intelligent companion")
-    parser.add_argument("--interface", choices=["cli", "web", "desktop", "desktop_modern"], default="web",
-                       help="Interface to use (default: web)")
+    parser.add_argument("--interface", choices=["cli", "web", "desktop", "desktop_modern"], default=None,
+                       help="Interface to use (defaults to last used, or web)")
     parser.add_argument("--config", type=str, help="Path to configuration file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument("--port", type=int, default=8000, help="Port for web interface (default: 8000)")
@@ -72,6 +77,35 @@ def main():
     parser.add_argument("--skip-auth", action="store_true", default=True, help="Skip PIN authentication (development only)")
     
     args = parser.parse_args()
+    
+    # 1.5 Improve Startup Experience - Remember the last interface
+    try:
+        import json
+        settings_path = project_root / 'config' / 'user_settings.json'
+        
+        # Load settings
+        settings_data = {}
+        if settings_path.exists():
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                settings_data = json.load(f)
+                
+        # Determine interface
+        if args.interface:
+            interface_to_use = args.interface
+        else:
+            interface_to_use = settings_data.get("last_interface", "web")
+            
+        # Save last interface
+        settings_data["last_interface"] = interface_to_use
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings_path, 'w', encoding='utf-8') as f:
+            json.dump(settings_data, f, indent=2)
+            
+        args.interface = interface_to_use
+    except Exception as e:
+        logger.warning(f"Could not load/save last interface preference: {e}")
+        if not args.interface:
+            args.interface = "web"
     
     # Handle PIN setup
     if args.setup_pin:

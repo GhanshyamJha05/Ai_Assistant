@@ -133,15 +133,20 @@ class AppAutomation:
         
         # Fallback: use subprocess
         try:
-            # Handle common app names
+            # Handle common app names - avoid shell=True!
             if 'notepad' in app_name.lower():
-                subprocess.Popen("notepad.exe")
+                subprocess.Popen(["notepad.exe"])
             elif 'calc' in app_name.lower():
-                subprocess.Popen("calc.exe")
+                subprocess.Popen(["calc.exe"])
             elif 'cmd' in app_name.lower():
-                subprocess.Popen("start cmd.exe", shell=True)
+                subprocess.Popen(["cmd.exe"])
             else:
-                subprocess.Popen(app_name, shell=True)
+                # For other apps, use os.startfile on Windows or subprocess with shell=False if possible
+                import os
+                if os.name == 'nt':
+                    os.startfile(app_name)
+                else:
+                    subprocess.Popen([app_name])
                 
             time.sleep(2)  # Give app time to open
             logger.info(f"✅ Opened: {app_name}")

@@ -14,17 +14,9 @@ import time
 import threading
 
 # Import required modules
-try:
-    from ai_assistant.modules.llm_provider import UnifiedChatInterface
-    LLM_PROVIDER_AVAILABLE = True
-except ImportError:
-    LLM_PROVIDER_AVAILABLE = False
-
-try:
-    from ai_assistant.modules.conversational_ai import AdvancedConversationalAI
-    CONVERSATIONAL_AI_AVAILABLE = True
-except ImportError:
-    CONVERSATIONAL_AI_AVAILABLE = False
+# Lazy loading for AI modules
+LLM_PROVIDER_AVAILABLE = True
+CONVERSATIONAL_AI_AVAILABLE = True
 
 try:
     import psutil
@@ -125,6 +117,21 @@ def handle_command(data):
             except Exception as e:
                 print(f"⚠️ General emit error: {e}")
         
+        # Check if AI models have finished background initialization
+        try:
+            from ai_assistant.services.modern_web_backend import ai_models_ready
+            if not ai_models_ready:
+                safe_emit('command_response', {
+                    'success': True,
+                    'response': "I am still warming up my AI core. Please give me a moment!",
+                    'command': command_text,
+                    'source': 'system',
+                    'timestamp': datetime.now().isoformat()
+                })
+                return
+        except ImportError:
+            pass # fallback if called from somewhere else
+
         # ============================================
         # PRIORITY 1: Local Command Processing
         # ============================================
@@ -134,6 +141,8 @@ def handle_command(data):
         
         if CONVERSATIONAL_AI_AVAILABLE:
             try:
+                from ai_assistant.modules.conversational_ai import AdvancedConversationalAI
+                
                 # Create instance with automation callback
                 def automation_callback(action, param):
                     """Execute automation actions"""
@@ -176,9 +185,14 @@ def handle_command(data):
                     })
                     
                     # Log learning
-                    if learning_router:
-                        learning_router.log_user_query(command_text, source=source)
-                        learning_router.log_ai_response(command_text, response_text)
+                    try:
+                        from ai_assistant.services.modern_web_backend import _get_learning_router_lazy
+                        lr = _get_learning_router_lazy()
+                        if lr:
+                            lr.log_user_query(command_text, source=source)
+                            lr.log_ai_response(command_text, response_text)
+                    except Exception as e:
+                        print(f"⚠️ Could not log learning: {e}")
                     
                     return  # Successfully handled
                     
@@ -194,6 +208,8 @@ def handle_command(data):
         # ============================================
         if LLM_PROVIDER_AVAILABLE and not used_local_tools:
             try:
+                from ai_assistant.modules.llm_provider import UnifiedChatInterface
+                
                 # Extract provider/model preference from request
                 preferred_provider = data.get('provider')
                 preferred_model = data.get('model')
@@ -251,9 +267,14 @@ def handle_command(data):
                 print(f'✅ [EXTERNAL AI - {provider_name.upper()}] {response_text[:100]}...')
                 
                 # Log learning
-                if learning_router:
-                    learning_router.log_user_query(command_text, source=source)
-                    learning_router.log_ai_response(command_text, response_text)
+                try:
+                    from ai_assistant.services.modern_web_backend import _get_learning_router_lazy
+                    lr = _get_learning_router_lazy()
+                    if lr:
+                        lr.log_user_query(command_text, source=source)
+                        lr.log_ai_response(command_text, response_text)
+                except Exception as e:
+                    print(f"⚠️ Could not log learning: {e}")
                 
                 # Emit response (safe_emit will catch any socket errors)
                 safe_emit('command_response', {

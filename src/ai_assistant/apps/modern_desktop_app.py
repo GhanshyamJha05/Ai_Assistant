@@ -25,10 +25,14 @@ project_root = get_resource_path("")
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
-from ai_assistant.services.modern_web_backend import app, socketio
-
 def start_backend():
     print("Starting backend on port 5000 for Desktop App...")
+    
+    # LAZY IMPORT: Move heavy imports here so they don't block the UI window from opening!
+    from ai_assistant.services.modern_web_backend import app, socketio, start_ai_background_thread
+    
+    # Fire off the background thread to load AI models while Flask starts serving the UI instantly
+    start_ai_background_thread()
     
     try:
         from ai_assistant.services.backend.system_monitor import start_system_monitor
@@ -56,28 +60,43 @@ def start_backend():
     socketio.run(app, host='127.0.0.1', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
 
 def main():
-    # Start the Flask backend in a separate thread
-    backend_thread = threading.Thread(target=start_backend, daemon=True)
-    backend_thread.start()
-    
-    # Wait a moment for the backend to initialize
-    time.sleep(2)
+    loading_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Loading YourDaddy AI...</title>
+        <style>
+            body { background: #16181D; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+            .loader { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3B82F6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+    </head>
+    <body>
+        <div class="loader"></div>
+        <h2>Starting Web Server...</h2>
+        <p style="color: #9CA3AF;">UI will appear instantly, AI modules will load in background.</p>
+        <script>
+            function checkServer() {
+                fetch('http://127.0.0.1:5000/')
+                    .then(r => {
+                        if(r.ok) window.location.href = 'http://127.0.0.1:5000/';
+                        else setTimeout(checkServer, 200);
+                    })
+                    .catch(e => setTimeout(checkServer, 200));
+            }
+            setTimeout(checkServer, 200);
+        </script>
+    </body>
+    </html>
+    """
 
-    # Path to the compiled React app
-    dist_path = get_resource_path("src/web_assets")
+    # We now serve the frontend via Flask on port 5000
+    print("Opening native window with loading screen...")
+    webview.create_window('YourDaddy AI Assistant', html=loading_html, width=1280, height=800, min_size=(800, 600))
     
-    if not dist_path.exists():
-        print(f"Error: React build not found at {dist_path}")
-        print("Please run 'npm install && npm run build' in src/project first.")
-        url = "http://localhost:5173"
-        print(f"Falling back to dev server: {url}")
-        webview.create_window('YourDaddy AI Assistant', url, width=1280, height=800, min_size=(800, 600))
-        webview.start()
-    else:
-        # We now serve the frontend via Flask on port 5000
-        print(f"Serving UI from Flask on port 5000 (from {dist_path})")
-        webview.create_window('YourDaddy AI Assistant', 'http://127.0.0.1:5000', width=1280, height=800, min_size=(800, 600))
-        webview.start()
+    # Start the webview GUI loop FIRST, then run start_backend in a background thread.
+    # This guarantees the window appears instantly (0 seconds) before heavy AI models block the GIL.
+    webview.start(start_backend)
 
 if __name__ == '__main__':
     main()

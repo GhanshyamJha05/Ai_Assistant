@@ -253,34 +253,8 @@ def web_search(query: str, max_results: int = 5) -> Dict[str, Any]:
         }
 
 
-def execute_code(code: str, language: str = "python") -> Dict[str, Any]:
-    """
-    Execute code (sandboxed).
-    
-    Args:
-        code: Code to execute
-        language: Programming language
-    """
-    try:
-        if language == "python":
-            import subprocess
-            result = subprocess.run(
-                ["python", "-c", code],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            return {
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "return_code": result.returncode,
-                "language": language
-            }
-    except Exception as e:
-        return {
-            "error": str(e),
-            "language": language
-        }
+# execute_code tool has been REMOVED for security reasons
+# Arbitrary code execution is too dangerous to expose to AI models
 
 
 def get_current_time() -> Dict[str, Any]:
@@ -297,14 +271,47 @@ def get_current_time() -> Dict[str, Any]:
 
 def calculator(expression: str) -> Dict[str, Any]:
     """
-    Evaluate a mathematical expression.
+    Evaluate a mathematical expression safely.
     
     Args:
         expression: Mathematical expression
     """
+    import ast
+    import operator
+
+    # Define safe operators
+    safe_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def evaluate(node):
+        if isinstance(node, ast.Expression):
+            return evaluate(node.body)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            op = safe_operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported operator: {type(node.op)}")
+            return op(evaluate(node.left), evaluate(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            op = safe_operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported unary operator: {type(node.op)}")
+            return op(evaluate(node.operand))
+        else:
+            raise ValueError(f"Unsupported node type: {type(node)}")
+
     try:
-        # Safe evaluation with restricted scope
-        result = eval(expression, {"__builtins__": {}}, {"__import__": None})
+        # Parse the expression and evaluate safely
+        tree = ast.parse(expression, mode='eval')
+        result = evaluate(tree)
         return {
             "expression": expression,
             "result": result,
@@ -362,22 +369,6 @@ def get_default_executor() -> ToolExecutor:
         required_params=["expression"]
     )
     
-    executor.register_tool(
-        "execute_code",
-        execute_code,
-        "Execute code (Python only, sandboxed)",
-        {
-            "code": {
-                "type": "string",
-                "description": "Code to execute"
-            },
-            "language": {
-                "type": "string",
-                "description": "Programming language",
-                "default": "python"
-            }
-        },
-        required_params=["code"]
-    )
+    # execute_code tool has been REMOVED for security reasons
     
     return executor

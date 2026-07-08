@@ -134,7 +134,7 @@ class PINAuth:
             print("⚠️  PIN authentication not configured")
             print("Run 'python main.py --setup-pin' to configure PIN")
             return False
-        
+            
         for attempt in range(max_attempts):
             try:
                 pin = getpass.getpass("🔐 Enter PIN: ")

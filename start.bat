@@ -7,6 +7,15 @@ echo     Starting YourDaddy AI Assistant
 echo ===================================================
 echo.
 
+:: Change to the directory of this script
+cd /d "%~dp0"
+
+:: Activate virtual environment if it exists
+if exist ".venv\Scripts\activate.bat" (
+    call .venv\Scripts\activate.bat
+)
+
+
 :: Check if node is installed
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (

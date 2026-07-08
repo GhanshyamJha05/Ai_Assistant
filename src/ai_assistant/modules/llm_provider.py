@@ -39,9 +39,10 @@ class LLMProvider(ABC):
 class OpenAIProvider(LLMProvider):
     """OpenAI GPT provider."""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo", base_url: Optional[str] = None):
         """Initialize OpenAI provider."""
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
         self.model = model
         
         if not self.api_key:
@@ -49,7 +50,10 @@ class OpenAIProvider(LLMProvider):
         
         try:
             from openai import OpenAI, APIError
-            self.client = OpenAI(api_key=self.api_key)
+            if self.base_url:
+                self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+            else:
+                self.client = OpenAI(api_key=self.api_key)
             self.APIError = APIError
         except ImportError:
             raise ImportError("OpenAI package required: pip install openai")

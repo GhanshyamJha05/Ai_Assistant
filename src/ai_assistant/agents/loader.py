@@ -154,7 +154,31 @@ class AgentLoader:
             factory=lambda: AgentLoader._load_audio()
         )
 
-        print("✅ Registered 12 Agent Definitions (Lazy Load)")
+        # 13. Deep Research Agent (last30days-skill replica)
+        registry.register_agent_definition(
+            AgentMetadata(
+                agent_id="deep-research-001",
+                name="Deep Research Agent",
+                description="Performs deep topic analysis, parallel search, and LLM synthesis",
+                capabilities=["deep_research", "social_synthesis", "multi_source_scrape"],
+                status="standby"
+            ),
+            factory=lambda: AgentLoader._load_deep_research()
+        )
+
+        # 14. Autonomous Learning Agent (hermes-agent replica)
+        registry.register_agent_definition(
+            AgentMetadata(
+                agent_id="autonomous-001",
+                name="Autonomous Learning Agent",
+                description="Observes interactions and learns preferences to persist knowledge",
+                capabilities=["memory_persistence", "behavior_learning", "skill_generation"],
+                status="standby"
+            ),
+            factory=lambda: AgentLoader._load_autonomous()
+        )
+
+        print("✅ Registered 14 Agent Definitions (Lazy Load)")
 
     # --- Lazy Factories ---
 
@@ -217,3 +241,13 @@ class AgentLoader:
     def _load_audio():
         from .audio.audio_agent import AudioAgent
         return AudioAgent()
+
+    @staticmethod
+    def _load_deep_research():
+        from .research.deep_research_agent import DeepResearchAgent
+        return DeepResearchAgent()
+
+    @staticmethod
+    def _load_autonomous():
+        from .core.autonomous_agent import AutonomousAgent
+        return AutonomousAgent()

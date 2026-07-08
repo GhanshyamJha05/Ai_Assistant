@@ -14,6 +14,13 @@
       "command": "uvx",
       "args": ["mcp-server-postgres", "postgresql://user:pass@localhost:5432/dbname"],
       "enabled": false
+    },
+    "chrome-devtools": {
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools MCP for browser debugging and inspection",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp"],
+      "enabled": false
     }
   }
 }

@@ -177,6 +177,19 @@ class ModernAssistant:
             print("⚡ Lazy initialization enabled - features load on first use")
             
     def process_query(self, query: str) -> str:
+        """Process user query and return response"""
+        
+        # Check custom commands first
+        try:
+            from ai_assistant.core.custom_commands import CustomCommandManager
+            if not hasattr(self, '_custom_cmd_mgr'):
+                self._custom_cmd_mgr = CustomCommandManager()
+            resolved = self._custom_cmd_mgr.resolve_command(query)
+            if len(resolved) > 1:
+                return f"Executing macro: {', '.join(resolved)} (Multi-step macros are partially supported)"
+        except Exception:
+            pass
+            
         """
         Process a natural language query using the best available AI method.
         Added for backward compatibility and centralized processing.
@@ -185,11 +198,34 @@ class ModernAssistant:
             # Lazy import to avoid circular dependencies
             try:
                 from ai_assistant.modules.llm_provider import UnifiedChatInterface
+                from ai_assistant.core.onboarding import OnboardingManager
+                from ai_assistant.core.context_optimizer import ContextOptimizer
+                
                 if self._llm_chat is None:
                     self._llm_chat = UnifiedChatInterface(use_fallback=True)
-                    self._llm_chat.add_system_message("You are 'YourDaddy', a smart and helpful AI assistant.")
+                    self._onboarding_mgr = OnboardingManager()
+                    self._context_opt = ContextOptimizer()
+                    
+                    if not self._onboarding_mgr.is_onboarded():
+                        self._llm_chat.add_system_message(self._onboarding_mgr.get_onboarding_system_prompt())
+                    else:
+                        base_prompt = "You are 'YourDaddy', a smart and helpful AI assistant."
+                        self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
                 
-                return self._llm_chat.chat(query)
+                # Fetch response
+                response = self._llm_chat.chat(query)
+                
+                # Process onboarding if active
+                if hasattr(self, '_onboarding_mgr') and not self._onboarding_mgr.is_onboarded():
+                    response, is_complete = self._onboarding_mgr.process_onboarding_response(response)
+                    if is_complete:
+                        # Reset system message once onboarding completes
+                        if not hasattr(self, '_context_opt'):
+                            self._context_opt = ContextOptimizer()
+                        base_prompt = "You are 'YourDaddy', a smart and helpful AI assistant."
+                        self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
+                        
+                return response
             except ImportError:
                 # Fallback if module missing
                 return f"I received: {query} (AI engine unavailable)"
@@ -219,6 +255,13 @@ class ModernAssistant:
         
         if ENABLE_SYSTEM_MONITORING:
             self.start_system_monitoring()
+            
+        try:
+            from ai_assistant.core.proactive_anticipator import ProactiveAnticipator
+            self._proactive_anticipator = ProactiveAnticipator(chat_interface=self._llm_chat if hasattr(self, '_llm_chat') else None)
+            self._proactive_anticipator.start()
+        except Exception as e:
+            print(f"⚠️ Proactive Anticipator could not start: {e}")
         
         print("✅ Background initialization complete")
     

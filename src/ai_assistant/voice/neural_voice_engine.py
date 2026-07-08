@@ -26,6 +26,12 @@ except ImportError:
     COQUI_AVAILABLE = False
 
 try:
+    import kittentts
+    KITTEN_AVAILABLE = True
+except ImportError:
+    KITTEN_AVAILABLE = False
+
+try:
     import pyttsx3
     PYTTSX3_AVAILABLE = True
 except ImportError:
@@ -106,6 +112,8 @@ class NeuralVoiceEngine:
         # Initialize engines
         self.edge_tts_available = EDGE_TTS_AVAILABLE
         self.coqui_tts = None
+        self.kitten_tts = None
+        self.kitten_available = KITTEN_AVAILABLE
         self.pyttsx3_engine = None
         self.current_voice = 'en-US-AriaNeural'
         
@@ -126,6 +134,12 @@ class NeuralVoiceEngine:
         else:
              # Only log debug, not warning, since we have other engines
              logger.debug("Sound engine: Coqui TTS not installed (optional)")
+             
+        # KittenTTS (ultra-lightweight offline) - Lazy load
+        if self.kitten_available:
+             logger.debug("Sound engine: KittenTTS library found (will load on-demand)")
+        else:
+             logger.debug("Sound engine: KittenTTS not installed (optional)")
         
         # pyttsx3 (fallback)
         if PYTTSX3_AVAILABLE:
@@ -263,6 +277,41 @@ class NeuralVoiceEngine:
         except Exception as e:
             logger.error(f"❌ Coqui TTS synthesis failed: {e}")
             return None
+
+    def synthesize_kitten_tts(
+        self,
+        text: str,
+        output_file: str,
+        voice: str = "Jasper",
+        speed: float = 1.0
+    ) -> Optional[str]:
+        """
+        Synthesize speech using KittenTTS (offline, ultra-lightweight)
+        """
+        if not self.kitten_available or not text:
+            return None
+            
+        try:
+            logger.info(f"⏳ Synthesizing with KittenTTS: {text[:50]}...")
+            
+            # Lazy load the model
+            if self.kitten_tts is None:
+                from kittentts import KittenTTS
+                # Use the recommended mini model (or fallback to nano if memory is tight)
+                self.kitten_tts = KittenTTS("KittenML/kitten-tts-mini-0.8")
+                
+            # KittenTTS has specific built-in voices: 'Bella', 'Jasper', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo'
+            if voice not in self.kitten_tts.available_voices:
+                voice = "Jasper" # Default fallback
+                
+            self.kitten_tts.generate_to_file(text, output_file, voice=voice, speed=speed)
+            
+            logger.info(f"✅ KittenTTS synthesized: {text[:50]}...")
+            return output_file
+            
+        except Exception as e:
+            logger.error(f"❌ KittenTTS synthesis failed: {e}")
+            return None
     
     def synthesize_pyttsx3_fallback(
         self,
@@ -345,17 +394,26 @@ class NeuralVoiceEngine:
         # Try in preferred order
         if prefer_online and self.edge_tts_available:
             result = self.synthesize_edge_tts_sync(
-                text, language, gender, rate, output_file=output_file
+                text, language, gender, rate, 0.0, output_file
             )
             if result:
                 return result
-        
+                
+        # 2. Try KittenTTS (fast, offline)
+        if self.kitten_available:
+            # Map gender to a KittenTTS voice
+            kitten_voice = "Luna" if gender == VoiceGender.FEMALE else "Jasper"
+            result = self.synthesize_kitten_tts(text, output_file, voice=kitten_voice)
+            if result:
+                return result
+                
+        # 3. Try Coqui TTS (heavy, offline)
         if COQUI_AVAILABLE:
             result = self.synthesize_coqui_tts(text, language, output_file=output_file)
             if result:
                 return result
-        
-        # Final fallback
+                
+        # 4. Fallback to pyttsx3 (always available, robotic)
         return self.synthesize_pyttsx3_fallback(text, language, output_file)
     
     def clear_cache(self, older_than_hours: int = 24):

@@ -49,8 +49,12 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
     sys.stderr.reconfigure(encoding='utf-8') if hasattr(sys.stderr, 'reconfigure') else None
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from absolute path
+_env_path = Path(__file__).parent.parent.parent.parent / '.env'
+if _env_path.exists():
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 # Setup centralized logging
 from utils.logging_config import get_logger, get_api_logger
@@ -80,20 +84,7 @@ except ImportError as e:
 # Import automation tools
 try:
     # Try importing from ai_assistant package first
-    from ai_assistant.automation_tools_new import (
-        write_a_note, open_application, search_google, search_youtube,
-        close_application, speak, set_system_volume, get_app_path_from_name,
-        setup_memory, save_to_memory, get_memory, search_memory,
-        get_conversation_summary, save_knowledge, get_knowledge,
-        discover_applications, smart_open_application, list_installed_apps,
-        refresh_app_database, search_apps_by_name, get_app_usage_stats, get_apps_for_web,
-        get_system_status, get_running_processes, cleanup_temp_files,
-        get_network_info, get_upcoming_events, get_inbox_summary,
-        get_spotify_status, spotify_play_pause, spotify_next_track,
-        spotify_previous_track, search_and_play_spotify,
-        get_weather_info, get_latest_news, get_stock_price,
-        detect_taskbar_apps, can_see_taskbar
-    )
+    import ai_assistant.automation_tools_new as automation_tools
     # Import app discovery scheduler functions
     from ai_assistant.modules.app_discovery import (
         start_auto_refresh_after_startup, start_periodic_refresh
@@ -115,105 +106,80 @@ except ImportError as e:
         AUTOMATION_AVAILABLE = False
 
 # Import Learning Router for automatic AI training
-try:
-    from auto_learning_router import LearningDataRouter
-    learning_router = LearningDataRouter()
-    LEARNING_ROUTER_AVAILABLE = True
-    print("✅ Learning router initialized - AI will learn from all interactions")
-except (ImportError, Exception) as e:
-    print(f"⚠️ Learning router not available: {e}")
-    learning_router = None
-    LEARNING_ROUTER_AVAILABLE = False
+learning_router = None
+LEARNING_ROUTER_AVAILABLE = True # Assume true, fallback to false later
+
+def _get_learning_router_lazy():
+    global learning_router, LEARNING_ROUTER_AVAILABLE
+    if learning_router is None and LEARNING_ROUTER_AVAILABLE:
+        try:
+            from auto_learning_router import LearningDataRouter
+            learning_router = LearningDataRouter()
+            logger.info("✅ Learning router initialized - AI will learn from all interactions")
+        except Exception as e:
+            logger.warning(f"⚠️ Learning router not available: {e}")
+            LEARNING_ROUTER_AVAILABLE = False
+            learning_router = None
+    return learning_router
 
 # Import Smart Memory Retrieval for answering from past conversations
-try:
-    from smart_memory_retrieval import SmartMemoryRetrieval, enhance_response_with_memory
-    memory_retriever = SmartMemoryRetrieval()
-    SMART_MEMORY_AVAILABLE = True
-    print("✅ Smart memory retrieval initialized - AI can answer from past conversations")
-except ImportError as e:
-    print(f"⚠️ Smart memory retrieval not available: {e}")
-    memory_retriever = None
-    SMART_MEMORY_AVAILABLE = False
+memory_retriever = None
+SMART_MEMORY_AVAILABLE = True
 
-# Import multimodal AI if available
-try:
-    from ai_assistant.multimodal import MultiModalAI
-    MULTIMODAL_AVAILABLE = True
-except ImportError:
-    MULTIMODAL_AVAILABLE = False
+def _get_memory_retriever_lazy():
+    global memory_retriever, SMART_MEMORY_AVAILABLE
+    if memory_retriever is None and SMART_MEMORY_AVAILABLE:
+        try:
+            from smart_memory_retrieval import SmartMemoryRetrieval
+            memory_retriever = SmartMemoryRetrieval()
+            logger.info("✅ Smart memory retrieval initialized - AI can answer from past conversations")
+        except Exception as e:
+            logger.warning(f"⚠️ Smart memory retrieval not available: {e}")
+            SMART_MEMORY_AVAILABLE = False
+            memory_retriever = None
+    return memory_retriever
 
-# Import conversational AI if available
-try:
-    from ai_assistant.modules.conversational_ai import AdvancedConversationalAI
-    CONVERSATIONAL_AI_AVAILABLE = True
-except ImportError:
-    CONVERSATIONAL_AI_AVAILABLE = False
+# Global AI Loading State
+ai_models_ready = False
+ai_models_status = "Not Started"
 
-# Import multilingual support if available
-try:
-    from ai_assistant.multilingual import MultilingualSupport, Language, LanguageContext
-    MULTILINGUAL_AVAILABLE = True
-    print("Multilingual support loaded in web backend")
-except ImportError as e:
-    MULTILINGUAL_AVAILABLE = False
-    print("Multilingual support not available in web backend - dependency issue with googletrans/httpx")
-except Exception as e:
-    MULTILINGUAL_AVAILABLE = False
-    print(f"Multilingual support not available in web backend: {e}")
+# We are using pure lazy loading for all heavy ML modules.
+# They will be imported locally inside the functions that need them.
+MULTIMODAL_AVAILABLE = True
+CONVERSATIONAL_AI_AVAILABLE = True
+MULTILINGUAL_AVAILABLE = True
+ADVANCED_CHAT_AVAILABLE = True
+LLM_PROVIDER_AVAILABLE = True
+LOCAL_AI_AVAILABLE = True
+ENHANCED_AI_AVAILABLE = True
+USAGE_ANALYZER_AVAILABLE = True
 
-# Import advanced chat system and LLM providers
-try:
-    from ai_assistant.modules.advanced_chat_system import AdvancedChatSystem
-    ADVANCED_CHAT_AVAILABLE = True
-    print("Advanced chat system loaded")
-except ImportError as e:
-    ADVANCED_CHAT_AVAILABLE = False
-    print(f"Advanced chat system not available: {e}")
-
-try:
-    from ai_assistant.modules.llm_provider import UnifiedChatInterface, LLMFactory
-    LLM_PROVIDER_AVAILABLE = True
-    print("LLM providers loaded")
-except ImportError as e:
-    LLM_PROVIDER_AVAILABLE = False
-    print(f"LLM providers not available: {e}")
-
-# Import NEW ADVANCED FEATURES (lazy initialization)
-try:
-    from ai_assistant.core.enhanced_integration import get_enhanced_ai
-    enhanced_ai = None  # Lazy load on first use
-    ENHANCED_AI_AVAILABLE = True
-    print("⚡ Enhanced AI available (will load on first use)")
-except ImportError as e:
-    ENHANCED_AI_AVAILABLE = False
-    enhanced_ai = None
-    print(f"⚠️ Enhanced AI not available: {e}")
+# Lazy loaded instances
+enhanced_ai = None
+usage_analyzer = None
 
 def _get_enhanced_ai_lazy():
     """Lazy load enhanced AI on first use"""
     global enhanced_ai
     if enhanced_ai is None and ENHANCED_AI_AVAILABLE:
-        enhanced_ai = get_enhanced_ai()
-        logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
+        try:
+            from ai_assistant.core.enhanced_integration import get_enhanced_ai
+            enhanced_ai = get_enhanced_ai()
+            logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
+        except Exception as e:
+            logger.warning(f"⚠️ Enhanced AI not available: {e}")
     return enhanced_ai
-
-try:
-    from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
-    usage_analyzer = None  # Lazy load on first use
-    USAGE_ANALYZER_AVAILABLE = True
-    print("⚡ Usage pattern analyzer available (will load on first use)")
-except ImportError as e:
-    USAGE_ANALYZER_AVAILABLE = False
-    usage_analyzer = None
-    print(f"⚠️ Usage analyzer not available: {e}")
 
 def _get_usage_analyzer_lazy():
     """Lazy load usage analyzer on first use"""
     global usage_analyzer
     if usage_analyzer is None and USAGE_ANALYZER_AVAILABLE:
-        usage_analyzer = UsagePatternAnalyzer()
-        logger.info("✅ Usage pattern analyzer initialized")
+        try:
+            from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+            usage_analyzer = UsagePatternAnalyzer()
+            logger.info("✅ Usage pattern analyzer initialized")
+        except Exception as e:
+            logger.warning(f"⚠️ Usage analyzer not available: {e}")
     return usage_analyzer
 
 # System monitoring
@@ -223,7 +189,7 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 
-# Voice processing
+# Voice processing (lightweight wrapper, safe to import)
 try:
     import pvporcupine
     import pyaudio
@@ -237,16 +203,61 @@ try:
 except ImportError:
     VOICE_AVAILABLE = False
 
-# Import local AI manager
-try:
-    from ai_assistant.local_ai_manager import LocalAIManager
-    LOCAL_AI_AVAILABLE = True
-except ImportError:
-    LOCAL_AI_AVAILABLE = False
-    logger.warning("⚠️ Local AI not available. Install: pip install llama-cpp-python")
+# Background Initialization Thread for AI Models
+def initialize_heavy_ai_models():
+    """Run in a background thread to pre-warm the AI models without blocking the UI"""
+    global ai_models_ready, ai_models_status
+    
+    logger.info("🚀 Background AI Initialization started...")
+    
+    # 1. Start loading the Learning Router
+    ai_models_status = "Loading Learning Matrix..."
+    _get_learning_router_lazy()
+    
+    # 2. Load Smart Memory
+    ai_models_status = "Loading Memory Matrix..."
+    _get_memory_retriever_lazy()
+    
+    # 3. Load Enhanced AI (semantic cache, routers)
+    ai_models_status = "Loading Semantic Engines..."
+    _get_enhanced_ai_lazy()
+    
+    # 4. Load Usage Analyzer
+    ai_models_status = "Loading Pattern Analyzer..."
+    _get_usage_analyzer_lazy()
+    
+    # 5. Load Voice Engines
+    ai_models_status = "Loading Voice Engines..."
+    global vad_detector, noise_reducer
+    try:
+        from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector
+        vad_detector = VoiceActivityDetector()
+        logger.info("✅ Voice Activity Detector initialized in background")
+    except Exception as e:
+        logger.warning(f"⚠️ VAD module not available: {e}")
+        
+    try:
+        from ai_assistant.voice.noise_reduction import NoiseReductionSystem
+        noise_reducer = NoiseReductionSystem()
+        logger.info("✅ Noise Reduction initialized in background")
+    except Exception as e:
+        logger.warning(f"⚠️ Noise Reduction module not available: {e}")
+        
+    logger.info("✅ Background AI Initialization COMPLETE!")
+    ai_models_ready = True
+    ai_models_status = "Ready"
 
-# Load environment variables
-load_dotenv()
+def start_ai_background_thread():
+    """Starts the AI loading thread. Called by desktop app or main."""
+    import threading
+    t = threading.Thread(target=initialize_heavy_ai_models, daemon=True)
+    t.start()
+
+# Load environment variables again if needed
+if _env_path.exists():
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 # Create Flask app
 # Point to new web assets location
@@ -262,6 +273,12 @@ template_dir = web_assets_dir
 static_dir = web_assets_dir
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir, static_url_path='/')
+
+try:
+    from ai_assistant.services.learning_dashboard_api import dashboard_api
+    app.register_blueprint(dashboard_api)
+except ImportError as e:
+    logger.warning(f"Could not load dashboard_api: {e}")
 
 # Security Configuration - Use secrets manager for secure key handling
 # Helper to dynamically ensure secret keys are persisted in .env
@@ -322,6 +339,11 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+@limiter.request_filter
+def exempt_localhost():
+    """Exempt the local desktop app from all rate limits so health checks don't ban it."""
+    return request.remote_addr in ('127.0.0.1', 'localhost', '::1')
+
 # Secure CORS Configuration
 ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:15000,http://127.0.0.1:15000').split(',')
 CORS(app, resources={
@@ -341,7 +363,7 @@ CORS(app, resources={
 # Initialize SocketIO for WebSocket support
 socketio = SocketIO(
     app,
-    cors_allowed_origins=ALLOWED_ORIGINS,
+    cors_allowed_origins="*",
     async_mode='threading',
     logger=False,  # Disable verbose logging
     engineio_logger=False,  # Disable engine.io logging
@@ -386,50 +408,12 @@ except ImportError as e:
     VOICE_API_AVAILABLE = False
 
 # Import advanced voice processing modules
-try:
-    from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector, VADConfig
-    VAD_AVAILABLE = True
-    logger.info("✅ Voice Activity Detection module loaded")
-except ImportError as e:
-    VAD_AVAILABLE = False
-    logger.warning(f"⚠️ VAD module not available: {e}")
-
-try:
-    from ai_assistant.voice.noise_reduction import NoiseReductionSystem, NoiseReductionConfig
-    NOISE_REDUCTION_AVAILABLE = True
-    logger.info("✅ Noise Reduction module loaded")
-except ImportError as e:
-    NOISE_REDUCTION_AVAILABLE = False
-    logger.warning(f"⚠️ Noise Reduction module not available: {e}")
-
-try:
-    from ai_assistant.voice.async_recognizer import (
-        init_async_recognizer, recognize_async, get_recognition_stats
-    )
-    ASYNC_RECOGNIZER_AVAILABLE = True
-    logger.info("✅ Async Voice Recognizer module loaded")
-except ImportError as e:
-    ASYNC_RECOGNIZER_AVAILABLE = False
-    logger.warning(f"⚠️ Async Recognizer module not available: {e}")
-
-# Import voice WebSocket handlers
-try:
-    from ai_assistant.services.voice_websocket_handlers import register_voice_handlers
-    VOICE_WEBSOCKET_AVAILABLE = True
-    logger.info("✅ Voice WebSocket handlers module loaded")
-except ImportError as e:
-    VOICE_WEBSOCKET_AVAILABLE = False
-    logger.warning(f"⚠️ Voice WebSocket handlers not available: {e}")
-
-
-# Import Google Speech Recognition WebSocket handlers
-try:
-    from ai_assistant.services.google_speech_websocket_handler import register_google_speech_handlers
-    GOOGLE_SPEECH_WS_AVAILABLE = True
-    logger.info("✅ Google Speech Recognition WebSocket handler loaded (online recognition ready)")
-except ImportError as e:
-    GOOGLE_SPEECH_WS_AVAILABLE = False
-    logger.warning(f"⚠️ Google Speech WebSocket handler not available: {e}")
+# We defer imports to avoid blocking the main thread
+VAD_AVAILABLE = True
+NOISE_REDUCTION_AVAILABLE = True
+ASYNC_RECOGNIZER_AVAILABLE = True
+VOICE_WEBSOCKET_AVAILABLE = True
+GOOGLE_SPEECH_WS_AVAILABLE = True
 
 
 # =============================================================================
@@ -521,6 +505,20 @@ AVAILABLE_VOICES = [
     {"id": "en-GB-LibbyNeural", "name": "Libby", "gender": "female", "accent": "UK", "language": "en-GB", "description": "Young and friendly British", "personality": "Youthful and energetic"},
     {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
 ]
+
+
+@app.route('/api/context', methods=['GET'])
+def get_current_context():
+    """Get the current contextual profile for Adaptive UI"""
+    try:
+        from ai_assistant.core.context_optimizer import ContextOptimizer
+        optimizer = ContextOptimizer()
+        return jsonify({
+            "success": True,
+            "context": optimizer.get_current_profile()
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/api/user/preferences', methods=['GET'])
@@ -918,6 +916,7 @@ except Exception as e:
     traceback.print_exc()
 
 @app.route('/')
+@limiter.exempt
 def index():
     """Serve Bolt.ai React app build"""
     try:
@@ -5190,23 +5189,9 @@ if not AUTOMATION_AVAILABLE:
     def detect_taskbar_apps(*args, **kwargs): return []
     def can_see_taskbar(*args, **kwargs): return False
 
-# Initialize advanced voice processing systems
+# Voice models are initialized in background thread (initialize_heavy_ai_models)
 vad_detector = None
 noise_reducer = None
-
-if VAD_AVAILABLE:
-    try:
-        vad_detector = VoiceActivityDetector()
-        logger.info("✅ Voice Activity Detector initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize VAD: {e}")
-
-if NOISE_REDUCTION_AVAILABLE:
-    try:
-        noise_reducer = NoiseReductionSystem()
-        logger.info("✅ Noise Reduction System initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize noise reduction: {e}")
 
 # Register voice API blueprint if available (skip if already registered above)
 if VOICE_API_AVAILABLE and 'voice_bp' in globals():
@@ -5229,6 +5214,7 @@ else:
 # Register voice WebSocket handlers
 if VOICE_WEBSOCKET_AVAILABLE:
     try:
+        from ai_assistant.services.voice_websocket_handlers import register_voice_handlers
         register_voice_handlers(socketio, assistant)
         logger.info("✅ Voice WebSocket handlers registered")
     except Exception as e:

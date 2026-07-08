@@ -7,7 +7,7 @@ from .models import Task
 class AgentMetadata:
     """Metadata for a lazy-loaded agent"""
     agent_id: str
-    name: string
+    name: str
     description: str
     capabilities: List[str]
     status: str = "standby"  # standby, active, error

@@ -318,6 +318,17 @@ class IntentRecognizer:
         
         return None
     
+    def analyze_sentiment(self, command: str) -> str:
+        """Analyze the sentiment/tone of the command to adapt responses."""
+        cmd_lower = command.lower()
+        if any(word in cmd_lower for word in ['urgent', 'quick', 'fast', 'hurry', 'asap']):
+            return "rushed"
+        elif any(word in cmd_lower for word in ['fuck', 'stupid', 'idiot', 'shit', 'hate']):
+            return "frustrated"
+        elif any(word in cmd_lower for word in ['please', 'thanks', 'kindly', 'love', 'happy']):
+            return "positive"
+        return "neutral"
+
     def parse_command(self, command: str) -> Dict:
         """
         Parse a natural language command into structured format.
@@ -327,7 +338,8 @@ class IntentRecognizer:
             'intent': 'open_app',
             'app_name': 'whatsapp',
             'original_command': 'whatsapp kholo',
-            'confidence': 0.95
+            'confidence': 0.95,
+            'sentiment': 'neutral'
         }
         """
         result = {
@@ -335,7 +347,8 @@ class IntentRecognizer:
             'app_name': None,
             'original_command': command,
             'confidence': 0.0,
-            'normalized_command': self.normalize_text(command)
+            'normalized_command': self.normalize_text(command),
+            'sentiment': self.analyze_sentiment(command)
         }
         
         # Extract intent
