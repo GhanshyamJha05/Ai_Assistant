@@ -21,7 +21,7 @@ class ContextAwareResponseGenerator:
     Generates intelligent responses based on conversation context
     """
     
-    def __init__(self, db_path: str = "data/context_aware_responses.db"):
+    def __init__(self, db_path: str = "data/context/context_aware_responses.db"):
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()

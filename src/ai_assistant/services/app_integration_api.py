@@ -42,7 +42,10 @@ def require_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Simple session-based auth for now
-        admin_password = os.getenv('ADMIN_PASSWORD', 'changeme123')
+        admin_password = os.getenv('ADMIN_PASSWORD')
+        if not admin_password:
+            admin_password = 'changeme123'
+            logger.warning("SECURITY WARNING: Using default ADMIN_PASSWORD! Please set it in your environment.")
         
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
@@ -64,7 +67,10 @@ def login():
     try:
         data = request.get_json()
         password = data.get('password', '')
-        admin_password = os.getenv('ADMIN_PASSWORD', 'changeme123')
+        admin_password = os.getenv('ADMIN_PASSWORD')
+        if not admin_password:
+            admin_password = 'changeme123'
+            logger.warning("SECURITY WARNING: Using default ADMIN_PASSWORD! Please set it in your environment.")
         
         if password == admin_password:
             session['authenticated'] = True

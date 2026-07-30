@@ -23,7 +23,7 @@ class CommandMarkovChain:
     Predicts next command using Markov chain models
     """
     
-    def __init__(self, db_path: str = "data/command_sequences.db",
+    def __init__(self, db_path: str = "data/automation/command_sequences.db",
                  order: int = 2,
                  context_aware: bool = True):
         self.db_path = db_path

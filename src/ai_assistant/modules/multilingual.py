@@ -266,7 +266,7 @@ class MultilingualSupport:
     def _setup_database(self):
         """Setup language database for caching and learning."""
         try:
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             # Create tables
@@ -508,7 +508,7 @@ class MultilingualSupport:
     def _get_cached_translation(self, text: str, target_language: Language) -> Optional[str]:
         """Get cached translation if available."""
         try:
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             cursor.execute(
@@ -529,7 +529,7 @@ class MultilingualSupport:
                           translated: str, target_lang: Language, confidence: float):
         """Cache translation for future use."""
         try:
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -843,7 +843,7 @@ class MultilingualSupport:
     def set_language_preference(self, user_id: str, language: Language, tts_language: Language = None):
         """Set user language preference."""
         try:
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -864,7 +864,7 @@ class MultilingualSupport:
     def get_language_preference(self, user_id: str) -> Tuple[Language, Language]:
         """Get user language preference."""
         try:
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             cursor.execute(
@@ -894,7 +894,7 @@ class MultilingualSupport:
                 'hinglish_usage': 0
             }
             
-            conn = sqlite3.connect('language_data.db')
+            conn = sqlite3.connect('data/core/language_data.db')
             cursor = conn.cursor()
             
             # Total translations

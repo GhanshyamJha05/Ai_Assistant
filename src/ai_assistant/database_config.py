@@ -19,9 +19,9 @@ DATA_DIR.mkdir(exist_ok=True)
 DATABASES = {
     'app_usage': DATA_DIR / 'app_usage.db',
     'chat_history': DATA_DIR / 'chat_history.db',
-    'conversation_ai': DATA_DIR / 'conversation_ai.db',
+    'conversation_ai': DATA_DIR / 'data/core/conversation_ai.db',
     'enhanced_learning': DATA_DIR / 'enhanced_learning.db',
-    'language_data': DATA_DIR / 'language_data.db',
+    'language_data': DATA_DIR / 'data/core/language_data.db',
     'memory': DATA_DIR / 'memory.db',
     'personal_knowledge': DATA_DIR / 'personal_knowledge.db',
 }
@@ -99,9 +99,9 @@ def get_database_size(db_name: str) -> int:
 LEGACY_PATHS = {
     'app_usage': 'app_usage.db',
     'chat_history': 'chat_history.db',
-    'conversation_ai': 'conversation_ai.db',
+    'conversation_ai': 'data/core/conversation_ai.db',
     'enhanced_learning': 'enhanced_learning.db',
-    'language_data': 'language_data.db',
+    'language_data': 'data/core/language_data.db',
     'memory': 'memory.db',
 }
 

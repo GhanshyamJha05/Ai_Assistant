@@ -18,14 +18,44 @@ import SettingsDetail from './components/DetailViews/SettingsDetail';
 import AILearningDetail from './components/DetailViews/AILearningDetail';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { useState } from 'react';
+import OnboardingModal from './components/OnboardingModal';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
 
 function AppContent() {
   const { selectedView, closeDetailView } = useDashboard();
   const [activeTab, setActiveTab] = useState<'main' | 'options' | 'stats'>('main');
   const [showOptions, setShowOptions] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/settings/all')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.settings && data.settings.onboarded === false) {
+          setShowOnboarding(true);
+        }
+        setHasCheckedOnboarding(true);
+      })
+      .catch(() => setHasCheckedOnboarding(true));
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    // Start tour
+    const tour = driver({
+      showProgress: true,
+      steps: [
+        { element: '#command-input', popover: { title: 'Chat Interface', description: 'Here is where you chat with your assistant.' } },
+        { element: '#voice-button', popover: { title: 'Voice Control', description: 'Click here to use hands-free voice commands.' } },
+      ]
+    });
+    setTimeout(() => tour.drive(), 500);
+  };
 
   const getDetailContent = () => {
     switch (selectedView) {
@@ -75,6 +105,8 @@ function AppContent() {
     <div className="h-screen bg-deep-space text-gray-100 overflow-hidden flex flex-col">
       {/* Offline Indicator */}
       <OfflineIndicator />
+      
+      {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
 
       <motion.div
         className="flex-1 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col"

@@ -1,3 +1,4 @@
+import functools
 from datetime import datetime
 import platform
 import socket
@@ -42,6 +43,7 @@ class ContextOptimizer:
         else:
             return "night"
             
+    @functools.lru_cache(maxsize=1)
     def get_device_context(self) -> Dict[str, str]:
         return {
             "os": platform.system(),

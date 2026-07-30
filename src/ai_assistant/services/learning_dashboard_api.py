@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-from ai_assistant.ai.active_learning import ActiveLearningSystem
+from ai_assistant.ai.active_learning import ActiveLearner
 
 dashboard_api = Blueprint('dashboard_api', __name__)
-knowledge_graph = PersonalKnowledgeGraph()
-active_learning = ActiveLearningSystem()
+knowledge_graph = PersonalKnowledgeGraph(db_path="data/knowledge_graph.db")
+active_learning = ActiveLearner()
 
 @dashboard_api.route('/api/memory/graph', methods=['GET'])
 def get_knowledge_graph():

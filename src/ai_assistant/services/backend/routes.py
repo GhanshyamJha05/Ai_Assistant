@@ -1,4 +1,4 @@
-"""
+﻿"""
 YourDaddy AI Assistant - API Routes
 
 All REST API endpoints for the backend.
@@ -273,7 +273,7 @@ def register_routes(app, components):
             # Import voice constants if available
             voices = []
             try:
-                from ai_assistant.services.voice_api import AVAILABLE_VOICES
+                from ai_assistant.services.voice_service import AVAILABLE_VOICES
                 voices = AVAILABLE_VOICES
             except ImportError:
                 pass
@@ -394,6 +394,9 @@ def register_routes(app, components):
         logger.error(f"Internal server error: {error}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
     
-    logger.info("✅ API routes registered")
+    logger.info("âœ… API routes registered")
     
     return app
+
+
+

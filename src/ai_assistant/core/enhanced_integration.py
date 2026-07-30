@@ -187,8 +187,7 @@ class EnhancedAI:
             # Stream response
             provider_map = {
                 'gemini': StreamProvider.GOOGLE,
-                'gpt': StreamProvider.OPENAI,
-                'claude': StreamProvider.ANTHROPIC
+                'gpt': StreamProvider.OPENAI
             }
             
             # Determine provider from model name
@@ -196,8 +195,6 @@ class EnhancedAI:
                 provider = StreamProvider.GOOGLE
             elif 'gpt' in selected_model.name.lower():
                 provider = StreamProvider.OPENAI
-            elif 'claude' in selected_model.name.lower():
-                provider = StreamProvider.ANTHROPIC
             else:
                 provider = StreamProvider.GOOGLE  # Default
             

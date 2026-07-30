@@ -23,7 +23,6 @@ interface SecuritySettings {
   apiKeys: {
     googleGemini: string;
     openAI: string;
-    anthropic: string;
     elevenLabs: string;
   };
   permissions: {

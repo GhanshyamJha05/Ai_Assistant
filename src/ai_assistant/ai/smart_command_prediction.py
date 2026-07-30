@@ -21,7 +21,7 @@ class SmartCommandPredictor:
     Suggests commands based on context, history, and patterns
     """
     
-    def __init__(self, db_path: str = "data/smart_commands.db"):
+    def __init__(self, db_path: str = "data/automation/smart_commands.db"):
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()

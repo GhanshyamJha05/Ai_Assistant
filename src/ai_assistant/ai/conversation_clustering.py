@@ -34,7 +34,7 @@ class ConversationClusterer:
     Clusters conversations by topics
     """
     
-    def __init__(self, db_path: str = "data/conversation_clustering.db",
+    def __init__(self, db_path: str = "data/analytics/conversation_clustering.db",
                  n_clusters: int = 10,
                  n_topics: int = 10):
         self.db_path = db_path

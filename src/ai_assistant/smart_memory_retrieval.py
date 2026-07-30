@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 class SmartMemoryRetrieval:
     """Intelligently retrieve information from learned conversations"""
     
-    def __init__(self, db_path: str = "data/memory.db"):
+    def __init__(self, db_path: str = "data/core/memory.db"):
         self.db_path = Path(db_path)
     
     def answer_from_memory(self, question: str) -> Optional[str]:

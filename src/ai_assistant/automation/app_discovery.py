@@ -109,7 +109,7 @@ class AppDiscovery:
             return False
 
     def _scan_apps_and_features_registry(self) -> Dict[str, str]:
-        """
+        r"""
         Scan Registry Uninstall keys - EXACT same source as Settings > Apps & Features.
         This finds all desktop applications installed via installers.
         

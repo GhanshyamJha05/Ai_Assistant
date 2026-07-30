@@ -254,9 +254,6 @@ class YourDaddyWebInterface {
                 } else if (preferredModel.includes('gpt')) {
                     provider = 'openai';
                     model = preferredModel;
-                } else if (preferredModel.includes('claude')) {
-                    provider = 'anthropic';
-                    model = preferredModel;
                 } else {
                     // Default to gemini if unknown
                     provider = 'gemini';
@@ -655,8 +652,7 @@ async function showSettings() {
 function getProviderIcon(provider) {
     const icons = {
         'Google': '🔵',
-        'OpenAI': '🟢',
-        'Anthropic': '🟣'
+        'OpenAI': '🟢'
     };
     return icons[provider] || '⚪';
 }

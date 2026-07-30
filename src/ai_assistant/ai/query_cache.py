@@ -34,7 +34,7 @@ class QuerySimilarityCache:
     Smart query caching using TF-IDF similarity
     """
     
-    def __init__(self, db_path: str = "data/query_cache.db", 
+    def __init__(self, db_path: str = "data/caches/query_cache.db", 
                  similarity_threshold: float = 0.85,
                  cache_ttl_hours: int = 24):
         self.db_path = db_path

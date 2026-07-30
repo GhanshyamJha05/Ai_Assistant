@@ -561,7 +561,7 @@ class AdvancedTaskScheduler:
     Advanced task scheduler with intelligent scheduling and load management
     """
     
-    def __init__(self, db_path: str = "user_data/task_scheduler.db"):
+    def __init__(self, db_path: str = "data/automation/task_scheduler.db"):
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
         

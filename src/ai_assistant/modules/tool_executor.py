@@ -302,9 +302,42 @@ def calculator(expression: str) -> Dict[str, Any]:
     Args:
         expression: Mathematical expression
     """
+    import ast
+    import operator
+
+    # Define safe operators
+    safe_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def evaluate(node):
+        if isinstance(node, ast.Expression):
+            return evaluate(node.body)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            op = safe_operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported operator: {type(node.op)}")
+            return op(evaluate(node.left), evaluate(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            op = safe_operators.get(type(node.op))
+            if op is None:
+                raise ValueError(f"Unsupported unary operator: {type(node.op)}")
+            return op(evaluate(node.operand))
+        else:
+            raise ValueError(f"Unsupported node type: {type(node)}")
+
     try:
-        # Safe evaluation with restricted scope
-        result = eval(expression, {"__builtins__": {}}, {"__import__": None})
+        # Parse the expression and evaluate safely
+        tree = ast.parse(expression, mode='eval')
+        result = evaluate(tree)
         return {
             "expression": expression,
             "result": result,

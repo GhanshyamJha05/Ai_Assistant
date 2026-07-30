@@ -1,4 +1,4 @@
-# YourDaddy Assistant - Modern Web Backend
+﻿# YourDaddy Assistant - Modern Web Backend
 """
 Modern Flask backend to serve the React frontend and provide real-time APIs
 for YourDaddy Assistant's features.
@@ -90,9 +90,9 @@ try:
         start_auto_refresh_after_startup, start_periodic_refresh
     )
     AUTOMATION_AVAILABLE = True
-    print("✅ Automation tools loaded successfully")
+    print("âœ… Automation tools loaded successfully")
 except ImportError as e:
-    print(f"⚠️ Automation tools import failed: {e}")
+    print(f"âš ï¸ Automation tools import failed: {e}")
     # Try fallback import from modules directly
     try:
         from ai_assistant.modules.app_discovery import (
@@ -100,9 +100,9 @@ except ImportError as e:
             start_auto_refresh_after_startup, start_periodic_refresh
         )
         AUTOMATION_AVAILABLE = True
-        print("✅ App discovery loaded from modules")
+        print("âœ… App discovery loaded from modules")
     except ImportError as e2:
-        print(f"❌ App discovery also failed: {e2}")
+        print(f"âŒ App discovery also failed: {e2}")
         AUTOMATION_AVAILABLE = False
 
 # Import Learning Router for automatic AI training
@@ -115,9 +115,9 @@ def _get_learning_router_lazy():
         try:
             from auto_learning_router import LearningDataRouter
             learning_router = LearningDataRouter()
-            logger.info("✅ Learning router initialized - AI will learn from all interactions")
+            logger.info("âœ… Learning router initialized - AI will learn from all interactions")
         except Exception as e:
-            logger.warning(f"⚠️ Learning router not available: {e}")
+            logger.warning(f"âš ï¸ Learning router not available: {e}")
             LEARNING_ROUTER_AVAILABLE = False
             learning_router = None
     return learning_router
@@ -132,9 +132,9 @@ def _get_memory_retriever_lazy():
         try:
             from smart_memory_retrieval import SmartMemoryRetrieval
             memory_retriever = SmartMemoryRetrieval()
-            logger.info("✅ Smart memory retrieval initialized - AI can answer from past conversations")
+            logger.info("âœ… Smart memory retrieval initialized - AI can answer from past conversations")
         except Exception as e:
-            logger.warning(f"⚠️ Smart memory retrieval not available: {e}")
+            logger.warning(f"âš ï¸ Smart memory retrieval not available: {e}")
             SMART_MEMORY_AVAILABLE = False
             memory_retriever = None
     return memory_retriever
@@ -165,9 +165,9 @@ def _get_enhanced_ai_lazy():
         try:
             from ai_assistant.core.enhanced_integration import get_enhanced_ai
             enhanced_ai = get_enhanced_ai()
-            logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
+            logger.info("âœ… Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
         except Exception as e:
-            logger.warning(f"⚠️ Enhanced AI not available: {e}")
+            logger.warning(f"âš ï¸ Enhanced AI not available: {e}")
     return enhanced_ai
 
 def _get_usage_analyzer_lazy():
@@ -177,9 +177,9 @@ def _get_usage_analyzer_lazy():
         try:
             from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
             usage_analyzer = UsagePatternAnalyzer()
-            logger.info("✅ Usage pattern analyzer initialized")
+            logger.info("âœ… Usage pattern analyzer initialized")
         except Exception as e:
-            logger.warning(f"⚠️ Usage analyzer not available: {e}")
+            logger.warning(f"âš ï¸ Usage analyzer not available: {e}")
     return usage_analyzer
 
 # System monitoring
@@ -189,26 +189,30 @@ try:
 except ImportError:
     PSUTIL_AVAILABLE = False
 
-# Voice processing (lightweight wrapper, safe to import)
-try:
-    import pvporcupine
-    import pyaudio
-    import speech_recognition as sr
-    import pyttsx3
-    import numpy as np
-    import wave
-    import base64
-    import io
-    VOICE_AVAILABLE = True
-except ImportError:
-    VOICE_AVAILABLE = False
+# Voice processing (lazy loaded)
+VOICE_AVAILABLE = True
+
+def _load_voice_modules():
+    global VOICE_AVAILABLE
+    try:
+        import pvporcupine
+        import sounddevice as sd
+        import speech_recognition as sr
+        import numpy as np
+        import wave
+        import base64
+        import io
+        return True
+    except ImportError:
+        VOICE_AVAILABLE = False
+        return False
 
 # Background Initialization Thread for AI Models
 def initialize_heavy_ai_models():
     """Run in a background thread to pre-warm the AI models without blocking the UI"""
     global ai_models_ready, ai_models_status
     
-    logger.info("🚀 Background AI Initialization started...")
+    logger.info("ðŸš€ Background AI Initialization started...")
     
     # 1. Start loading the Learning Router
     ai_models_status = "Loading Learning Matrix..."
@@ -232,18 +236,18 @@ def initialize_heavy_ai_models():
     try:
         from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector
         vad_detector = VoiceActivityDetector()
-        logger.info("✅ Voice Activity Detector initialized in background")
+        logger.info("âœ… Voice Activity Detector initialized in background")
     except Exception as e:
-        logger.warning(f"⚠️ VAD module not available: {e}")
+        logger.warning(f"âš ï¸ VAD module not available: {e}")
         
     try:
         from ai_assistant.voice.noise_reduction import NoiseReductionSystem
         noise_reducer = NoiseReductionSystem()
-        logger.info("✅ Noise Reduction initialized in background")
+        logger.info("âœ… Noise Reduction initialized in background")
     except Exception as e:
-        logger.warning(f"⚠️ Noise Reduction module not available: {e}")
+        logger.warning(f"âš ï¸ Noise Reduction module not available: {e}")
         
-    logger.info("✅ Background AI Initialization COMPLETE!")
+    logger.info("âœ… Background AI Initialization COMPLETE!")
     ai_models_ready = True
     ai_models_status = "Ready"
 
@@ -303,13 +307,13 @@ def get_or_create_env_secret(name: str) -> str:
             separator = "\n" if content and not content.endswith("\n") else ""
             with open(env_path, 'a', encoding='utf-8') as f:
                 f.write(f"{separator}{name}={new_key}\n")
-            logger.info(f"💾 Generated and saved stable {name} to .env")
+            logger.info(f"ðŸ’¾ Generated and saved stable {name} to .env")
         
         # Update os.environ immediately so it's loaded
         os.environ[name] = new_key
         return new_key
     except Exception as e:
-        logger.warning(f"⚠️ Could not write secret {name} to .env: {e}. Session will not persist across restarts.")
+        logger.warning(f"âš ï¸ Could not write secret {name} to .env: {e}. Session will not persist across restarts.")
         return new_key
 
 if SECRETS_MANAGER_AVAILABLE:
@@ -360,10 +364,10 @@ CORS(app, resources={
     }
 })
 
-# Initialize SocketIO for WebSocket support
+# Initialize SocketIO for WebSocket support (single init with secure origins)
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=ALLOWED_ORIGINS,
     async_mode='threading',
     logger=False,  # Disable verbose logging
     engineio_logger=False,  # Disable engine.io logging
@@ -378,27 +382,12 @@ logging.getLogger('engineio').setLevel(logging.ERROR)
 logging.getLogger('engineio.server').setLevel(logging.ERROR)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-logger.info("✅ SocketIO initialized with CORS origins: %s", ALLOWED_ORIGINS)
+logger.info("âœ… SocketIO initialized with CORS origins: %s", ALLOWED_ORIGINS)
 
-# Voice Options for TTS
-AVAILABLE_VOICES = [
-    {"id": "en-US-AriaNeural", "name": "Aria", "gender": "female", "accent": "US", "language": "en-US", "description": "Warm and friendly", "personality": "Friendly and conversational"},
-    {"id": "en-US-JennyNeural", "name": "Jenny", "gender": "female", "accent": "US", "language": "en-US", "description": "Professional and clear", "personality": "Professional and articulate"},
-    {"id": "en-US-GuyNeural", "name": "Guy", "gender": "male", "accent": "US", "language": "en-US", "description": "Confident and professional", "personality": "Confident and authoritative"},
-    {"id": "en-US-DavisNeural", "name": "Davis", "gender": "male", "accent": "US", "language": "en-US", "description": "Warm and conversational", "personality": "Warm and approachable"},
-    {"id": "en-GB-SoniaNeural", "name": "Sonia", "gender": "female", "accent": "UK", "language": "en-GB", "description": "British elegance", "personality": "Elegant and refined"},
-    {"id": "en-GB-RyanNeural", "name": "Ryan", "gender": "male", "accent": "UK", "language": "en-GB", "description": "British sophistication", "personality": "Sophisticated and clear"},
-    {"id": "en-IN-NeerjaNeural", "name": "Neerja", "gender": "female", "accent": "Indian", "language": "en-IN", "description": "Indian warmth", "personality": "Warm and expressive"},
-    {"id": "en-IN-PrabhatNeural", "name": "Prabhat", "gender": "male", "accent": "Indian", "language": "en-IN", "description": "Indian clarity", "personality": "Clear and professional"},
-    {"id": "en-US-AnaNeural", "name": "Ana", "gender": "female", "accent": "US", "language": "en-US", "description": "Energetic and cheerful", "personality": "Cheerful and enthusiastic"},
-    {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "male", "accent": "US", "language": "en-US", "description": "Deep and reassuring", "personality": "Calm and reassuring"},
-    {"id": "en-GB-LibbyNeural", "name": "Libby", "gender": "female", "accent": "UK", "language": "en-GB", "description": "Young and friendly British", "personality": "Youthful and energetic"},
-    {"id": "en-US-EricNeural", "name": "Eric", "gender": "male", "accent": "US", "language": "en-US", "description": "Natural and friendly", "personality": "Casual and friendly"}
-]
-
+# (Duplicate AVAILABLE_VOICES removed - single copy at line ~498)
 # Import voice API blueprint
 try:
-    from ai_assistant.services.voice_api import voice_bp, AVAILABLE_VOICES as VOICE_API_VOICES
+    from ai_assistant.services.voice_service import voice_bp, AVAILABLE_VOICES as VOICE_API_VOICES
     VOICE_API_AVAILABLE = True
     # Update AVAILABLE_VOICES if not already defined
     if 'AVAILABLE_VOICES' not in globals() or not AVAILABLE_VOICES:
@@ -429,7 +418,7 @@ ENABLE_SYSTEM_MONITORING = os.getenv('ENABLE_SYSTEM_MONITORING', 'true').lower()
 LAZY_INIT = os.getenv('LAZY_INIT', 'true').lower() == 'true'  # Lazy load components on first use
 BACKGROUND_INIT = os.getenv('BACKGROUND_INIT', 'true').lower() == 'true'  # Initialize in background
 
-logger.info("🔧 Startup Configuration:")
+logger.info("ðŸ”§ Startup Configuration:")
 logger.info(f"  - Lazy Initialization: {LAZY_INIT}")
 logger.info(f"  - Background Initialization: {BACKGROUND_INIT}")
 logger.info(f"  - Voice Features: {ENABLE_VOICE}")
@@ -479,14 +468,14 @@ def initialize_local_ai():
         logger.error(f"Local AI initialization failed: {e}")
 
 
-# ⚡ OPTIMIZATION: Lazy load Ollama - only initialize when user selects it
+# âš¡ OPTIMIZATION: Lazy load Ollama - only initialize when user selects it
 # This saves 30-60 seconds on startup!
 # Ollama will be initialized on-demand when provider == 'ollama'
 # 
 # if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:
 #     threading.Thread(target=initialize_local_ai, daemon=True).start()
 
-logger.info("⚡ Ollama will load on-demand (lazy loading enabled)")
+logger.info("âš¡ Ollama will load on-demand (lazy loading enabled)")
 
 # =============================================================================
 
@@ -668,7 +657,7 @@ def setup_user_profile():
                 s_node = kg.add_knowledge_node(skill, "skill", {})
                 kg.add_relationship(user_node_id, s_node, "has_skill", strength=0.9)
                 
-        logger.info(f"✅ Created/Updated profile for {name}")
+        logger.info(f"âœ… Created/Updated profile for {name}")
         
         return jsonify({"success": True, "message": "Profile setup complete"})
         
@@ -747,50 +736,43 @@ def get_initialization_status():
         }), 500
 
 
-# Initialize SocketIO with secure origins
-socketio = SocketIO(
-    app, 
-    cors_allowed_origins=ALLOWED_ORIGINS,
-    async_mode='threading',
-    engineio_logger=False,
-    logger=False,
-    ping_timeout=60,
-    ping_interval=25
-)
+# NOTE: SocketIO is already initialized at module level above (line ~363).
+# A duplicate init here was causing CORS origin rejection errors.
+# Removed to prevent overwriting the existing socketio instance.
 
 # ============================================================
 # PROFESSIONAL VOICE SYSTEM INITIALIZATION
 # ============================================================
 try:
-    from ai_assistant.services.voice_api import voice_bp, init_professional_voice_services
+    from ai_assistant.services.voice_service import voice_bp, init_professional_voice_services
     
     # Register voice API blueprint
     app.register_blueprint(voice_bp, url_prefix='/api/voice')
-    logger.info("✅ Voice API blueprint registered at /api/voice")
+    logger.info("âœ… Voice API blueprint registered at /api/voice")
     
     # Initialize professional voice services with WebSocket support
     voice_initialized = init_professional_voice_services(socketio)
     
     if voice_initialized:
         logger.info("=" * 60)
-        logger.info("🎤 PROFESSIONAL VOICE SYSTEM ACTIVATED")
+        logger.info("ðŸŽ¤ PROFESSIONAL VOICE SYSTEM ACTIVATED")
         logger.info("=" * 60)
-        logger.info("✅ SmartWakeWordDetector - PocketSphinx (Offline)")
-        logger.info("✅ NeuralVoiceEngine - Edge-TTS + Coqui")
-        logger.info("✅ VoiceActivityDetector - WebRTC VAD")
-        logger.info("✅ Speaker Recognition - Enabled")
-        logger.info("✅ Advanced STT - Whisper + Google + Vosk")
-        logger.info("✅ Noise Reduction - Active")
+        logger.info("âœ… SmartWakeWordDetector - PocketSphinx (Offline)")
+        logger.info("âœ… NeuralVoiceEngine - Edge-TTS + Coqui")
+        logger.info("âœ… VoiceActivityDetector - WebRTC VAD")
+        logger.info("âœ… Speaker Recognition - Enabled")
+        logger.info("âœ… Advanced STT - Whisper + Google + Vosk")
+        logger.info("âœ… Noise Reduction - Active")
         logger.info("=" * 60)
     else:
-        logger.warning("⚠️  Voice system running in limited mode")
+        logger.warning("âš ï¸  Voice system running in limited mode")
         
 except ImportError as e:
-    logger.warning(f"⚠️  Professional voice system not available: {e}")
-    logger.info("💡 Basic voice features still available via assistant")
+    logger.warning(f"âš ï¸  Professional voice system not available: {e}")
+    logger.info("ðŸ’¡ Basic voice features still available via assistant")
 except Exception as e:
-    logger.error(f"❌ Voice system initialization failed: {e}")
-    logger.info("💡 Server will continue without professional voice features")
+    logger.error(f"âŒ Voice system initialization failed: {e}")
+    logger.info("ðŸ’¡ Server will continue without professional voice features")
 
 
 # User Management (Simple in-memory store - replace with database in production)
@@ -798,7 +780,7 @@ except Exception as e:
 _admin_password = os.getenv('ADMIN_PASSWORD')
 if not _admin_password:
     logger.warning(
-        "⚠️  ADMIN_PASSWORD not set! Using temporary generated password. "
+        "âš ï¸  ADMIN_PASSWORD not set! Using temporary generated password. "
         "Set ADMIN_PASSWORD in your environment for production use."
     )
     _admin_password = secrets.token_urlsafe(16)
@@ -862,12 +844,12 @@ set_socketio(socketio)
 
 # Global assistant instance - protected initialization
 try:
-    print("ðŸ”§ Initializing YourDaddy Assistant...")
+    print("Ã°Å¸â€Â§ Initializing YourDaddy Assistant...")
     assistant = ModernAssistant()
-    print("âœ… Assistant initialized successfully")
+    print("Ã¢Å“â€¦ Assistant initialized successfully")
 except Exception as e:
-    print(f"âŒ CRITICAL: Assistant initialization failed: {e}")
-    print("âš ï¸  Server will start in limited mode without some features")
+    print(f"Ã¢ÂÅ’ CRITICAL: Assistant initialization failed: {e}")
+    print("Ã¢Å¡Â Ã¯Â¸Â  Server will start in limited mode without some features")
     # Create a minimal assistant instance
     class MinimalAssistant:
         def __init__(self):
@@ -905,13 +887,13 @@ except Exception as e:
 # =============================================================================
 # REGISTER BLUEPRINTS - Modular Route Organization
 # =============================================================================
-print("📋 Registering blueprints...")
+print("ðŸ“‹ Registering blueprints...")
 try:
     from ai_assistant.services.backend.blueprints import register_all_blueprints
     register_all_blueprints(app, assistant)
-    print("✅ All blueprints registered")
+    print("âœ… All blueprints registered")
 except Exception as e:
-    print(f"⚠️ Blueprint registration failed: {e}")
+    print(f"âš ï¸ Blueprint registration failed: {e}")
     import traceback
     traceback.print_exc()
 
@@ -1031,14 +1013,14 @@ def test_page():
     </head>
     <body>
         <div class="container">
-            <h1>ðŸ¤– YourDaddy Assistant - Test Page</h1>
-            <div class="status success">âœ… Backend is operational and all features are enabled!</div>
+            <h1>Ã°Å¸Â¤â€“ YourDaddy Assistant - Test Page</h1>
+            <div class="status success">Ã¢Å“â€¦ Backend is operational and all features are enabled!</div>
             
             <h2>Test Enhanced Chat Features:</h2>
-            <a href="/enhanced-chat" class="test-btn">ðŸ’¬ Open Enhanced Chat Interface</a>
-            <a href="/api/features" class="test-btn">ðŸ”§ Check Available Features</a>
-            <a href="/api/apps" class="test-btn">ðŸ“± List Installed Applications</a>
-            <a href="/api/weather" class="test-btn">ðŸŒ¤ï¸ Get Weather Information</a>
+            <a href="/enhanced-chat" class="test-btn">Ã°Å¸â€™Â¬ Open Enhanced Chat Interface</a>
+            <a href="/api/features" class="test-btn">Ã°Å¸â€Â§ Check Available Features</a>
+            <a href="/api/apps" class="test-btn">Ã°Å¸â€œÂ± List Installed Applications</a>
+            <a href="/api/weather" class="test-btn">Ã°Å¸Å’Â¤Ã¯Â¸Â Get Weather Information</a>
             
             <h2>Quick API Tests:</h2>
             <div style="font-family: monospace; background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 12px;">
@@ -1254,7 +1236,7 @@ try:
     dashboard_api = LearningDashboardAPI()
     DASHBOARD_API_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Dashboard API not available: {e}")
+    print(f"âš ï¸ Dashboard API not available: {e}")
     dashboard_api = None
     DASHBOARD_API_AVAILABLE = False
 
@@ -1737,7 +1719,7 @@ def api_chat():
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(message):
-                logger.info(f"🔗 Multi-step command detected: {message}")
+                logger.info(f"ðŸ”— Multi-step command detected: {message}")
                 orch_result = process_with_orchestrator(message, context)
                 
                 if orch_result['success']:
@@ -1868,7 +1850,7 @@ def api_command():
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(command):
-                logger.info(f"🔗 Multi-step command detected: {command}")
+                logger.info(f"ðŸ”— Multi-step command detected: {command}")
                 orch_result = process_with_orchestrator(command, {})
                 
                 if orch_result['success']:
@@ -1902,11 +1884,11 @@ def api_command():
         use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
         
         # DEBUG: Log the offline mode request
-        logger.info(f"🔍 Command received: {command[:30]}...")
-        logger.info(f"🔍 offline_mode flag in request: {data.get('offline_mode')}")
-        logger.info(f"🔍 use_local_ai: {use_local_ai}")
-        logger.info(f"🔍 local_ai_initialized: {local_ai_initialized}")
-        logger.info(f"🔍 local_ai_manager exists: {local_ai_manager is not None}")
+        logger.info(f"ðŸ” Command received: {command[:30]}...")
+        logger.info(f"ðŸ” offline_mode flag in request: {data.get('offline_mode')}")
+        logger.info(f"ðŸ” use_local_ai: {use_local_ai}")
+        logger.info(f"ðŸ” local_ai_initialized: {local_ai_initialized}")
+        logger.info(f"ðŸ” local_ai_manager exists: {local_ai_manager is not None}")
         
         if use_local_ai and local_ai_initialized and local_ai_manager:
             # Use local Ollama model
@@ -2281,7 +2263,7 @@ def api_chat_stream():
         if not message:
             return jsonify({"error": "No message provided"}), 400
         
-        logger.info(f"ðŸ”„ Streaming chat for user: {current_user}, session: {session_id}")
+        logger.info(f"Ã°Å¸â€â€ž Streaming chat for user: {current_user}, session: {session_id}")
         
         def generate_stream():
             """Generate streaming response tokens"""
@@ -2343,7 +2325,7 @@ def api_chat_stream():
                 })
                 yield f"data: {completion_data}\n\n"
                 
-                logger.info(f"âœ… Stream complete: {tokens} tokens in {duration:.2f}s ({tokens/duration:.1f} tok/s)")
+                logger.info(f"Ã¢Å“â€¦ Stream complete: {tokens} tokens in {duration:.2f}s ({tokens/duration:.1f} tok/s)")
                 
             except Exception as e:
                 logger.error(f"Stream generation error: {e}")
@@ -2410,11 +2392,11 @@ def api_weather():
             weather = get_weather_info()
         else:
             weather = {
-                "temperature": "72Â°F",
+                "temperature": "72Ã‚Â°F",
                 "description": "Sunny and Clear",
                 "humidity": "45%",
                 "wind_speed": "12 mph",
-                "icon": "â˜€ï¸"
+                "icon": "Ã¢Ëœâ‚¬Ã¯Â¸Â"
             }
         return jsonify(weather)
     except Exception as e:
@@ -2540,7 +2522,7 @@ def api_get_workflows():
         if not AUTOMATION_AVAILABLE:
             return jsonify({"workflows": []})
         
-        from ai_assistant.modules.smart_automation import SmartAutomationEngine
+        from ai_assistant.modules.automation_engine import SmartAutomationEngine
         automation_engine = SmartAutomationEngine()
         workflows = automation_engine.get_available_workflows()
         
@@ -2563,7 +2545,7 @@ def api_execute_workflow():
         if not workflow_name:
             return jsonify({"error": "Workflow name required"}), 400
         
-        from ai_assistant.modules.smart_automation import SmartAutomationEngine
+        from ai_assistant.modules.automation_engine import SmartAutomationEngine
         automation_engine = SmartAutomationEngine()
         result = automation_engine.execute_workflow_by_name(workflow_name)
         
@@ -3073,76 +3055,7 @@ def api_process_voice():
     except Exception as e:
         return jsonify({"error": "Failed to process voice"}), 500
 
-# SocketIO Events
-@socketio.on('connect')
-def handle_connect():
-    """Handle client connection"""
-    print(f"Client connected: {request.sid}")
-    emit('connected', {
-        'message': 'Connected to YourDaddy Assistant',
-        'timestamp': datetime.now().isoformat()
-    })
-    
-    # Send voice server status
-    voice_available = VOICE_AVAILABLE and assistant.voice_recognizer is not None
-    emit('voice_server_status', {
-        'connected': True,
-        'voice_available': voice_available,
-        'features': {
-            'speech_recognition': assistant.voice_recognizer is not None,
-            'text_to_speech': assistant.tts_engine is not None,
-            'wake_word_detection': assistant.wake_word_detector is not None
-        }
-    })
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle client disconnection"""
-    print(f"Client disconnected: {request.sid}")
-
-# DISABLED: Duplicate handler - using chat_voice_handlers.py instead
-#@socketio.on('command')
-def handle_command_disabled_1(data):
-    """Handle real-time command"""
-    try:
-        command = data.get('command', '')
-        message = data.get('message', command)  # Support both 'command' and 'message'
-        model = data.get('model')  # Get model preference
-        
-        if command or message:
-            # Use the actual command/message
-            user_input = command or message
-            
-            # Process command with proper error handling
-            response = assistant.process_command(user_input, model_preference=model)
-            
-            # Enhanced response format
-            emit('command_response', {
-                'command': user_input,
-                'response': response,
-                'timestamp': datetime.now().isoformat(),
-                'success': True,
-                'type': 'text'
-            })
-            
-            # Log the interaction
-            print(f"âœ… Command processed: {user_input[:50]}...")
-            
-        else:
-            emit('command_response', {
-                'error': 'No command provided',
-                'timestamp': datetime.now().isoformat(),
-                'success': False
-            })
-            
-    except Exception as e:
-        print(f"âŒ Command processing error: {str(e)}")
-        emit('command_response', {
-            'error': f'Sorry, I encountered an error: {str(e)}',
-            'timestamp': datetime.now().isoformat(),
-            'success': False
-        })
-
+# (Duplicate connect/disconnect/command handlers removed - using voice_service.py)
 # Enhanced Chat SocketIO Events
 @socketio.on('enhanced_chat')
 def handle_enhanced_chat(data):
@@ -3190,7 +3103,7 @@ def handle_chat_stream(data):
             emit('chat_stream_error', {'error': 'No message provided'})
             return
         
-        logger.info(f"ðŸ“¡ WebSocket chat stream started: {session_id}")
+        logger.info(f"Ã°Å¸â€œÂ¡ WebSocket chat stream started: {session_id}")
         
         # Get or create chat session
         with chat_session_lock:
@@ -3240,7 +3153,7 @@ def handle_chat_stream(data):
             'timestamp': datetime.now().isoformat()
         })
         
-        logger.info(f"âœ… WebSocket stream complete: {tokens} tokens in {duration:.2f}s")
+        logger.info(f"Ã¢Å“â€¦ WebSocket stream complete: {tokens} tokens in {duration:.2f}s")
         
     except Exception as e:
         logger.error(f"WebSocket chat stream error: {e}")
@@ -3310,7 +3223,7 @@ def handle_execute_workflow(data):
             return
         
         if AUTOMATION_AVAILABLE:
-            from ai_assistant.modules.smart_automation import SmartAutomationEngine
+            from ai_assistant.modules.automation_engine import SmartAutomationEngine
             automation_engine = SmartAutomationEngine()
             result = automation_engine.execute_workflow_by_name(workflow_name)
             
@@ -3397,7 +3310,7 @@ def handle_voice_command(data):
             emit('voice_response', {'response': 'No command received', 'error': True})
             return
         
-        print(f"🎤 Processing voice command: {text}")
+        print(f"ðŸŽ¤ Processing voice command: {text}")
         print(f"   Language: {language}")
         
         # Log the voice interaction
@@ -3418,14 +3331,14 @@ def handle_voice_command(data):
             'command': text
         })
         
-        print(f"✅ Voice command processed successfully")
+        print(f"âœ… Voice command processed successfully")
         print(f"   Response: {response[:100]}...")
-        print(f"🔊 Emitted voice_response event for talkback")
+        print(f"ðŸ”Š Emitted voice_response event for talkback")
         
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"❌ Voice command error: {str(e)}")
+        print(f"âŒ Voice command error: {str(e)}")
         print(f"   Traceback: {error_trace}")
         
         error_msg = f'Sorry, I encountered an error: {str(e)}'
@@ -3456,56 +3369,7 @@ def handle_tts_request(data):
             success = assistant.speak_text(text)
             emit('tts_response', {'success': success, 'text': text})
 
-# Multilingual API Routes
-@app.route('/api/language/detect', methods=['POST'])
-def detect_language():
-    """Detect language of input text"""
-    data = request.json
-    text = data.get('text', '')
-    
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-    
-    if assistant.multilingual:
-        context = assistant.multilingual.detect_language(text)
-        return jsonify({
-            'detected_language': context.detected_language.value,
-            'confidence': context.confidence,
-            'is_mixed': context.is_mixed,
-            'hindi_percentage': context.hindi_percentage,
-            'english_percentage': context.english_percentage
-        })
-    else:
-        return jsonify({"error": "Multilingual support not available"}), 503
-
-@app.route('/api/language/translate', methods=['POST'])
-def translate_text():
-    """Translate text between languages"""
-    data = request.json
-    text = data.get('text', '')
-    target_language = data.get('target_language', 'en')
-    source_language = data.get('source_language')
-    
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-    
-    if assistant.multilingual:
-        try:
-            target_lang = Language(target_language)
-            source_lang = Language(source_language) if source_language else None
-            
-            result = assistant.multilingual.translate_text(text, target_lang, source_lang)
-            return jsonify({
-                'translated_text': result,
-                'source_language': source_language,
-                'target_language': target_language
-            })
-        except ValueError as e:
-            return jsonify({"error": f"Invalid language code: {str(e)}"}), 400
-        except Exception as e:
-            return jsonify({"error": f"Translation failed: {str(e)}"}), 500
-    else:
-        return jsonify({"error": "Multilingual support not available"}), 503
+# (Duplicate language/detect and language/translate routes removed - kept secured versions above)
 
 @app.route('/api/language/hinglish', methods=['POST'])
 def process_hinglish():
@@ -3684,7 +3548,6 @@ def api_get_all_settings():
         
         google_gemini_key = get_secure_key('googleGemini')
         open_ai_key = get_secure_key('openAI')
-        anthropic_key = get_secure_key('anthropic')
         eleven_labs_key = get_secure_key('elevenLabs')
         
         # Backward compatibility / Migration:
@@ -3695,9 +3558,6 @@ def api_get_all_settings():
         if not open_ai_key and os.getenv('OPENAI_API_KEY'):
             open_ai_key = os.getenv('OPENAI_API_KEY', '')
             save_secure_key('openAI', open_ai_key)
-        if not anthropic_key and os.getenv('ANTHROPIC_API_KEY'):
-            anthropic_key = os.getenv('ANTHROPIC_API_KEY', '')
-            save_secure_key('anthropic', anthropic_key)
         if not eleven_labs_key and os.getenv('ELEVEN_LABS_API_KEY'):
             eleven_labs_key = os.getenv('ELEVEN_LABS_API_KEY', '')
             save_secure_key('elevenLabs', eleven_labs_key)
@@ -3716,7 +3576,6 @@ def api_get_all_settings():
                 "apiKeys": {
                     "googleGemini": "********" if google_gemini_key else "",
                     "openAI": "********" if open_ai_key else "",
-                    "anthropic": "********" if anthropic_key else "",
                     "elevenLabs": "********" if eleven_labs_key else ""
                 },
                 "permissions": {
@@ -3860,7 +3719,6 @@ def api_update_settings():
             env_map = {
                 "googleGemini": "GOOGLE_GEMINI_API_KEY",
                 "openAI": "OPENAI_API_KEY",
-                "anthropic": "ANTHROPIC_API_KEY",
                 "elevenLabs": "ELEVEN_LABS_API_KEY"
             }
             
@@ -3880,7 +3738,7 @@ def api_update_settings():
                     save_secure_key(key_name, key_val)
                     if key_name in env_map:
                         os.environ[env_map[key_name]] = key_val
-                        logger.info(f"🔑 Secure Key '{key_name}' updated & loaded at runtime")
+                        logger.info(f"ðŸ”‘ Secure Key '{key_name}' updated & loaded at runtime")
             
             # Wipe actual values from settings_data before writing to JSON file
             cleaned_keys = {}
@@ -3899,10 +3757,10 @@ def api_update_settings():
             provider = settings_data.get('defaultProvider')
             model = settings_data.get('defaultModel')
             if provider or model:
-                logger.info(f"🤖 AI provider updated: {provider}, model: {model}")
+                logger.info(f"ðŸ¤– AI provider updated: {provider}, model: {model}")
                 # Invalidate cached AI settings in chat handlers
                 try:
-                    import ai_assistant.services.chat_voice_handlers_new as chat_handlers
+                    import ai_assistant.services.voice_service as chat_handlers
                     chat_handlers._ai_settings_mtime = 0  # Force cache invalidation
                 except Exception:
                     pass
@@ -4088,18 +3946,6 @@ def api_get_available_models():
                     'capabilities': ['general', 'multimodal', 'reasoning', 'coding'],
                     'priority': 2,
                     'description': 'Advanced multimodal model with large context'
-                },
-                {
-                    'id': 'claude-3-sonnet',
-                    'name': 'Claude 3 Sonnet',
-                    'provider': 'Anthropic',
-                    'tier': 'standard',
-                    'max_tokens': 4096,
-                    'cost_per_1k_tokens': 0.015,
-                    'avg_latency_ms': 1500,
-                    'capabilities': ['general', 'reasoning', 'coding'],
-                    'priority': 4,
-                    'description': 'Balanced Claude model'
                 }
             ]
         
@@ -4294,15 +4140,6 @@ def api_get_providers():
                 'description': 'GPT models from OpenAI',
                 'models': ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o'],
                 'features': ['versatile', 'powerful', 'coding'],
-                'api_key_required': True,
-                'status': 'active'
-            },
-            {
-                'id': 'anthropic',
-                'name': 'Anthropic',
-                'description': 'Claude models',
-                'models': ['claude-3-sonnet', 'claude-3-opus', 'claude-3-haiku'],
-                'features': ['safe', 'reasoning', 'long-context'],
                 'api_key_required': True,
                 'status': 'active'
             }
@@ -4972,7 +4809,7 @@ def api_get_trending():
 def api_detect_taskbar():
     """Detect and analyze taskbar applications"""
     try:
-        from ai_assistant.modules.taskbar_detection import detect_taskbar_apps
+        from ai_assistant.modules.app_discovery import detect_taskbar_apps
         
         result = detect_taskbar_apps()
         
@@ -4990,7 +4827,7 @@ def api_detect_taskbar():
 def api_taskbar_capabilities():
     """Check taskbar detection capabilities"""
     try:
-        from ai_assistant.modules.taskbar_detection import can_see_taskbar
+        from ai_assistant.modules.app_discovery import can_see_taskbar
         
         result = can_see_taskbar()
         
@@ -5009,7 +4846,7 @@ def api_taskbar_capabilities():
 def api_find_app_in_taskbar():
     """Find a specific application in taskbar"""
     try:
-        from ai_assistant.modules.taskbar_detection import TaskbarDetector
+        from ai_assistant.modules.app_discovery import TaskbarDetector
         
         data = request.get_json()
         app_name = data.get('app_name')
@@ -5035,7 +4872,7 @@ def api_find_app_in_taskbar():
 def api_get_running_apps():
     """Get list of running applications"""
     try:
-        from ai_assistant.modules.taskbar_detection import TaskbarDetector
+        from ai_assistant.modules.app_discovery import TaskbarDetector
         
         detector = TaskbarDetector()
         result = detector.get_running_applications()
@@ -5183,7 +5020,7 @@ if not AUTOMATION_AVAILABLE:
     def spotify_next_track(*args, **kwargs): return "Spotify control not available"
     def spotify_previous_track(*args, **kwargs): return "Spotify control not available"
     def search_and_play_spotify(*args, **kwargs): return "Spotify search not available"
-    def get_weather_info(*args, **kwargs): return {"temperature": "22Â°C", "description": "Weather service not configured"}
+    def get_weather_info(*args, **kwargs): return {"temperature": "22Ã‚Â°C", "description": "Weather service not configured"}
     def get_latest_news(*args, **kwargs): return []
     def get_stock_price(*args, **kwargs): return "N/A"
     def detect_taskbar_apps(*args, **kwargs): return []
@@ -5199,131 +5036,24 @@ if VOICE_API_AVAILABLE and 'voice_bp' in globals():
         # Check if already registered to avoid duplicate error
         if not any(bp.name == 'voice' for bp in app.blueprints.values()):
             app.register_blueprint(voice_bp, url_prefix='/api/voice')
-            logger.info("✅ Voice API blueprint registered at /api/voice")
+            logger.info("âœ… Voice API blueprint registered at /api/voice")
             logger.info(f"   - GET /api/voice/list (12 voices available)")
             logger.info(f"   - POST /api/voice/preview (voice preview generation)")
             logger.info(f"   - GET /api/voice/cache/stats (cache monitoring)")
         else:
-            logger.info("✅ Voice API blueprint already registered (skipping duplicate)")
+            logger.info("âœ… Voice API blueprint already registered (skipping duplicate)")
     except Exception as e:
         logger.error(f"Failed to register voice API blueprint: {e}")
 else:
     if not VOICE_API_AVAILABLE:
-        logger.warning("⚠️ Voice API blueprint not available")
+        logger.warning("âš ï¸  Voice API blueprint not available")
 
-# Register voice WebSocket handlers
-if VOICE_WEBSOCKET_AVAILABLE:
-    try:
-        from ai_assistant.services.voice_websocket_handlers import register_voice_handlers
-        register_voice_handlers(socketio, assistant)
-        logger.info("✅ Voice WebSocket handlers registered")
-    except Exception as e:
-        logger.error(f"Failed to register voice WebSocket handlers: {e}")
-else:
-    logger.warning("⚠️ Voice WebSocket handlers not available")
+# (Redundant voice WebSocket handler registration removed during consolidation)
 
 # ============================================================
-# CHAT & VOICE INTEGRATION
+# CHAT & VOICE INTEGRATION (handlers registered via voice_service.py)
 # ============================================================
-
-# Import and register Socket.IO handlers for chat and voice
 try:
-    # Define Socket.IO event handlers inline
-    @socketio.on('connect')
-    def handle_connect():
-        """Handle client connection"""
-        print(f'✅ Client connected: {request.sid}')
-        socketio.emit('connection_established', {
-            'status': 'connected',
-            'sid': request.sid,
-            'timestamp': datetime.now().isoformat()
-        }, room=request.sid)
-
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        """Handle client disconnection"""
-        print(f'❌ Client disconnected: {request.sid}')
-
-    # DISABLED: Duplicate handler - using chat_voice_handlers.py instead
-    #@socketio.on('command')
-    def handle_command_disabled_2(data):
-        """Handle command from voice or chat input"""
-        try:
-            from ai_assistant.core.assistant import ModernAssistant
-            
-            command_text = data.get('command') or data.get('message', '')
-            source = data.get('source', 'chat')
-            
-            if not command_text:
-                emit('command_response', {
-                    'success': False,
-                    'error': 'No command provided',
-                    'timestamp': datetime.now().isoformat()
-                })
-                return
-            
-            print(f'📨 Command received ({source}): {command_text}')
-            print(f'   Using assistant: {type(handle_command.assistant).__name__ if hasattr(handle_command, "assistant") else "Not created yet"}')
-            
-            # Process command through assistant
-            try:
-                # Create assistant instance if needed
-                if not hasattr(handle_command, 'assistant'):
-                    handle_command.assistant = ModernAssistant()
-                
-                # Process the query
-                response_text = handle_command.assistant.process_query(command_text)
-                
-                # Emit response
-                emit('command_response', {
-                    'success': True,
-                    'response': response_text,
-                    'command': command_text,
-                    'source': source,
-                    'timestamp': datetime.now().isoformat()
-                })
-                
-                print(f'✅ Response sent: {response_text[:100]}...')
-                
-                # Emit log update
-                emit('log_update', {
-                    'type': 'info',
-                    'message': f'Processed {source} command: {command_text[:50]}...',
-                    'timestamp': datetime.now().strftime('%H:%M:%S')
-                })
-                
-            except Exception as process_error:
-                print(f'❌ Processing error: {process_error}')
-                import traceback
-                print(traceback.format_exc())
-                
-                # Fallback: Simple greeting responses
-                cmd_lower = command_text.lower()
-                if any(word in cmd_lower for word in ['hello', 'hi', 'hey']):
-                    fallback_response = "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, and much more. What would you like me to do?"
-                elif any(word in cmd_lower for word in ['how are you']):
-                    fallback_response = "I'm doing great, thank you for asking! 😊 How can I help you today?"
-                else:
-                    fallback_response = f'I received: "{command_text}". Let me help you with that!'
-                
-                emit('command_response', {
-                    'success': True,
-                    'response': fallback_response,
-                    'command': command_text,
-                    'source': source,
-                    'timestamp': datetime.now().isoformat()
-                })
-                
-                print(f'✅ Fallback response sent: {fallback_response[:100]}...')
-                
-        except Exception as e:
-            print(f'❌ Command error: {e}')
-            emit('command_response', {
-                'success': False,
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            })
-
     # System stats broadcaster with caching
     _stats_cache = {'data': None, 'timestamp': 0}
     STATS_CACHE_DURATION = 2  # Cache for 2 seconds
@@ -5368,7 +5098,7 @@ try:
     stats_thread.start()
     
     
-    logger.info("✅ Chat & Voice Socket.IO handlers registered")
+    logger.info("âœ… Chat & Voice Socket.IO handlers registered")
     
 except Exception as e:
     logger.error(f"Failed to register chat/voice handlers: {e}")
@@ -5528,13 +5258,13 @@ def serve_unified_dashboard():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("🚀 YourDaddy Assistant - Modern Web Backend")
+    print("ðŸš€ YourDaddy Assistant - Modern Web Backend")
     print("=" * 60)
-    print("🌐 Server starting on: http://localhost:5000")
-    print("⚛️  Bolt.ai React UI (Monochrome Steel Design)")
-    print("⚡ Real-time features enabled via WebSockets")
-    print("🔧 API endpoints available at /api/*")
-    print("🛑 Press Ctrl+C to stop the server")
+    print("ðŸŒ Server starting on: http://localhost:5000")
+    print("âš›ï¸  Bolt.ai React UI (Monochrome Steel Design)")
+    print("âš¡ Real-time features enabled via WebSockets")
+    print("ðŸ”§ API endpoints available at /api/*")
+    print("ðŸ›‘ Press Ctrl+C to stop the server")
     print("=" * 60)
     
     try:
@@ -5542,13 +5272,13 @@ if __name__ == '__main__':
         host = os.getenv('HOST', '127.0.0.1')
         port = int(os.getenv('PORT', 5000))
         
-        print(f"ðŸ”’ Security: JWT authentication enabled")
-        print(f"ðŸ”’ Security: Rate limiting enabled")
-        print(f"ðŸ”’ Security: CORS restricted to: {', '.join(ALLOWED_ORIGINS)}")
-        print(f"ðŸ”’ Security: Host binding: {host}")
+        print(f"Ã°Å¸â€â€™ Security: JWT authentication enabled")
+        print(f"Ã°Å¸â€â€™ Security: Rate limiting enabled")
+        print(f"Ã°Å¸â€â€™ Security: CORS restricted to: {', '.join(ALLOWED_ORIGINS)}")
+        print(f"Ã°Å¸â€â€™ Security: Host binding: {host}")
         print("")
-        print(f"âš ï¸  Default credentials: username='admin', password='{os.getenv('ADMIN_PASSWORD', 'changeme123')}'")
-        print("âš ï¸  CHANGE THE PASSWORD in .env file before production!")
+        print(f"Ã¢Å¡Â Ã¯Â¸Â  Default credentials: username='admin', password='{os.getenv('ADMIN_PASSWORD', 'changeme123')}'")
+        print("Ã¢Å¡Â Ã¯Â¸Â  CHANGE THE PASSWORD in .env file before production!")
         print("")
         
         # Initialize secure keys from OS Credential Store into environment
@@ -5557,16 +5287,15 @@ if __name__ == '__main__':
             env_map = {
                 "googleGemini": "GOOGLE_GEMINI_API_KEY",
                 "openAI": "OPENAI_API_KEY",
-                "anthropic": "ANTHROPIC_API_KEY",
                 "elevenLabs": "ELEVEN_LABS_API_KEY"
             }
             for key_name, env_name in env_map.items():
                 val = get_secure_key(key_name)
                 if val:
                     os.environ[env_name] = val
-                    logger.info(f"🔑 Stored Key '{key_name}' loaded into environment at startup.")
+                    logger.info(f"ðŸ”‘ Stored Key '{key_name}' loaded into environment at startup.")
         except Exception as e:
-            logger.warning(f"⚠️ Failed to load secure keys at startup: {e}")
+            logger.warning(f"âš ï¸ Failed to load secure keys at startup: {e}")
             
         # Start app discovery schedulers (non-blocking)
         if AUTOMATION_AVAILABLE:
@@ -5579,27 +5308,27 @@ if __name__ == '__main__':
         try:
             from ai_assistant.services.backend.system_monitor import start_system_monitor
             start_system_monitor(socketio)
-            print("✅ System monitoring started")
+            print("âœ… System monitoring started")
         except ImportError as e:
-            print(f"⚠️ Could not start system monitoring: {e}")
+            print(f"âš ï¸ Could not start system monitoring: {e}")
         
         # Register Google Speech Recognition WebSocket handlers
         if GOOGLE_SPEECH_WS_AVAILABLE:
             try:
                 register_google_speech_handlers(socketio)
-                print("✅ Google Speech Recognition WebSocket handlers registered")
+                print("âœ… Google Speech Recognition WebSocket handlers registered")
             except Exception as e:
-                print(f"⚠️ Could not register Google Speech handlers: {e}")
+                print(f"âš ï¸ Could not register Google Speech handlers: {e}")
         
         # Register improved command handlers with proper routing
         try:
-            print(f"🔍 DEBUG: socketio type = {type(socketio)}, value = {socketio}")
-            import ai_assistant.services.chat_voice_handlers_new as chat_handlers
+            print(f"ðŸ” DEBUG: socketio type = {type(socketio)}, value = {socketio}")
+            import ai_assistant.services.voice_service as chat_handlers
             chat_handlers.set_socketio(socketio)
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
-            print("✅ Command handlers registered with local-first routing")
+            print("âœ… Command handlers registered with local-first routing")
         except Exception as e:
-            print(f"⚠️ Could not register command handlers: {e}")
+            print(f"âš ï¸ Could not register command handlers: {e}")
             import traceback
             traceback.print_exc()
 
@@ -5607,5 +5336,8 @@ if __name__ == '__main__':
 
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:
-        print(f"âŒ Server failed to start: {e}")
+        print(f"Ã¢ÂÅ’ Server failed to start: {e}")
         sys.exit(1)
+
+
+

@@ -350,5 +350,306 @@ class InputValidator:
                     audit_security_event(
                         f"SQL injection attempt detected in field {field_name}: {value[:100]}",
                         SeverityLevel.HIGH
-                    )\n                raise ValidationError(f"Potential SQL injection detected in field '{field_name}'")\n        \n        # XSS detection\n        for pattern in self.xss_patterns:\n            if re.search(pattern, value_lower, re.IGNORECASE):\n                if AUDIT_AVAILABLE:\n                    audit_security_event(\n                        f\"XSS attempt detected in field {field_name}: {value[:100]}\",\n                        SeverityLevel.HIGH\n                    )\n                raise ValidationError(f\"Potential XSS attack detected in field '{field_name}'\")\n        \n        # Command injection detection\n        for pattern in self.command_injection_patterns:\n            if re.search(pattern, value, re.IGNORECASE):\n                if AUDIT_AVAILABLE:\n                    audit_security_event(\n                        f\"Command injection attempt detected in field {field_name}: {value[:100]}\",\n                        SeverityLevel.HIGH\n                    )\n                raise ValidationError(f\"Potential command injection detected in field '{field_name}'\")\n    \n    def _sanitize_string(self, value: str, input_type: InputType) -> str:\n        \"\"\"Sanitize string input based on type\"\"\"\n        if input_type == InputType.HTML:\n            # HTML sanitization (escape dangerous characters)\n            return html.escape(value, quote=True)\n        \n        elif input_type == InputType.URL:\n            # URL encoding for unsafe characters\n            return urllib.parse.quote(value, safe=\":/?#[]@!$&'()*+,;=\")\n        \n        elif input_type == InputType.STRING:\n            # Basic string sanitization\n            # Remove null bytes and control characters\n            sanitized = re.sub(r'[\\x00-\\x1f\\x7f-\\x9f]', '', value)\n            # Normalize whitespace\n            sanitized = ' '.join(sanitized.split())\n            return sanitized.strip()\n        \n        else:\n            return value.strip()\n    \n    def validate_dict(self, data: Dict[str, Any], rules: List[ValidationRule]) -> Dict[str, Any]:\n        \"\"\"\n        Validate a dictionary against a set of rules\n        \n        Args:\n            data: Dictionary to validate\n            rules: List of validation rules\n            \n        Returns:\n            Validated and sanitized dictionary\n            \n        Raises:\n            ValidationError: If any field fails validation\n        \"\"\"\n        validated_data = {}\n        errors = []\n        \n        # Create rule lookup\n        rule_map = {rule.field_name: rule for rule in rules}\n        \n        # Validate each field\n        for field_name, rule in rule_map.items():\n            try:\n                value = data.get(field_name)\n                validated_value = self.validate_field(value, rule)\n                if validated_value is not None:  # Don't include None values\n                    validated_data[field_name] = validated_value\n            except ValidationError as e:\n                errors.append(e)\n        \n        # Check for unexpected fields\n        expected_fields = set(rule_map.keys())\n        provided_fields = set(data.keys())\n        unexpected_fields = provided_fields - expected_fields\n        \n        if unexpected_fields:\n            logger.warning(f\"Unexpected fields in input: {unexpected_fields}\")\n            # Optionally reject unexpected fields\n            # errors.append(ValidationError(f\"Unexpected fields: {unexpected_fields}\"))\n        \n        if errors:\n            # Combine error messages\n            error_messages = [str(e) for e in errors]\n            raise ValidationError(f\"Validation failed: {'; '.join(error_messages)}\")\n        \n        return validated_data\n    \n    def validate_api_request(self, data: Dict[str, Any], endpoint: str) -> Dict[str, Any]:\n        \"\"\"Validate API request data based on endpoint\"\"\"\n        rules = self._get_api_rules(endpoint)\n        return self.validate_dict(data, rules)\n    \n    def _get_api_rules(self, endpoint: str) -> List[ValidationRule]:\n        \"\"\"Get validation rules for specific API endpoints\"\"\"\n        # Common API validation rules\n        common_rules = {\n            '/api/auth/login': [\n                ValidationRule('pin', InputType.PIN, required=True, description='User PIN')\n            ],\n            '/api/chat': [\n                ValidationRule('message', InputType.STRING, required=True, max_length=10000, description='Chat message'),\n                ValidationRule('session_id', InputType.UUID, required=False, description='Session identifier'),\n                ValidationRule('model_preference', InputType.STRING, required=False, \n                             allowed_values=['gpt-4', 'gpt-3.5-turbo', 'claude', 'gemini'], description='AI model preference')\n            ],\n            '/api/system/command': [\n                ValidationRule('command', InputType.COMMAND, required=True, max_length=500, description='System command'),\n                ValidationRule('user_id', InputType.STRING, required=True, description='User identifier')\n            ],\n            '/api/settings': [\n                ValidationRule('setting_name', InputType.STRING, required=True, max_length=100, description='Setting name'),\n                ValidationRule('setting_value', InputType.STRING, required=True, max_length=1000, description='Setting value')\n            ],\n            '/api/file/upload': [\n                ValidationRule('filename', InputType.FILE_PATH, required=True, description='File name'),\n                ValidationRule('content_type', InputType.STRING, required=True, \n                             allowed_values=['text/plain', 'application/json', 'image/jpeg', 'image/png'],\n                             description='File content type')\n            ]\n        }\n        \n        return common_rules.get(endpoint, [])\n\n\nclass WebSocketValidator:\n    \"\"\"Specialized validator for WebSocket messages\"\"\"\n    \n    def __init__(self, input_validator: InputValidator):\n        self.validator = input_validator\n        \n        # WebSocket message types and their validation rules\n        self.message_rules = {\n            'chat': [\n                ValidationRule('type', InputType.STRING, required=True, allowed_values=['chat']),\n                ValidationRule('message', InputType.STRING, required=True, max_length=10000),\n                ValidationRule('session_id', InputType.STRING, required=False)\n            ],\n            'command': [\n                ValidationRule('type', InputType.STRING, required=True, allowed_values=['command']),\n                ValidationRule('command', InputType.STRING, required=True, max_length=500),\n                ValidationRule('parameters', InputType.JSON, required=False)\n            ],\n            'system': [\n                ValidationRule('type', InputType.STRING, required=True, allowed_values=['system']),\n                ValidationRule('action', InputType.STRING, required=True, \n                             allowed_values=['status', 'stats', 'config']),\n                ValidationRule('data', InputType.JSON, required=False)\n            ]\n        }\n    \n    def validate_message(self, message: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Validate WebSocket message\"\"\"\n        # Validate message structure\n        if not isinstance(message, dict):\n            raise ValidationError(\"WebSocket message must be a JSON object\")\n        \n        message_type = message.get('type')\n        if not message_type:\n            raise ValidationError(\"WebSocket message must include 'type' field\")\n        \n        rules = self.message_rules.get(message_type, [])\n        if not rules:\n            raise ValidationError(f\"Unknown WebSocket message type: {message_type}\")\n        \n        return self.validator.validate_dict(message, rules)\n\n\nclass CLIValidator:\n    \"\"\"Specialized validator for CLI command inputs\"\"\"\n    \n    def __init__(self, input_validator: InputValidator):\n        self.validator = input_validator\n    \n    def validate_command_args(self, args: List[str]) -> List[str]:\n        \"\"\"Validate CLI command arguments\"\"\"\n        validated_args = []\n        \n        for arg in args:\n            # Basic sanitization\n            if not isinstance(arg, str):\n                raise ValidationError(f\"Command argument must be string, got {type(arg)}\")\n            \n            # Check for injection attempts\n            self.validator._check_security_threats(arg, 'cli_argument')\n            \n            # Sanitize\n            sanitized_arg = self.validator._sanitize_string(arg, InputType.COMMAND)\n            validated_args.append(sanitized_arg)\n        \n        return validated_args\n    \n    def validate_file_path(self, file_path: str) -> str:\n        \"\"\"Validate file path for CLI operations\"\"\"\n        rule = ValidationRule('file_path', InputType.FILE_PATH, required=True)\n        return self.validator.validate_field(file_path, rule)\n\n\n# Global validator instances\n_input_validator = None\n_websocket_validator = None\n_cli_validator = None\n\ndef get_input_validator() -> InputValidator:\n    \"\"\"Get global input validator instance\"\"\"\n    global _input_validator\n    if _input_validator is None:\n        _input_validator = InputValidator()\n    return _input_validator\n\ndef get_websocket_validator() -> WebSocketValidator:\n    \"\"\"Get WebSocket validator instance\"\"\"\n    global _websocket_validator\n    if _websocket_validator is None:\n        _websocket_validator = WebSocketValidator(get_input_validator())\n    return _websocket_validator\n\ndef get_cli_validator() -> CLIValidator:\n    \"\"\"Get CLI validator instance\"\"\"\n    global _cli_validator\n    if _cli_validator is None:\n        _cli_validator = CLIValidator(get_input_validator())\n    return _cli_validator\n\n\n# Convenience functions for common validation scenarios\ndef validate_api_input(data: Dict[str, Any], endpoint: str) -> Dict[str, Any]:\n    \"\"\"Validate API input data\"\"\"\n    return get_input_validator().validate_api_request(data, endpoint)\n\ndef validate_websocket_message(message: Dict[str, Any]) -> Dict[str, Any]:\n    \"\"\"Validate WebSocket message\"\"\"\n    return get_websocket_validator().validate_message(message)\n\ndef validate_cli_command(args: List[str]) -> List[str]:\n    \"\"\"Validate CLI command arguments\"\"\"\n    return get_cli_validator().validate_command_args(args)\n\ndef validate_pin(pin: str) -> str:\n    \"\"\"Validate PIN format\"\"\"\n    rule = ValidationRule('pin', InputType.PIN, required=True)\n    return get_input_validator().validate_field(pin, rule)\n\ndef validate_email(email: str) -> str:\n    \"\"\"Validate email address\"\"\"\n    rule = ValidationRule('email', InputType.EMAIL, required=True)\n    return get_input_validator().validate_field(email, rule)\n\ndef validate_file_upload(filename: str, content_type: str) -> Dict[str, str]:\n    \"\"\"Validate file upload parameters\"\"\"\n    rules = [\n        ValidationRule('filename', InputType.FILE_PATH, required=True),\n        ValidationRule('content_type', InputType.STRING, required=True)\n    ]\n    data = {'filename': filename, 'content_type': content_type}\n    return get_input_validator().validate_dict(data, rules)\n\n\nif __name__ == \"__main__\":\n    # Test input validation system\n    print(\"Testing input validation system...\")\n    \n    validator = InputValidator()\n    \n    # Test API validation\n    try:\n        login_data = {'pin': '1234'}\n        validated = validate_api_input(login_data, '/api/auth/login')\n        print(f\"Valid login data: {validated}\")\n    except ValidationError as e:\n        print(f\"Login validation error: {e}\")\n    \n    # Test WebSocket validation\n    try:\n        ws_message = {\n            'type': 'chat',\n            'message': 'Hello, assistant!',\n            'session_id': 'abc123'\n        }\n        validated_ws = validate_websocket_message(ws_message)\n        print(f\"Valid WebSocket message: {validated_ws}\")\n    except ValidationError as e:\n        print(f\"WebSocket validation error: {e}\")\n    \n    # Test security detection\n    try:\n        malicious_input = \"'; DROP TABLE users; --\"\n        validator._check_security_threats(malicious_input, 'test_field')\n    except ValidationError as e:\n        print(f\"Security threat detected: {e}\")\n    \n    # Test file validation\n    try:\n        safe_file = validate_file_upload('document.pdf', 'application/pdf')\n        print(f\"Valid file upload: {safe_file}\")\n    except ValidationError as e:\n        print(f\"File validation error: {e}\")\n    \n    print(\"✅ Input validation test completed!\")"
+                    )
+                raise ValidationError(f"Potential SQL injection detected in field '{field_name}'")
+        
+        # XSS detection
+        for pattern in self.xss_patterns:
+            if re.search(pattern, value_lower, re.IGNORECASE):
+                if AUDIT_AVAILABLE:
+                    audit_security_event(
+                        f"XSS attempt detected in field {field_name}: {value[:100]}",
+                        SeverityLevel.HIGH
+                    )
+                raise ValidationError(f"Potential XSS attack detected in field '{field_name}'")
+        
+        # Command injection detection
+        for pattern in self.command_injection_patterns:
+            if re.search(pattern, value, re.IGNORECASE):
+                if AUDIT_AVAILABLE:
+                    audit_security_event(
+                        f"Command injection attempt detected in field {field_name}: {value[:100]}",
+                        SeverityLevel.HIGH
+                    )
+                raise ValidationError(f"Potential command injection detected in field '{field_name}'")
+    
+    def _sanitize_string(self, value: str, input_type: InputType) -> str:
+        """Sanitize string input based on type"""
+        if input_type == InputType.HTML:
+            # HTML sanitization (escape dangerous characters)
+            return html.escape(value, quote=True)
+        
+        elif input_type == InputType.URL:
+            # URL encoding for unsafe characters
+            return urllib.parse.quote(value, safe=":/?#[]@!$&'()*+,;=")
+        
+        elif input_type == InputType.STRING:
+            # Basic string sanitization
+            # Remove null bytes and control characters
+            sanitized = re.sub(r'[\\x00-\\x1f\\x7f-\\x9f]', '', value)
+            # Normalize whitespace
+            sanitized = ' '.join(sanitized.split())
+            return sanitized.strip()
+        
+        else:
+            return value.strip()
+    
+    def validate_dict(self, data: Dict[str, Any], rules: List[ValidationRule]) -> Dict[str, Any]:
+        """
+        Validate a dictionary against a set of rules
+        
+        Args:
+            data: Dictionary to validate
+            rules: List of validation rules
+            
+        Returns:
+            Validated and sanitized dictionary
+            
+        Raises:
+            ValidationError: If any field fails validation
+        """
+        validated_data = {}
+        errors = []
+        
+        # Create rule lookup
+        rule_map = {rule.field_name: rule for rule in rules}
+        
+        # Validate each field
+        for field_name, rule in rule_map.items():
+            try:
+                value = data.get(field_name)
+                validated_value = self.validate_field(value, rule)
+                if validated_value is not None:  # Don't include None values
+                    validated_data[field_name] = validated_value
+            except ValidationError as e:
+                errors.append(e)
+        
+        # Check for unexpected fields
+        expected_fields = set(rule_map.keys())
+        provided_fields = set(data.keys())
+        unexpected_fields = provided_fields - expected_fields
+        
+        if unexpected_fields:
+            logger.warning(f"Unexpected fields in input: {unexpected_fields}")
+            # Optionally reject unexpected fields
+            # errors.append(ValidationError(f"Unexpected fields: {unexpected_fields}"))
+        
+        if errors:
+            # Combine error messages
+            error_messages = [str(e) for e in errors]
+            raise ValidationError(f"Validation failed: {'; '.join(error_messages)}")
+        
+        return validated_data
+    
+    def validate_api_request(self, data: Dict[str, Any], endpoint: str) -> Dict[str, Any]:
+        """Validate API request data based on endpoint"""
+        rules = self._get_api_rules(endpoint)
+        return self.validate_dict(data, rules)
+    
+    def _get_api_rules(self, endpoint: str) -> List[ValidationRule]:
+        """Get validation rules for specific API endpoints"""
+        # Common API validation rules
+        common_rules = {
+            '/api/auth/login': [
+                ValidationRule('pin', InputType.PIN, required=True, description='User PIN')
+            ],
+            '/api/chat': [
+                ValidationRule('message', InputType.STRING, required=True, max_length=10000, description='Chat message'),
+                ValidationRule('session_id', InputType.UUID, required=False, description='Session identifier'),
+                ValidationRule('model_preference', InputType.STRING, required=False, 
+                             allowed_values=['gpt-4', 'gpt-3.5-turbo', 'claude', 'gemini'], description='AI model preference')
+            ],
+            '/api/system/command': [
+                ValidationRule('command', InputType.COMMAND, required=True, max_length=500, description='System command'),
+                ValidationRule('user_id', InputType.STRING, required=True, description='User identifier')
+            ],
+            '/api/settings': [
+                ValidationRule('setting_name', InputType.STRING, required=True, max_length=100, description='Setting name'),
+                ValidationRule('setting_value', InputType.STRING, required=True, max_length=1000, description='Setting value')
+            ],
+            '/api/file/upload': [
+                ValidationRule('filename', InputType.FILE_PATH, required=True, description='File name'),
+                ValidationRule('content_type', InputType.STRING, required=True, 
+                             allowed_values=['text/plain', 'application/json', 'image/jpeg', 'image/png'],
+                             description='File content type')
+            ]
+        }
+        
+        return common_rules.get(endpoint, [])
+
+
+class WebSocketValidator:
+    """Specialized validator for WebSocket messages"""
+    
+    def __init__(self, input_validator: InputValidator):
+        self.validator = input_validator
+        
+        # WebSocket message types and their validation rules
+        self.message_rules = {
+            'chat': [
+                ValidationRule('type', InputType.STRING, required=True, allowed_values=['chat']),
+                ValidationRule('message', InputType.STRING, required=True, max_length=10000),
+                ValidationRule('session_id', InputType.STRING, required=False)
+            ],
+            'command': [
+                ValidationRule('type', InputType.STRING, required=True, allowed_values=['command']),
+                ValidationRule('command', InputType.STRING, required=True, max_length=500),
+                ValidationRule('parameters', InputType.JSON, required=False)
+            ],
+            'system': [
+                ValidationRule('type', InputType.STRING, required=True, allowed_values=['system']),
+                ValidationRule('action', InputType.STRING, required=True, 
+                             allowed_values=['status', 'stats', 'config']),
+                ValidationRule('data', InputType.JSON, required=False)
+            ]
+        }
+    
+    def validate_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate WebSocket message"""
+        # Validate message structure
+        if not isinstance(message, dict):
+            raise ValidationError("WebSocket message must be a JSON object")
+        
+        message_type = message.get('type')
+        if not message_type:
+            raise ValidationError("WebSocket message must include 'type' field")
+        
+        rules = self.message_rules.get(message_type, [])
+        if not rules:
+            raise ValidationError(f"Unknown WebSocket message type: {message_type}")
+        
+        return self.validator.validate_dict(message, rules)
+
+
+class CLIValidator:
+    """Specialized validator for CLI command inputs"""
+    
+    def __init__(self, input_validator: InputValidator):
+        self.validator = input_validator
+    
+    def validate_command_args(self, args: List[str]) -> List[str]:
+        """Validate CLI command arguments"""
+        validated_args = []
+        
+        for arg in args:
+            # Basic sanitization
+            if not isinstance(arg, str):
+                raise ValidationError(f"Command argument must be string, got {type(arg)}")
+            
+            # Check for injection attempts
+            self.validator._check_security_threats(arg, 'cli_argument')
+            
+            # Sanitize
+            sanitized_arg = self.validator._sanitize_string(arg, InputType.COMMAND)
+            validated_args.append(sanitized_arg)
+        
+        return validated_args
+    
+    def validate_file_path(self, file_path: str) -> str:
+        """Validate file path for CLI operations"""
+        rule = ValidationRule('file_path', InputType.FILE_PATH, required=True)
+        return self.validator.validate_field(file_path, rule)
+
+
+# Global validator instances
+_input_validator = None
+_websocket_validator = None
+_cli_validator = None
+
+def get_input_validator() -> InputValidator:
+    """Get global input validator instance"""
+    global _input_validator
+    if _input_validator is None:
+        _input_validator = InputValidator()
+    return _input_validator
+
+def get_websocket_validator() -> WebSocketValidator:
+    """Get WebSocket validator instance"""
+    global _websocket_validator
+    if _websocket_validator is None:
+        _websocket_validator = WebSocketValidator(get_input_validator())
+    return _websocket_validator
+
+def get_cli_validator() -> CLIValidator:
+    """Get CLI validator instance"""
+    global _cli_validator
+    if _cli_validator is None:
+        _cli_validator = CLIValidator(get_input_validator())
+    return _cli_validator
+
+
+# Convenience functions for common validation scenarios
+def validate_api_input(data: Dict[str, Any], endpoint: str) -> Dict[str, Any]:
+    """Validate API input data"""
+    return get_input_validator().validate_api_request(data, endpoint)
+
+def validate_websocket_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate WebSocket message"""
+    return get_websocket_validator().validate_message(message)
+
+def validate_cli_command(args: List[str]) -> List[str]:
+    """Validate CLI command arguments"""
+    return get_cli_validator().validate_command_args(args)
+
+def validate_pin(pin: str) -> str:
+    """Validate PIN format"""
+    rule = ValidationRule('pin', InputType.PIN, required=True)
+    return get_input_validator().validate_field(pin, rule)
+
+def validate_email(email: str) -> str:
+    """Validate email address"""
+    rule = ValidationRule('email', InputType.EMAIL, required=True)
+    return get_input_validator().validate_field(email, rule)
+
+def validate_file_upload(filename: str, content_type: str) -> Dict[str, str]:
+    """Validate file upload parameters"""
+    rules = [
+        ValidationRule('filename', InputType.FILE_PATH, required=True),
+        ValidationRule('content_type', InputType.STRING, required=True)
+    ]
+    data = {'filename': filename, 'content_type': content_type}
+    return get_input_validator().validate_dict(data, rules)
+
+
+if __name__ == "__main__":
+    # Test input validation system
+    print("Testing input validation system...")
+    
+    validator = InputValidator()
+    
+    # Test API validation
+    try:
+        login_data = {'pin': '1234'}
+        validated = validate_api_input(login_data, '/api/auth/login')
+        print(f"Valid login data: {validated}")
+    except ValidationError as e:
+        print(f"Login validation error: {e}")
+    
+    # Test WebSocket validation
+    try:
+        ws_message = {
+            'type': 'chat',
+            'message': 'Hello, assistant!',
+            'session_id': 'abc123'
+        }
+        validated_ws = validate_websocket_message(ws_message)
+        print(f"Valid WebSocket message: {validated_ws}")
+    except ValidationError as e:
+        print(f"WebSocket validation error: {e}")
+    
+    # Test security detection
+    try:
+        malicious_input = "'; DROP TABLE users; --"
+        validator._check_security_threats(malicious_input, 'test_field')
+    except ValidationError as e:
+        print(f"Security threat detected: {e}")
+    
+    # Test file validation
+    try:
+        safe_file = validate_file_upload('document.pdf', 'application/pdf')
+        print(f"Valid file upload: {safe_file}")
+    except ValidationError as e:
+        print(f"File validation error: {e}")
+    
+    print("✅ Input validation test completed!")
     

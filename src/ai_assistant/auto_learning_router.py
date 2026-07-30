@@ -62,7 +62,7 @@ class LearningDataRouter:
             self.command_predictor = CommandSuccessPredictor()
             self.context_generator = ContextAwareResponseGenerator()
             self.smart_commands = SmartCommandPredictor()
-            self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/personal_knowledge.db")
+            self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/core/personal_knowledge.db")
             self.query_cache = QuerySimilarityCache()
             print("✅ Learning systems initialized")
         except Exception as e:

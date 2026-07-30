@@ -7,7 +7,7 @@
       "description": "Access local file system - read, write, search files and directories",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "f:/bn/assitant"],
-      "enabled": false,
+      "enabled": true,
       "category": "file-operations",
       "capabilities": [
         "read_file",
@@ -41,7 +41,7 @@
       "env": {
         "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       },
-      "enabled": false,
+      "enabled": true,
       "category": "development",
       "capabilities": [
         "search_repositories",
@@ -161,6 +161,23 @@
         "analyze"
       ],
       "notes": "Improves AI reasoning for complex problems"
+    },
+    "chrome-devtools": {
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools MCP for browser debugging and inspection",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp"],
+      "enabled": true,
+      "category": "development",
+      "capabilities": [
+        "inspect_dom",
+        "view_console",
+        "debug_javascript",
+        "network_inspection",
+        "performance_profiling",
+        "element_selection"
+      ],
+      "notes": "Use VS Code's Get DevTools MCP flow or run via npx chrome-devtools-mcp. The old @modelcontextprotocol/server-chrome-devtools package does not exist."
     }
   },
   "categories": {

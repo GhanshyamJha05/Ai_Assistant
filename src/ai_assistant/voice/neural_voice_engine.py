@@ -1,9 +1,7 @@
 """
-Neural Voice Engine - Google Assistant Quality Voice Synthesis
-Combines Edge-TTS (Microsoft Neural), Coqui TTS (offline), and fallback options
-Implements prosody, emotion, and context-aware speech generation
+Neural Voice Engine for YourDaddy AI Assistant
+Provides high-quality neural voice synthesis using KittenTTS (primary, offline) and Edge-TTS (fallback, online).
 """
-
 import asyncio
 import os
 import logging
@@ -20,22 +18,10 @@ except ImportError:
     EDGE_TTS_AVAILABLE = False
 
 try:
-    from TTS.api import TTS as CoquiTTS
-    COQUI_AVAILABLE = True
-except ImportError:
-    COQUI_AVAILABLE = False
-
-try:
     import kittentts
     KITTEN_AVAILABLE = True
 except ImportError:
     KITTEN_AVAILABLE = False
-
-try:
-    import pyttsx3
-    PYTTSX3_AVAILABLE = True
-except ImportError:
-    PYTTSX3_AVAILABLE = False
 
 try:
     from utils.logging_config import get_logger
@@ -44,13 +30,11 @@ except ImportError:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-
 class VoiceGender(Enum):
     """Voice gender options"""
     MALE = "male"
     FEMALE = "female"
     NEUTRAL = "neutral"
-
 
 class SpeakingStyle(Enum):
     """Speaking style options for natural conversation"""
@@ -65,22 +49,14 @@ class SpeakingStyle(Enum):
 class NeuralVoiceEngine:
     """
     High-quality neural voice synthesis engine
-    Matches Google Assistant's natural, human-like voice quality
     """
     
     def __init__(self, cache_dir: str = "data/voice_cache", gpu: bool = False):
-        """
-        Initialize the neural voice engine
-        
-        Args:
-            cache_dir: Directory for caching synthesized audio
-            gpu: Enable GPU acceleration if available
-        """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.gpu = gpu
         
-        # Voice configurations
+        # Voice configurations for edge-tts
         self.edge_voices = {
             'en': {
                 'female': 'en-US-AriaNeural',
@@ -91,114 +67,101 @@ class NeuralVoiceEngine:
                 'female': 'hi-IN-SwaraNeural',
                 'male': 'hi-IN-MadhurNeural',
                 'neutral': 'hi-IN-SwaraNeural'
-            },
-            'en-GB': {
-                'female': 'en-GB-SoniaNeural',
-                'male': 'en-GB-RyanNeural',
-                'neutral': 'en-GB-SoniaNeural'
-            },
-            'es': {
-                'female': 'es-ES-ConchitaNeural',
-                'male': 'es-ES-AlvaroNeural',
-                'neutral': 'es-ES-ConchitaNeural'
-            },
-            'fr': {
-                'female': 'fr-FR-DeniseNeural',
-                'male': 'fr-FR-HenriNeural',
-                'neutral': 'fr-FR-DeniseNeural'
             }
         }
         
         # Initialize engines
         self.edge_tts_available = EDGE_TTS_AVAILABLE
-        self.coqui_tts = None
         self.kitten_tts = None
         self.kitten_available = KITTEN_AVAILABLE
-        self.pyttsx3_engine = None
-        self.current_voice = 'en-US-AriaNeural'
         
         self._initialize_engines()
         
     def _initialize_engines(self):
         """Initialize all available TTS engines"""
-        # Edge-TTS (online, best quality)
+        if self.kitten_available:
+             logger.info("✅ KittenTTS available (Primary Offline Voice Engine)")
+        else:
+             logger.warning("⚠️ KittenTTS not available. Install: pip install kittentts")
+             
         if self.edge_tts_available:
-            logger.info("✅ Edge-TTS available (Microsoft Neural Voices)")
+            logger.info("✅ Edge-TTS available (Fallback Online Voice Engine)")
         else:
             logger.warning("⚠️ Edge-TTS not available. Install: pip install edge-tts")
-        
-        # Coqui TTS (offline, good quality) - Lazy load to save startup time
-        self.coqui_available = False # Will check when needed
-        if COQUI_AVAILABLE:
-             logger.debug("Sound engine: Coqui TTS library found (will load on-demand)")
-        else:
-             # Only log debug, not warning, since we have other engines
-             logger.debug("Sound engine: Coqui TTS not installed (optional)")
-             
-        # KittenTTS (ultra-lightweight offline) - Lazy load
-        if self.kitten_available:
-             logger.debug("Sound engine: KittenTTS library found (will load on-demand)")
-        else:
-             logger.debug("Sound engine: KittenTTS not installed (optional)")
-        
-        # pyttsx3 (fallback)
-        if PYTTSX3_AVAILABLE:
-            try:
-                self.pyttsx3_engine = pyttsx3.init()
-                self.pyttsx3_engine.setProperty('rate', 150)  # Speaking rate
-                logger.info("✅ pyttsx3 available as fallback")
-            except Exception as e:
-                logger.warning(f"⚠️ pyttsx3 initialization failed: {e}")
-    
+
+    def synthesize_kitten_tts(
+        self,
+        text: str,
+        voice: str = "Jasper",
+        speed: float = 1.0,
+        output_file: Optional[str] = None
+    ) -> Optional[str]:
+        """Synthesize speech using KittenTTS (offline, ultra-lightweight)"""
+        if not self.kitten_available or not text:
+            return None
+            
+        try:
+            logger.info(f"⏳ Synthesizing with KittenTTS: {text[:50]}...")
+            
+            # Lazy load the model
+            if self.kitten_tts is None:
+                from kittentts import KittenTTS
+                self.kitten_tts = KittenTTS("KittenML/kitten-tts-mini-0.8")
+                
+            if voice not in self.kitten_tts.available_voices:
+                voice = "Jasper" # Default fallback
+                
+            # Cache key
+            cache_key = f"kitten_{text[:30].replace(' ', '_')}_{voice}.wav"
+            cache_file = self.cache_dir / cache_key
+            
+            output_file = output_file or str(cache_file)
+            if Path(output_file).exists():
+                return output_file
+                
+            # Generate audio
+            self.kitten_tts.tts_to_file(text, output_file, voice=voice, speed=speed)
+            logger.info(f"✅ KittenTTS Synthesized -> {output_file}")
+            
+            return output_file
+            
+        except Exception as e:
+            logger.error(f"❌ KittenTTS synthesis failed: {e}")
+            return None
+
     async def synthesize_edge_tts(
         self,
         text: str,
         language: str = 'en',
         gender: VoiceGender = VoiceGender.FEMALE,
-        rate: float = 0.0,  # -50 to 50, 0 is normal
-        pitch: float = 0.0,  # -50 to 50, 0 is normal
+        rate: float = 0.0,
+        pitch: float = 0.0,
         output_file: Optional[str] = None
     ) -> Optional[str]:
-        """
-        Synthesize speech using Edge-TTS (Microsoft Neural Voices)
-        Best quality, matches Google Assistant
-        
-        Args:
-            text: Text to synthesize
-            language: Language code (en, hi, en-GB, es, fr, etc.)
-            gender: Voice gender
-            rate: Speaking rate adjustment
-            pitch: Pitch adjustment
-            output_file: Output MP3 file path
-        
-        Returns:
-            Path to saved audio file or None if failed
-        """
+        """Synthesize speech using Edge-TTS (fallback)"""
         if not self.edge_tts_available or not text:
             return None
         
         try:
-            # Select voice
             voice_key = gender.value if gender.value != 'neutral' else 'female'
             voice = self.edge_voices.get(language, self.edge_voices['en']).get(
                 voice_key, 'en-US-AriaNeural'
             )
             
-            # Cache key
-            cache_key = f"{text[:50].replace(' ', '_')}_{language}_{gender.value}.mp3"
+            cache_key = f"edge_{text[:30].replace(' ', '_')}_{language}_{gender.value}.mp3"
             cache_file = self.cache_dir / cache_key
             
-            # Return cached if available
             if cache_file.exists():
-                logger.debug(f"Using cached audio: {cache_file}")
                 return str(cache_file)
             
-            # Synthesize
             output_file = output_file or str(cache_file)
-            communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
             
+            rate_str = f"+{int(rate)}%" if rate >= 0 else f"{int(rate)}%"
+            pitch_str = f"+{int(pitch)}Hz" if pitch >= 0 else f"{int(pitch)}Hz"
+            
+            communicate = edge_tts.Communicate(text, voice, rate=rate_str, pitch=pitch_str)
             await communicate.save(output_file)
-            logger.info(f"✅ Synthesized: {text[:50]}... -> {output_file}")
+            logger.info(f"✅ Edge-TTS Synthesized -> {output_file}")
             
             return output_file
             
@@ -225,234 +188,47 @@ class NeuralVoiceEngine:
         return loop.run_until_complete(
             self.synthesize_edge_tts(text, language, gender, rate, pitch, output_file)
         )
-    
-    def synthesize_coqui_tts(
-        self,
-        text: str,
-        language: str = 'en',
-        speaker: Optional[str] = None,
-        output_file: Optional[str] = None
-    ) -> Optional[str]:
-        """
-        Synthesize speech using Coqui TTS (offline)
-        Good quality, works without internet
-        
-        Args:
-            text: Text to synthesize
-            language: Language code
-            speaker: Speaker ID for multi-speaker models
-            output_file: Output WAV file path
-        
-        Returns:
-            Path to saved audio file or None if failed
-        """
-        if not COQUI_AVAILABLE or not text:
-            return None
-        
-        try:
-            if self.coqui_tts is None:
-                device = "cuda" if self.gpu else "cpu"
-                self.coqui_tts = CoquiTTS(gpu=self.gpu)
-            
-            # Cache key
-            cache_key = f"{text[:50].replace(' ', '_')}_{language}_coqui.wav"
-            cache_file = self.cache_dir / cache_key
-            
-            if cache_file.exists():
-                logger.debug(f"Using cached audio: {cache_file}")
-                return str(cache_file)
-            
-            # Synthesize
-            output_file = output_file or str(cache_file)
-            self.coqui_tts.tts_to_file(
-                text=text,
-                file_path=output_file,
-                language=language,
-                speaker_idx=speaker if speaker else "p225"
-            )
-            
-            logger.info(f"✅ Coqui TTS synthesized: {text[:50]}...")
-            return output_file
-            
-        except Exception as e:
-            logger.error(f"❌ Coqui TTS synthesis failed: {e}")
-            return None
 
-    def synthesize_kitten_tts(
-        self,
-        text: str,
-        output_file: str,
-        voice: str = "Jasper",
-        speed: float = 1.0
-    ) -> Optional[str]:
-        """
-        Synthesize speech using KittenTTS (offline, ultra-lightweight)
-        """
-        if not self.kitten_available or not text:
-            return None
-            
-        try:
-            logger.info(f"⏳ Synthesizing with KittenTTS: {text[:50]}...")
-            
-            # Lazy load the model
-            if self.kitten_tts is None:
-                from kittentts import KittenTTS
-                # Use the recommended mini model (or fallback to nano if memory is tight)
-                self.kitten_tts = KittenTTS("KittenML/kitten-tts-mini-0.8")
-                
-            # KittenTTS has specific built-in voices: 'Bella', 'Jasper', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo'
-            if voice not in self.kitten_tts.available_voices:
-                voice = "Jasper" # Default fallback
-                
-            self.kitten_tts.generate_to_file(text, output_file, voice=voice, speed=speed)
-            
-            logger.info(f"✅ KittenTTS synthesized: {text[:50]}...")
-            return output_file
-            
-        except Exception as e:
-            logger.error(f"❌ KittenTTS synthesis failed: {e}")
-            return None
-    
-    def synthesize_pyttsx3_fallback(
-        self,
-        text: str,
+    def speak(
+        self, 
+        text: str, 
         language: str = 'en',
-        output_file: Optional[str] = None
-    ) -> Optional[str]:
-        """
-        Fallback to pyttsx3 (lower quality but always available)
-        
-        Args:
-            text: Text to synthesize
-            language: Language code
-            output_file: Output file path
-        
-        Returns:
-            Path to saved audio file or None if failed
-        """
-        if not self.pyttsx3_engine or not text:
-            return None
-        
-        try:
-            # Cache key
-            cache_key = f"{text[:50].replace(' ', '_')}_{language}_fallback.mp3"
-            cache_file = self.cache_dir / cache_key
-            
-            if cache_file.exists():
-                return str(cache_file)
-            
-            output_file = output_file or str(cache_file)
-            self.pyttsx3_engine.save_to_file(text, output_file)
-            self.pyttsx3_engine.runAndWait()
-            
-            logger.info(f"✅ pyttsx3 synthesized: {text[:50]}...")
-            return output_file
-            
-        except Exception as e:
-            logger.error(f"❌ pyttsx3 synthesis failed: {e}")
-            return None
-    
-    def synthesize(
-        self,
-        text: str,
-        language: str = 'en',
-        gender: VoiceGender = VoiceGender.FEMALE,
         style: SpeakingStyle = SpeakingStyle.NORMAL,
-        prefer_online: bool = True,
-        output_file: Optional[str] = None
+        gender: VoiceGender = VoiceGender.FEMALE,
+        output_file: Optional[str] = None,
+        force_engine: Optional[str] = None
     ) -> Optional[str]:
         """
-        Synthesize speech with automatic fallback
-        Tries Edge-TTS first (best quality), then Coqui, then pyttsx3
-        
-        Args:
-            text: Text to synthesize
-            language: Language code
-            gender: Voice gender
-            style: Speaking style
-            prefer_online: Try online service first
-            output_file: Output file path
-        
-        Returns:
-            Path to saved audio file
+        Generate audio using KittenTTS, falling back to Edge-TTS.
+        Returns the path to the audio file.
         """
         if not text:
             return None
+            
+        logger.info(f"🎤 Synthesizing speech: {text[:50]}...")
+        result_file = None
         
-        # Rate adjustments based on style
-        rate_adjustments = {
-            SpeakingStyle.EXCITED: 20,
-            SpeakingStyle.CALM: -20,
-            SpeakingStyle.PROFESSIONAL: 0,
-            SpeakingStyle.FRIENDLY: 10,
-            SpeakingStyle.CHEERFUL: 25,
-            SpeakingStyle.NORMAL: 0
-        }
-        
-        rate = rate_adjustments.get(style, 0)
-        
-        # Try in preferred order
-        if prefer_online and self.edge_tts_available:
-            result = self.synthesize_edge_tts_sync(
-                text, language, gender, rate, 0.0, output_file
-            )
-            if result:
-                return result
-                
-        # 2. Try KittenTTS (fast, offline)
-        if self.kitten_available:
-            # Map gender to a KittenTTS voice
-            kitten_voice = "Luna" if gender == VoiceGender.FEMALE else "Jasper"
-            result = self.synthesize_kitten_tts(text, output_file, voice=kitten_voice)
-            if result:
-                return result
-                
-        # 3. Try Coqui TTS (heavy, offline)
-        if COQUI_AVAILABLE:
-            result = self.synthesize_coqui_tts(text, language, output_file=output_file)
-            if result:
-                return result
-                
-        # 4. Fallback to pyttsx3 (always available, robotic)
-        return self.synthesize_pyttsx3_fallback(text, language, output_file)
-    
-    def clear_cache(self, older_than_hours: int = 24):
-        """Clear old cached audio files"""
-        try:
-            current_time = time.time()
-            for cache_file in self.cache_dir.glob("*.mp3"):
-                if (current_time - cache_file.stat().st_mtime) > (older_than_hours * 3600):
-                    cache_file.unlink()
-            logger.info(f"Cleared cache older than {older_than_hours} hours")
-        except Exception as e:
-            logger.error(f"Cache cleanup failed: {e}")
+        # Primary Engine: KittenTTS
+        if self.kitten_available and force_engine in [None, 'kittentts']:
+            # Map gender to kitten voices roughly
+            kitten_voice = "Jasper" if gender == VoiceGender.MALE else "Bella"
+            result_file = self.synthesize_kitten_tts(text, voice=kitten_voice, output_file=output_file)
+            
+        # Fallback Engine: Edge-TTS
+        if not result_file and self.edge_tts_available and force_engine in [None, 'edge_tts']:
+            result_file = self.synthesize_edge_tts_sync(text, language, gender, output_file=output_file)
+            
+        if not result_file:
+            logger.error("❌ All TTS engines failed or are unavailable.")
+            
+        return result_file
 
-
-# Global instance
+# Singleton instance
 _engine_instance = None
 
-
 def get_neural_voice_engine(cache_dir: str = "data/voice_cache", gpu: bool = False) -> NeuralVoiceEngine:
-    """Get or create the neural voice engine instance"""
+    """Get or create the neural voice engine singleton"""
     global _engine_instance
     if _engine_instance is None:
         _engine_instance = NeuralVoiceEngine(cache_dir=cache_dir, gpu=gpu)
     return _engine_instance
-
-
-# Example usage
-if __name__ == "__main__":
-    engine = get_neural_voice_engine(gpu=False)
-    
-    # Test synthesis
-    text = "Hello! I'm your AI assistant with neural voice quality."
-    print(f"Synthesizing: {text}")
-    
-    audio_file = engine.synthesize(
-        text,
-        language='en',
-        gender=VoiceGender.FEMALE,
-        style=SpeakingStyle.FRIENDLY
-    )
-    
-    print(f"✅ Audio saved to: {audio_file}")

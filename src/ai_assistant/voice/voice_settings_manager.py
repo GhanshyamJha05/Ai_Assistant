@@ -1,4 +1,4 @@
-"""
+﻿"""
 Voice Settings Manager
 
 Handles persistence and validation of voice settings (TTS/STT).
@@ -212,3 +212,4 @@ def get_settings_manager() -> VoiceSettingsManager:
     if _settings_manager is None:
         _settings_manager = VoiceSettingsManager()
     return _settings_manager
+

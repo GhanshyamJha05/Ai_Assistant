@@ -31,7 +31,7 @@ class CommandSuccessPredictor:
     Predicts command success probability using ML
     """
     
-    def __init__(self, db_path: str = "data/command_success.db"):
+    def __init__(self, db_path: str = "data/automation/command_success.db"):
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         

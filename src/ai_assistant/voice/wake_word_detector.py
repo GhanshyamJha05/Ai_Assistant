@@ -20,10 +20,10 @@ except ImportError:
     POCKETSPHINX_AVAILABLE = False
 
 try:
-    import pyaudio
-    PYAUDIO_AVAILABLE = True
+    import sounddevice as sd
+    SOUNDDEVICE_AVAILABLE = True
 except ImportError:
-    PYAUDIO_AVAILABLE = False
+    SOUNDDEVICE_AVAILABLE = False
 
 try:
     from utils.logging_config import get_logger
@@ -120,8 +120,8 @@ class SmartWakeWordDetector:
             logger.warning("Already listening")
             return
         
-        if not PYAUDIO_AVAILABLE:
-            logger.error("❌ PyAudio not available. Install: pip install pyaudio")
+        if not SOUNDDEVICE_AVAILABLE:
+            logger.error("❌ sounddevice not available. Install: pip install sounddevice")
             return
         
         self.is_listening = True
@@ -137,79 +137,37 @@ class SmartWakeWordDetector:
         logger.info("⏸️ Wake word detection stopped")
     
     def _listen_loop(self):
-        """Main listening loop"""
-        consecutive_errors = 0
-        max_consecutive_errors = 10
+        """Main listening loop using sounddevice"""
+        import sounddevice as sd
         
+        def audio_callback(indata, frames, time, status):
+            if status:
+                logger.warning(f"Audio stream status: {status}")
+            
+            # We need raw bytes for pocketsphinx and energy fallback
+            audio_chunk = bytes(indata)
+            
+            # Put audio data in queue for processing
+            if not self.audio_queue.full():
+                self.audio_queue.put(audio_chunk)
+                
+            # Process in a non-blocking way to keep callback fast
+            self._process_audio_chunk(audio_chunk)
+            
         try:
-            import pyaudio
-            
-            p = pyaudio.PyAudio()
-            
-            # Open audio stream
-            stream = p.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=self.sample_rate,
-                input=True,
-                input_device_index=self.audio_device,
-                frames_per_buffer=self.chunk_size,
-                stream_callback=None
-            )
-            
-            stream.start_stream()
-            logger.info("Audio stream started")
-            
-            while self.is_listening:
-                try:
-                    # Check if stream is still active
-                    if not stream.is_active():
-                        logger.warning("Audio stream became inactive, stopping listener")
-                        break
-                    
-                    # Read audio chunk
-                    audio_chunk = stream.read(self.chunk_size, exception_on_overflow=False)
-                    
-                    # Reset error counter on successful read
-                    consecutive_errors = 0
-                    
-                    # Put in queue for processing
-                    if not self.audio_queue.full():
-                        self.audio_queue.put(audio_chunk)
-                    
-                    # Process detection
-                    self._process_audio_chunk(audio_chunk)
-                    
-                except IOError as e:
-                    # Stream closed error
-                    if e.errno == -9988:
-                        logger.error("Audio stream closed unexpectedly. Stopping listener.")
-                        break
-                    consecutive_errors += 1
-                    if consecutive_errors >= max_consecutive_errors:
-                        logger.error(f"Too many consecutive errors ({consecutive_errors}), stopping listener")
-                        break
-                    elif consecutive_errors == 1:  # Only log first error
-                        logger.warning(f"Audio read error: {e}")
+            with sd.RawInputStream(
+                samplerate=self.sample_rate, 
+                blocksize=self.chunk_size,
+                device=self.audio_device, 
+                channels=1, 
+                dtype='int16',
+                callback=audio_callback
+            ):
+                logger.info("Audio stream started (SoundDevice)")
+                while self.is_listening:
+                    import time
                     time.sleep(0.1)
                     
-                except Exception as e:
-                    consecutive_errors += 1
-                    if consecutive_errors >= max_consecutive_errors:
-                        logger.error(f"Too many consecutive errors ({consecutive_errors}), stopping listener")
-                        break
-                    elif consecutive_errors == 1:  # Only log first error
-                        logger.warning(f"Audio read error: {e}")
-                    time.sleep(0.1)
-            
-            # Cleanup
-            try:
-                stream.stop_stream()
-                stream.close()
-            except:
-                pass
-            p.terminate()
-            
         except Exception as e:
             logger.error(f"❌ Listening loop failed: {e}")
         finally:

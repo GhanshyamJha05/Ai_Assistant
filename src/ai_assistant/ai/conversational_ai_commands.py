@@ -113,15 +113,22 @@ def _execute_open_command(self, query: str, query_lower: str) -> str:
         except:
             pass
     
+    import os
     # Try direct execution using Windows 'start'
     try:
         exe_name = app_mappings.get(app_name, app_name + '.exe')
-        subprocess.Popen(f'start "" "{exe_name}"', shell=True)
+        if os.name == 'nt':
+            os.startfile(exe_name)
+        else:
+            subprocess.Popen([exe_name])
         return f"✅ Opening {app_name.title()}"
     except Exception as e:
         # Try as command
         try:
-            subprocess.Popen(f'start "" "{app_name}"', shell=True)
+            if os.name == 'nt':
+                os.startfile(app_name)
+            else:
+                subprocess.Popen([app_name])
             return f"✅ Launching {app_name}"
         except:
             return f"❌ Could not find '{app_name}' on your system. Try saying the full application name or check if it's installed."
@@ -143,8 +150,8 @@ def _execute_close_command(self, query: str, query_lower: str) -> str:
             pass
     
     try:
-        subprocess.run(f'taskkill /IM "{app_name}.exe" /F', 
-                     capture_output=True, shell=True, timeout=5)
+        subprocess.run(['taskkill', '/IM', f"{app_name}.exe", '/F'], 
+                     capture_output=True, timeout=5)
         return f"✅ Closed {app_name}"
     except:
         return f"❌ Could not close '{app_name}'"
@@ -213,7 +220,11 @@ def _execute_create_document(self, query: str, query_lower: str) -> str:
     if 'ppt' in query_lower or 'powerpoint' in query_lower or 'presentation' in query_lower:
         doc_type = 'PowerPoint presentation'
         try:
-            subprocess.Popen('start powerpnt', shell=True)
+            import os
+            if os.name == 'nt':
+                os.startfile('powerpnt')
+            else:
+                subprocess.Popen(['powerpnt'])
             return f"📊 Opening PowerPoint to create your presentation"
         except:
             return "❌ PowerPoint not found. Please install Microsoft Office."
@@ -223,7 +234,11 @@ def _execute_create_document(self, query: str, query_lower: str) -> str:
     
     elif 'document' in query_lower:
         try:
-            subprocess.Popen('start winword', shell=True)
+            import os
+            if os.name == 'nt':
+                os.startfile('winword')
+            else:
+                subprocess.Popen(['winword'])
             return "📝 Opening Word to create your document"
         except:
             return "❌ Word not found. Please install Microsoft Office."
@@ -288,7 +303,7 @@ def _execute_settings_command(self, query: str, query_lower: str) -> str:
         if os.name == 'nt':
             os.startfile(uri)
         else:
-            subprocess.Popen(f'start {uri}', shell=True)
+            subprocess.Popen(['xdg-open', uri])
             
         return msg
     except Exception as e:

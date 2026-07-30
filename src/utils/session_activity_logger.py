@@ -26,6 +26,16 @@ class SessionActivityLogger:
         
         self._deferred_init = False
         self._initialize_logger()
+        
+    def __getattr__(self, name):
+        if name == 'loggers':
+            if getattr(self, '_deferred_init', False):
+                self._initialize_logger()
+                self._deferred_init = False
+            if 'loggers' in self.__dict__:
+                return self.__dict__['loggers']
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        
     
     def _initialize_logger(self):
         """Initialize logger components (called after session is ready)"""
@@ -97,6 +107,10 @@ class SessionActivityLogger:
     def log_file_operation(self, operation: str, file_path: str = None, 
                           success: bool = True, details: Dict = None):
         """Log file operation activity"""
+        if hasattr(self, '_deferred_init') and self._deferred_init:
+            self._initialize_logger()
+            self._deferred_init = False
+            
         activity = {
             'timestamp': datetime.now().isoformat(),
             'session_id': self.session_id,
@@ -301,11 +315,13 @@ def get_session_activity_logger():
     global _session_activity_logger_instance
     if _session_activity_logger_instance is None:
         _session_activity_logger_instance = SessionActivityLogger()
-        # Initialize deferred logger if session is ready
-        if hasattr(_session_activity_logger_instance, '_deferred_init') and _session_activity_logger_instance._deferred_init:
-            if SessionManager._current_session is not None:
-                _session_activity_logger_instance._initialize_logger()
-                _session_activity_logger_instance._deferred_init = False
+        
+    # Initialize deferred logger if session is ready
+    if hasattr(_session_activity_logger_instance, '_deferred_init') and _session_activity_logger_instance._deferred_init:
+        if SessionManager._current_session is not None:
+            _session_activity_logger_instance._initialize_logger()
+            _session_activity_logger_instance._deferred_init = False
+            
     return _session_activity_logger_instance
 
 # Lazy property - only creates logger when first accessed

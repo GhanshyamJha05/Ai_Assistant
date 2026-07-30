@@ -188,3 +188,20 @@ backend.log
 temp_*
 *.session
 *.gguf
+
+# Legacy Backups
+legacy_backup/
+
+
+# User Generated Text & Reports
+*.txt
+!requirements.txt
+*_REPORT.md
+*_PLAN.md
+*_OPTIMIZATION.md
+BACKEND_OPTIMIZATION.md
+PERSONALIZATION_IMPLEMENTATION_PLAN.md
+SECURITY_AUDIT_REPORT.md
+
+ROOM_FOR_IMPROVEMENTS_AND_FUTURE_SCOPES.md
+

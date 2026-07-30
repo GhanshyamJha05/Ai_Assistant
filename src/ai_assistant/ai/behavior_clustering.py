@@ -32,7 +32,7 @@ class BehaviorClusterer:
     Clusters user behavior patterns
     """
     
-    def __init__(self, db_path: str = "data/behavior_clustering.db",
+    def __init__(self, db_path: str = "data/analytics/behavior_clustering.db",
                  n_clusters: int = 5):
         self.db_path = db_path
         self.n_clusters = n_clusters

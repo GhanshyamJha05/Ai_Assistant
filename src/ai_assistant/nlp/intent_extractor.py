@@ -65,8 +65,6 @@ class IntentExtractor:
             }
         }
         # Compile regex patterns
-        self.compiled_patterns = []
-        for pattern, info in self.patterns
         self.compiled = []
         for pattern, info in self.patterns.items():
             self.compiled.append((re.compile(pattern, re.IGNORECASE), info))

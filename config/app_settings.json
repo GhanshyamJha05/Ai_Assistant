@@ -47,7 +47,7 @@
     "stt": {
       "continuous": true,
       "enabled": true,
-      "engine": "google",
+      "engine": "whisper",
       "language": "en-US",
       "model": "vosk-model-small-en-us-0.15",
       "noise_reduction": true
@@ -130,8 +130,8 @@
       "enabled": true,
       "pitch": 1,
       "speed": 1,
-      "voice_id": "en-US-AriaNeural",
-      "voice_name": "Aria",
+      "voice_id": "en-US-EricNeural",
+      "voice_name": "Eric",
       "volume": 1
     },
     "wakeWord": {

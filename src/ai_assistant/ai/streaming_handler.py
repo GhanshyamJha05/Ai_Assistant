@@ -24,7 +24,6 @@ class StreamProvider(Enum):
     """Supported streaming providers"""
     OPENAI = "openai"
     GOOGLE = "google"
-    ANTHROPIC = "anthropic"
 
 
 @dataclass
@@ -67,14 +66,6 @@ class StreamingResponseHandler:
             logger.info("✅ Google Gemini streaming initialized")
         except Exception as e:
             logger.warning(f"Google streaming not available: {e}")
-        
-        # Anthropic
-        try:
-            from anthropic import Anthropic
-            self.providers[StreamProvider.ANTHROPIC] = Anthropic()
-            logger.info("✅ Anthropic streaming initialized")
-        except Exception as e:
-            logger.warning(f"Anthropic streaming not available: {e}")
     
     async def stream_openai(self,
                            messages: list,
@@ -169,48 +160,7 @@ class StreamingResponseHandler:
             logger.error(f"Google streaming error: {e}")
             raise
     
-    async def stream_anthropic(self,
-                              messages: list,
-                              model: str = "claude-3-sonnet-20240229",
-                              temperature: float = 0.7,
-                              max_tokens: int = 1000,
-                              **kwargs) -> AsyncGenerator[StreamChunk, None]:
-        """
-        Stream from Anthropic Claude
-        
-        Args:
-            messages: List of message dicts
-            model: Model name
-            temperature: Sampling temperature
-            max_tokens: Max tokens to generate
-            
-        Yields:
-            StreamChunk objects
-        """
-        if StreamProvider.ANTHROPIC not in self.providers:
-            raise ValueError("Anthropic not available")
-        
-        client = self.providers[StreamProvider.ANTHROPIC]
-        
-        try:
-            with client.messages.stream(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            ) as stream:
-                for text in stream.text_stream:
-                    yield StreamChunk(
-                        content=text,
-                        finish_reason=None,
-                        metadata={'model': model, 'provider': 'anthropic'}
-                    )
-        
-        except Exception as e:
-            logger.error(f"Anthropic streaming error: {e}")
-            raise
-    
+
     async def stream(self,
                     provider: StreamProvider,
                     prompt: Union[str, list],
@@ -245,10 +195,6 @@ class StreamingResponseHandler:
             elif provider == StreamProvider.GOOGLE:
                 prompt_str = prompt if isinstance(prompt, str) else prompt[-1]['content']
                 stream_gen = self.stream_google(prompt_str, model, **kwargs)
-            
-            elif provider == StreamProvider.ANTHROPIC:
-                messages = prompt if isinstance(prompt, list) else [{"role": "user", "content": prompt}]
-                stream_gen = self.stream_anthropic(messages, model, **kwargs)
             
             else:
                 raise ValueError(f"Unknown provider: {provider}")

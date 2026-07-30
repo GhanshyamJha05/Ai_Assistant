@@ -41,7 +41,6 @@ except ImportError:
     CV2_AVAILABLE = False
 
 try:
-    import PyPDF2
     import pdfplumber
     PDF_AVAILABLE = True
 except ImportError:
@@ -93,9 +92,9 @@ def check_ocr_dependencies() -> str:
     
     # Check PDF libraries
     if PDF_AVAILABLE:
-        status += "✅ PDF Processing: Available (PyPDF2 + pdfplumber)\n"
+        status += "✅ PDF Processing: Available (pdfplumber)\n"
     else:
-        status += "❌ PDF Processing: Not installed (pip install PyPDF2 pdfplumber)\n"
+        status += "❌ PDF Processing: Not installed (pip install pdfplumber)\n"
     
     # Overall status
     basic_available = PIL_AVAILABLE and TESSERACT_AVAILABLE
@@ -185,69 +184,35 @@ def extract_text_from_pdf(pdf_path: str, page_range: Optional[Tuple[int, int]] =
             return f"❌ PDF file not found: {pdf_path}"
         
         if not PDF_AVAILABLE:
-            return "❌ PDF libraries not installed. Run: pip install PyPDF2 pdfplumber"
-        
-        # Try pdfplumber first (better for complex layouts)
-        try:
-            import pdfplumber
-            with pdfplumber.open(pdf_path) as pdf:
-                pages = pdf.pages
-                
-                # Determine page range
-                start_page = 0
-                end_page = len(pages)
-                
-                if page_range:
-                    start_page = max(0, page_range[0] - 1)  # Convert to 0-indexed
-                    end_page = min(len(pages), page_range[1])
-                
-                extracted_text = ""
-                for i in range(start_page, end_page):
-                    page = pages[i]
-                    page_text = page.extract_text()
-                    if page_text:
-                        extracted_text += f"\n--- Page {i+1} ---\n{page_text}\n"
-                
-                if extracted_text.strip():
-                    result = f"📄 PDF Text Extraction: {os.path.basename(pdf_path)}\n"
-                    result += f"📖 Total Pages: {len(pages)}\n"
-                    result += f"📄 Extracted Pages: {start_page+1}-{end_page}\n\n"
-                    result += f"📝 Extracted Text:\n{'-'*40}\n{extracted_text.strip()}\n{'-'*40}"
-                    return result
-                else:
-                    return f"📄 No text found in PDF: {os.path.basename(pdf_path)}"
-        
-        except Exception as plumber_error:
-            # Fallback to PyPDF2
-            import PyPDF2
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                pages = pdf_reader.pages
-                
-                # Determine page range
-                start_page = 0
-                end_page = len(pages)
-                
-                if page_range:
-                    start_page = max(0, page_range[0] - 1)
-                    end_page = min(len(pages), page_range[1])
-                
-                extracted_text = ""
-                for i in range(start_page, end_page):
-                    page = pages[i]
-                    page_text = page.extract_text()
-                    if page_text:
-                        extracted_text += f"\n--- Page {i+1} ---\n{page_text}\n"
-                
-                if extracted_text.strip():
-                    result = f"📄 PDF Text Extraction: {os.path.basename(pdf_path)}\n"
-                    result += f"📖 Total Pages: {len(pages)}\n"
-                    result += f"📄 Extracted Pages: {start_page+1}-{end_page}\n\n"
-                    result += f"📝 Extracted Text:\n{'-'*40}\n{extracted_text.strip()}\n{'-'*40}"
-                    return result
-                else:
-                    return f"📄 No text found in PDF: {os.path.basename(pdf_path)}"
-        
+            return "❌ PDF libraries not installed. Run: pip install pdfplumber"
+            
+        import pdfplumber
+        with pdfplumber.open(pdf_path) as pdf:
+            pages = pdf.pages
+            
+            # Determine page range
+            start_page = 0
+            end_page = len(pages)
+            
+            if page_range:
+                start_page = max(0, page_range[0] - 1)  # Convert to 0-indexed
+                end_page = min(len(pages), page_range[1])
+            
+            extracted_text = ""
+            for i in range(start_page, end_page):
+                page = pages[i]
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_text += f"\n--- Page {i+1} ---\n{page_text}\n"
+            
+            if extracted_text.strip():
+                result = f"📄 PDF Text Extraction: {os.path.basename(pdf_path)}\n"
+                result += f"📖 Total Pages: {len(pages)}\n"
+                result += f"📄 Extracted Pages: {start_page+1}-{end_page}\n\n"
+                result += f"📝 Extracted Text:\n{'-'*40}\n{extracted_text.strip()}\n{'-'*40}"
+                return result
+            else:
+                return f"📄 No text found in PDF: {os.path.basename(pdf_path)}"
     except Exception as e:
         return f"❌ PDF extraction error: {str(e)}"
 

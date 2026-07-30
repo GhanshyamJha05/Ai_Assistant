@@ -605,7 +605,7 @@ class SpeakerVerificationSystem:
                             # Decrypt feature vectors
                             with open(features_file_enc, 'rb') as f:
                                 encrypted_features = f.read()
-                           features_array = self.encryptor.decrypt_biometric(encrypted_features)
+                            features_array = self.encryptor.decrypt_biometric(encrypted_features)
                             
                             self.logger.debug(f"🔓 Loaded encrypted profile for {speaker_id}")
                             

@@ -33,7 +33,7 @@ except ImportError:
     AIServiceManager = None
 
 try:
-    from .voice_service_manager import VoiceServiceManager
+    from ai_assistant.services.voice_service import VoiceServiceManager
 except ImportError:
     VoiceServiceManager = None
 

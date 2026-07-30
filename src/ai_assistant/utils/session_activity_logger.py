@@ -8,8 +8,18 @@ to prevent duplicate instances.
 DO NOT MODIFY - import from utils.session_activity_logger directly instead.
 """
 
-# Import from main utils to ensure singleton behavior
-from utils.session_activity_logger import (
+import sys
+import importlib.util
+from pathlib import Path
+
+# Dynamically load the main utils.session_activity_logger bypassing sys.path collisions
+main_module = Path(__file__).resolve().parent.parent.parent / "utils" / "session_activity_logger.py"
+spec = importlib.util.spec_from_file_location("main_utils_session_activity_logger", str(main_module))
+main_utils = importlib.util.module_from_spec(spec)
+sys.modules["main_utils_session_activity_logger"] = main_utils
+spec.loader.exec_module(main_utils)
+
+from main_utils_session_activity_logger import (
     SessionActivityLogger,
     session_activity_logger,
     get_session_activity_logger,
@@ -24,7 +34,7 @@ from utils.session_activity_logger import (
     log_web_scraping,
     log_multimodal_ai,
     log_automation,
-    end_session
+    end_current_session as end_session
 )
 
 __all__ = [

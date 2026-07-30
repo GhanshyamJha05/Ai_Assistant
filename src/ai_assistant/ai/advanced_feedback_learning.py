@@ -449,7 +449,7 @@ class AdaptiveLearningEngine:
     Implements continuous learning with concept drift detection
     """
     
-    def __init__(self, db_path: str = "data/feedback_learning.db"):
+    def __init__(self, db_path: str = "data/analytics/feedback_learning.db"):
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         

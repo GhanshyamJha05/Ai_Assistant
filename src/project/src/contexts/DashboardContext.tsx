@@ -1158,9 +1158,43 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.log('🔊 Utterance config:', { rate: utterance.rate, pitch: utterance.pitch, volume: utterance.volume });
                 console.log('🔊 Available voices:', synth.getVoices().length);
 
-                utterance.onstart = () => console.log('✅ TTS started');
-                utterance.onend = () => console.log('✅ TTS ended');
-                utterance.onerror = (e) => console.error('❌ TTS error:', e);
+                utterance.onstart = () => {
+                    console.log('✅ TTS started');
+                    // Mute microphone to prevent echo loop
+                    if (recognition) {
+                        try {
+                            recognition.stop();
+                        } catch (e) {
+                            console.warn('Could not stop recognition on TTS start:', e);
+                        }
+                    }
+                };
+                
+                utterance.onend = () => {
+                    console.log('✅ TTS ended');
+                    // Resume listening if alwaysActive mode is on
+                    if (recognition && alwaysActive && !userStoppedVoice) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.warn('Could not restart recognition on TTS end:', e);
+                            }
+                        }, 300); // 300ms delay to let speakers quiet down
+                    }
+                };
+                
+                utterance.onerror = (e) => {
+                    console.error('❌ TTS error:', e);
+                    // Ensure microphone resumes even if TTS fails
+                    if (recognition && alwaysActive && !userStoppedVoice) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (err) {}
+                        }, 300);
+                    }
+                };
 
                 synth.speak(utterance);
                 console.log('🔊 synth.speak() called, pending:', synth.pending, 'speaking:', synth.speaking);

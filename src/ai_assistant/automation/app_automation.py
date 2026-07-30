@@ -548,10 +548,8 @@ class WhatsAppAutomation(AppAutomation):
             # REVISION: Implementing the "File Copy to Clipboard" using PowerShell is reliable.
             # Then Ctrl+V in WhatsApp.
             
-            escaped_path = file_path.replace("'", "''")
-            ps_script = f"Set-Clipboard -Path '{escaped_path}'"
             clipboard_result = subprocess.run(
-                ["powershell", "-Command", ps_script],
+                ["powershell", "-Command", "Set-Clipboard", "-Path", file_path],
                 capture_output=True,
                 text=True,
             )

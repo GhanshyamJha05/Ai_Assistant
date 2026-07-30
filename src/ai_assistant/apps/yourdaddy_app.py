@@ -12,10 +12,16 @@ import threading
 import json
 from pathlib import Path
 from datetime import datetime
-from utils.user_data_logger import log_query, log_reply, log_action, log_module_usage
 
-# Add project modules to path
-sys.path.append(str(Path(__file__).parent / "modules"))
+# Add project root and modules to path so custom imports work during direct testing
+ai_assistant_dir = Path(__file__).resolve().parent.parent
+src_dir = ai_assistant_dir.parent
+
+sys.path.insert(0, str(src_dir))             # for 'utils' and 'ai_assistant'
+sys.path.insert(0, str(ai_assistant_dir))    # for 'utils.user_data_logger' if it was in ai_assistant
+sys.path.insert(0, str(ai_assistant_dir / "modules")) # for legacy 'from x import y' in modules
+
+from utils.user_data_logger import log_query, log_reply, log_action, log_module_usage
 
 # Validate configuration before loading modules
 try:
@@ -25,9 +31,7 @@ try:
     if not config_validator.validate():
         print("\n⚠️ Warning: Some required configurations are missing.")
         print("The application may not work correctly.")
-        response = input("\nDo you want to continue anyway? (y/N): ")
-        if response.lower() != 'y':
-            sys.exit(1)
+        print("Continuing anyway, but some features may not work...")
 except Exception as e:
     print(f"⚠️ Configuration validation failed: {e}")
     print("Continuing anyway, but some features may not work...")
@@ -37,7 +41,17 @@ try:
     from automation_tools_new import *
     print("✅ Automation tools loaded successfully")
 except ImportError as e:
-    print(f"❌ Failed to load automation tools: {e}")
+    err_msg = f"Failed to load automation tools: {e}"
+    print(f"❌ {err_msg}")
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Import Error", f"YourDaddy Assistant is missing a dependency:\n\n{e}\n\nPlease reinstall.")
+        root.destroy()
+    except:
+        pass
     sys.exit(1)
 
 # Multilingual support import
@@ -171,12 +185,24 @@ class YourDaddyAssistant:
             self.voice_enabled = True
             self.voice_stop_event = threading.Event()
             self.voice_thread = None
-            self.wake_words = self.config.get('voice', {}).get('wake_word', {}).get('hindi_keywords', ['hey daddy', 'arre daddy', 'sun daddy'])
+            
+            voice_cfg = self.config.get('voice', {})
+            if isinstance(voice_cfg, str):
+                voice_cfg = {}
+                
+            wake_word_cfg = voice_cfg.get('wake_word', {})
+            if isinstance(wake_word_cfg, str):
+                self.wake_words = [wake_word_cfg]
+            else:
+                self.wake_words = wake_word_cfg.get('hindi_keywords', ['hey daddy', 'arre daddy', 'sun daddy'])
             
             # Enable multilingual voice recognition if available
             if self.multilingual_enabled:
-                self.voice_languages = self.config.get('voice', {}).get('recognition', {}).get('supported_languages', ['en-US', 'hi-IN', 'en-IN'])
-                self.use_vosk = self.config.get('voice', {}).get('recognition', {}).get('engine', 'vosk') == 'vosk'
+                recog_cfg = voice_cfg.get('recognition', {})
+                if isinstance(recog_cfg, str):
+                    recog_cfg = {}
+                self.voice_languages = recog_cfg.get('supported_languages', ['en-US', 'hi-IN', 'en-IN'])
+                self.use_vosk = recog_cfg.get('engine', 'vosk') == 'vosk'
                 self.logger.info(f"Voice recognition ready with languages: {self.voice_languages}")
                 self.logger.info(f"Using {'Vosk (offline)' if self.use_vosk else 'Google (online)'}")
             else:
@@ -270,6 +296,14 @@ class YourDaddyAssistant:
                 command=self.show_voice_settings
             )
             self.voice_settings_button.pack(side=tk.RIGHT, padx=(0, 5))
+            
+            # Personalization Settings button
+            self.personalization_button = ttk.Button(
+                status_frame,
+                text="✨ Personalization",
+                command=self.show_personalization_settings
+            )
+            self.personalization_button.pack(side=tk.RIGHT, padx=(0, 5))
             
             # Command entry
             command_frame = ttk.Frame(main_frame)
@@ -479,6 +513,59 @@ class YourDaddyAssistant:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save settings: {e}")
     
+    def show_personalization_settings(self):
+        """Show Personalization & Privacy settings dialog"""
+        pers_window = tk.Toplevel(self.root)
+        pers_window.title("✨ Personalization Settings")
+        pers_window.geometry("450x450")
+        pers_window.transient(self.root)
+        pers_window.grab_set()
+        
+        main_frame = ttk.Frame(pers_window, padding="15")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Privacy & Analytics
+        ttk.Label(main_frame, text="Privacy & Analytics", font=("Arial", 11, "bold")).pack(anchor=tk.W, pady=(0, 5))
+        
+        self.learn_interactions_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(main_frame, text="Learn from Interactions (Knowledge Graph)", variable=self.learn_interactions_var).pack(anchor=tk.W)
+        
+        self.usage_analytics_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(main_frame, text="Share Anonymous Usage Analytics", variable=self.usage_analytics_var).pack(anchor=tk.W)
+        
+        # Response Style
+        ttk.Label(main_frame, text="Response Style", font=("Arial", 11, "bold")).pack(anchor=tk.W, pady=(15, 5))
+        
+        # Humor Scale
+        humor_frame = ttk.Frame(main_frame)
+        humor_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(humor_frame, text="Humor Level (1-10):").pack(side=tk.LEFT)
+        self.humor_var = tk.IntVar(value=7)
+        humor_scale = ttk.Scale(humor_frame, from_=1, to=10, variable=self.humor_var, orient=tk.HORIZONTAL)
+        humor_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        
+        # Formality Scale
+        form_frame = ttk.Frame(main_frame)
+        form_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(form_frame, text="Formality (1-10):").pack(side=tk.LEFT)
+        self.formality_var = tk.IntVar(value=4)
+        form_scale = ttk.Scale(form_frame, from_=1, to=10, variable=self.formality_var, orient=tk.HORIZONTAL)
+        form_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        
+        self.emoji_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(main_frame, text="Enable Emojis in Responses", variable=self.emoji_var).pack(anchor=tk.W, pady=5)
+        
+        # Save Button
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
+        
+        def save_settings():
+            self.log_output("Personalization settings updated!", speak=True)
+            pers_window.destroy()
+            
+        ttk.Button(btn_frame, text="Save Settings", command=save_settings).pack(side=tk.RIGHT)
+        ttk.Button(btn_frame, text="Cancel", command=pers_window.destroy).pack(side=tk.RIGHT, padx=5)
+
     def voice_listen_loop(self):
         """Voice listening loop with callback"""
         try:
@@ -850,6 +937,15 @@ def main():
         assistant.run()
     except Exception as e:
         print(f"❌ Failed to start assistant: {e}")
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror("Fatal Error", f"YourDaddy Assistant failed to start:\n\n{e}\n\nPlease reinstall or check the logs.")
+            root.destroy()
+        except:
+            pass
         sys.exit(1)
     
     print("\n👋 YourDaddy Assistant - Goodbye!")

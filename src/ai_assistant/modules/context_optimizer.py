@@ -64,7 +64,7 @@ class ConversationCompressor:
             messages = messages[1:]
         
         # Estimate tokens (rough)
-        from modules.advanced_chat_system import TokenCounter
+        from modules.conversational_ai import TokenCounter
         counter = TokenCounter()
         total_tokens = counter.count_messages(messages)
         
@@ -321,7 +321,7 @@ class SmartContextWindow:
         Returns:
             Optimized message history
         """
-        from modules.advanced_chat_system import TokenCounter
+        from modules.conversational_ai import TokenCounter
         
         counter = TokenCounter()
         optimized = []
@@ -369,7 +369,7 @@ class SmartContextWindow:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get context window statistics."""
-        from modules.advanced_chat_system import TokenCounter
+        from modules.conversational_ai import TokenCounter
         counter = TokenCounter()
         
         total_tokens = counter.count_messages(self.message_history)

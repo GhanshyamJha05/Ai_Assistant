@@ -82,6 +82,18 @@ def create_blueprint(assistant=None):
         except Exception as e:
             logger.error(f"Get all settings error: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
+            
+    @bp.route('/complete_onboarding', methods=['POST'])
+    def complete_onboarding():
+        """Mark onboarding as completed"""
+        try:
+            current_settings = load_settings()
+            current_settings["onboarded"] = True
+            if save_settings_to_file(current_settings):
+                return jsonify({"success": True})
+            return jsonify({"success": False, "error": "Failed to save"}), 500
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
     
     @bp.route('/update', methods=['POST'])
     def update_settings():
@@ -133,7 +145,6 @@ def create_blueprint(assistant=None):
                 "apiKeys": {
                   "googleGemini": "",
                   "openAI": "",
-                  "anthropic": "",
                   "elevenLabs": ""
                 },
                 "permissions": {

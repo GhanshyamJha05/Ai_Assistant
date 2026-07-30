@@ -139,8 +139,8 @@ class StartupSequence:
             status["message"] = "Voice recognition unavailable"
         
         try:
-            import pyttsx3
-            status["details"]["tts"] = "available"
+            import kittentts
+            status["details"]["tts"] = "available (kittentts)"
         except ImportError:
             if status["status"] != "warning":
                 status["status"] = "partial"
@@ -185,8 +185,8 @@ class StartupSequence:
         # Check for learning databases
         db_files = [
             "enhanced_learning.db",
-            "conversation_ai.db",
-            "language_data.db"
+            "data/core/conversation_ai.db",
+            "data/core/language_data.db"
         ]
         
         active_dbs = 0

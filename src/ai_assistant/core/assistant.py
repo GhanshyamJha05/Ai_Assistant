@@ -1,4 +1,4 @@
-"""
+﻿"""
 YourDaddy AI Assistant - ModernAssistant Class
 
 Core assistant class with AI initialization, command processing, and system monitoring.
@@ -159,9 +159,9 @@ class ModernAssistant:
             try:
                 setup_memory()
                 self._init_status['memory'] = 'ready'
-                print("✅ Memory system initialized")
+                print("âœ… Memory system initialized")
             except Exception as e:
-                print(f"⚠️ Memory initialization failed: {e}")
+                print(f"âš ï¸ Memory initialization failed: {e}")
                 self._init_status['memory'] = 'failed'
         
         # Background or lazy initialization based on config
@@ -169,12 +169,12 @@ class ModernAssistant:
             # Start background initialization thread
             self._bg_init_thread = threading.Thread(target=self._background_init, daemon=True)
             self._bg_init_thread.start()
-            print("⚡ Background initialization started - features will be ready shortly")
+            print("âš¡ Background initialization started - features will be ready shortly")
         elif not LAZY_INIT:
             # Eager initialization (old behavior, but respects feature flags)
             self._eager_init()
         else:
-            print("⚡ Lazy initialization enabled - features load on first use")
+            print("âš¡ Lazy initialization enabled - features load on first use")
             
     def process_query(self, query: str) -> str:
         """Process user query and return response"""
@@ -236,7 +236,7 @@ class ModernAssistant:
     
     def _background_init(self):
         """Initialize heavy components in background thread"""
-        print("🔄 Background initialization in progress...")
+        print("ðŸ”„ Background initialization in progress...")
         
         if ENABLE_MULTILINGUAL:
             self._init_multilingual_internal()
@@ -261,9 +261,9 @@ class ModernAssistant:
             self._proactive_anticipator = ProactiveAnticipator(chat_interface=self._llm_chat if hasattr(self, '_llm_chat') else None)
             self._proactive_anticipator.start()
         except Exception as e:
-            print(f"⚠️ Proactive Anticipator could not start: {e}")
+            print(f"âš ï¸ Proactive Anticipator could not start: {e}")
         
-        print("✅ Background initialization complete")
+        print("âœ… Background initialization complete")
     
     def _eager_init(self):
         """Eager initialization (respects feature flags)"""
@@ -358,13 +358,13 @@ class ModernAssistant:
                 self.current_language = primary_lang
                 
                 self._init_status['multilingual'] = 'ready'
-                print("✅ Multilingual support initialized in web backend")
+                print("âœ… Multilingual support initialized in web backend")
             except Exception as e:
-                print(f"❌ Multilingual initialization failed: {e}")
+                print(f"âŒ Multilingual initialization failed: {e}")
                 self._multilingual = None
                 self._init_status['multilingual'] = 'failed'
         else:
-            print("⚠️ Multilingual support not available")
+            print("âš ï¸ Multilingual support not available")
             self._multilingual = None
             self._init_status['multilingual'] = 'disabled'
     
@@ -384,8 +384,8 @@ class ModernAssistant:
             provider = config["provider"]
             model = config["model"]
             
-            print(f"🧠 Initializing LLM: {provider} ({model})")
-            print(f"📡 Network status: {'Online' if config['network_status'] else 'Offline'}")
+            print(f"ðŸ§  Initializing LLM: {provider} ({model})")
+            print(f"ðŸ“¡ Network status: {'Online' if config['network_status'] else 'Offline'}")
             
             # Initialize the chat interface with smart config
             self._llm_chat = UnifiedChatInterface(
@@ -399,10 +399,10 @@ class ModernAssistant:
             
             # REMOVED: Blocking test connection - trust the config
             self._init_status['llm_chat'] = 'ready'
-            print(f"✅ Smart LLM initialized with {provider} ({model})")
+            print(f"âœ… Smart LLM initialized with {provider} ({model})")
                 
         except Exception as e:
-            print(f"❌ Smart LLM initialization failed: {e}")
+            print(f"âŒ Smart LLM initialization failed: {e}")
             self._llm_chat = None
             self.current_llm_config = None
             self._init_status['llm_chat'] = 'failed'
@@ -420,17 +420,17 @@ class ModernAssistant:
                 if api_key:
                     self._multimodal_ai = MultiModalAI(api_key)
                     self._init_status['multimodal_ai'] = 'ready'
-                    print("✅ Multimodal AI initialized")
+                    print("âœ… Multimodal AI initialized")
                 else:
-                    print("⚠️ GEMINI_API_KEY not set for multimodal AI")
+                    print("âš ï¸ GEMINI_API_KEY not set for multimodal AI")
                     self._multimodal_ai = None
                     self._init_status['multimodal_ai'] = 'disabled'
             except Exception as e:
-                print(f"❌ Multimodal AI initialization failed: {e}")
+                print(f"âŒ Multimodal AI initialization failed: {e}")
                 self._multimodal_ai = None
                 self._init_status['multimodal_ai'] = 'failed'
         else:
-            print("⚠️ Multimodal AI not available")
+            print("âš ï¸ Multimodal AI not available")
             self._multimodal_ai = None
             self._init_status['multimodal_ai'] = 'disabled'
     
@@ -487,13 +487,13 @@ class ModernAssistant:
                 
                 self._conversational_ai = AdvancedConversationalAI(automation_callback=automation_callback)
                 self._init_status['conversational_ai'] = 'ready'
-                print("✅ Conversational AI initialized with automation support")
+                print("âœ… Conversational AI initialized with automation support")
             except Exception as e:
-                print(f"❌ Conversational AI initialization failed: {e}")
+                print(f"âŒ Conversational AI initialization failed: {e}")
                 self._conversational_ai = None
                 self._init_status['conversational_ai'] = 'failed'
         else:
-            print("⚠️ Conversational AI not available")
+            print("âš ï¸ Conversational AI not available")
             self._conversational_ai = None
             self._init_status['conversational_ai'] = 'disabled'
     
@@ -502,12 +502,12 @@ class ModernAssistant:
         if AUTOMATION_AVAILABLE:
             try:
                 setup_memory()
+                print("Ã¢Å“â€¦ Memory system initialized")
                 print("âœ… Memory system initialized")
-                print("✅ Memory system initialized")
             except Exception as e:
-                print(f"❌ Memory initialization failed: {e}")
+                print(f"âŒ Memory initialization failed: {e}")
         else:
-            print("⚠️ Memory system not available")
+            print("âš ï¸ Memory system not available")
     
     def _init_voice_system_internal(self):
         """Initialize voice recognition and TTS systems (internal)"""
@@ -523,9 +523,9 @@ class ModernAssistant:
                     self._voice_recognizer = sr.Recognizer()
                     self._voice_recognizer.energy_threshold = 4000
                     self._voice_recognizer.pause_threshold = 0.8
-                    print("✅ Speech recognition initialized")
+                    print("âœ… Speech recognition initialized")
                 except Exception as e:
-                    print(f"⚠️ Speech recognition initialization failed: {e}")
+                    print(f"âš ï¸ Speech recognition initialization failed: {e}")
                     self._voice_recognizer = None
                 
                 # Initialize text-to-speech (safeguarded)
@@ -533,9 +533,9 @@ class ModernAssistant:
                     self._tts_engine = pyttsx3.init()
                     self._tts_engine.setProperty('rate', 150)
                     self._tts_engine.setProperty('volume', 0.8)
-                    print("✅ Text-to-speech initialized")
+                    print("âœ… Text-to-speech initialized")
                 except Exception as e:
-                    print(f"⚠️ Text-to-speech initialization failed: {e}")
+                    print(f"âš ï¸ Text-to-speech initialization failed: {e}")
                     self._tts_engine = None
                 
                 # Try to initialize wake word detection (most likely to cause segfault)
@@ -548,25 +548,25 @@ class ModernAssistant:
                             access_key=access_key,
                             keywords=["hey daddy"]
                         )
-                        print("✅ Wake word detection initialized")
+                        print("âœ… Wake word detection initialized")
                     else:
-                        print("⚠️ PORCUPINE_ACCESS_KEY not set for wake word detection")
+                        print("âš ï¸ PORCUPINE_ACCESS_KEY not set for wake word detection")
                         self._wake_word_detector = None
                 except ImportError:
-                    print("⚠️ Porcupine not available")
+                    print("âš ï¸ Porcupine not available")
                     self._wake_word_detector = None
                 except Exception as e:
-                    print(f"⚠️ Wake word detection initialization failed: {e}")
+                    print(f"âš ï¸ Wake word detection initialization failed: {e}")
                     self._wake_word_detector = None
                 
                 self._init_status['voice_system'] = 'ready'
-                print("✅ Voice system initialized (partial or complete)")
+                print("âœ… Voice system initialized (partial or complete)")
             except Exception as e:
-                print(f"❌ Voice system initialization failed: {e}")
+                print(f"âŒ Voice system initialization failed: {e}")
                 self._init_status['voice_system'] = 'failed'
                 # Don't re-raise - allow server to continue without voice
         else:
-            print("⚠️ Voice features not available - missing dependencies")
+            print("âš ï¸ Voice features not available - missing dependencies")
             self._init_status['voice_system'] = 'disabled'
     
     def start_system_monitoring(self):
@@ -591,9 +591,9 @@ class ModernAssistant:
             monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
             monitor_thread.start()
             self._init_status['system_monitoring'] = 'ready'
-            print("✅ System monitoring started")
+            print("âœ… System monitoring started")
         except Exception as e:
-            print(f"⚠️ System monitoring could not start: {e}")
+            print(f"âš ï¸ System monitoring could not start: {e}")
             self._init_status['system_monitoring'] = 'failed'
     
     def get_real_time_system_stats(self):
@@ -810,7 +810,7 @@ class ModernAssistant:
             import traceback
             error_details = traceback.format_exc()
             print(f"Multilingual processing error details:\n{error_details}")
-            return f"âŒ Multilingual processing error: {str(e)}"
+            return f"Ã¢ÂÅ’ Multilingual processing error: {str(e)}"
     
     def execute_hinglish_command(self, hinglish_result):
         """Execute commands detected from Hinglish input"""
@@ -820,64 +820,64 @@ class ModernAssistant:
             
             if command == 'make_call':
                 if 'phone' in parameters:
-                    return f"ðŸ“ž Calling {parameters['phone']}..."
+                    return f"Ã°Å¸â€œÅ¾ Calling {parameters['phone']}..."
                 elif 'contact' in parameters:
-                    return f"ðŸ“ž Calling {parameters['contact']}..."
+                    return f"Ã°Å¸â€œÅ¾ Calling {parameters['contact']}..."
                 else:
-                    return "ðŸ“ž Phone number à¤¯à¤¾ contact name à¤¨à¤¹à¥€à¤‚ à¤®à¤¿à¤²à¤¾"
+                    return "Ã°Å¸â€œÅ¾ Phone number Ã Â¤Â¯Ã Â¤Â¾ contact name Ã Â¤Â¨Ã Â¤Â¹Ã Â¥â‚¬Ã Â¤â€š Ã Â¤Â®Ã Â¤Â¿Ã Â¤Â²Ã Â¤Â¾"
                     
             elif command == 'play_music':
                 if 'song' in parameters:
                     if AUTOMATION_AVAILABLE:
-                        return f"ðŸŽµ {search_and_play_spotify(parameters['song'])}"
+                        return f"Ã°Å¸Å½Âµ {search_and_play_spotify(parameters['song'])}"
                     else:
-                        return f"ðŸŽµ Playing: {parameters['song']}"
+                        return f"Ã°Å¸Å½Âµ Playing: {parameters['song']}"
                 else:
-                    return "ðŸŽµ à¤•à¥Œà¤¨ à¤¸à¤¾ song play à¤•à¤°à¤¨à¤¾ à¤¹à¥ˆ?"
+                    return "Ã°Å¸Å½Âµ Ã Â¤â€¢Ã Â¥Å’Ã Â¤Â¨ Ã Â¤Â¸Ã Â¤Â¾ song play Ã Â¤â€¢Ã Â¤Â°Ã Â¤Â¨Ã Â¤Â¾ Ã Â¤Â¹Ã Â¥Ë†?"
                     
             elif command == 'web_search':
                 if 'query' in parameters:
                     if AUTOMATION_AVAILABLE:
-                        return f"ðŸ” {search_google(parameters['query'])}"
+                        return f"Ã°Å¸â€Â {search_google(parameters['query'])}"
                     else:
-                        return f"ðŸ” Searching for: {parameters['query']}"
+                        return f"Ã°Å¸â€Â Searching for: {parameters['query']}"
                 else:
-                    return "ðŸ” Search query à¤¨à¤¹à¥€à¤‚ à¤®à¤¿à¤²à¤¾"
+                    return "Ã°Å¸â€Â Search query Ã Â¤Â¨Ã Â¤Â¹Ã Â¥â‚¬Ã Â¤â€š Ã Â¤Â®Ã Â¤Â¿Ã Â¤Â²Ã Â¤Â¾"
                     
             elif command == 'adjust_volume':
                 direction = parameters.get('direction', 'up')
                 level = parameters.get('level')
                 if level and AUTOMATION_AVAILABLE:
-                    return f"ðŸ”Š {set_system_volume(level)}"
+                    return f"Ã°Å¸â€Å  {set_system_volume(level)}"
                 elif direction == 'up' and AUTOMATION_AVAILABLE:
-                    return "ðŸ”Š Volume à¤¬à¤¢à¤¼à¤¾à¤¯à¤¾ à¤—à¤¯à¤¾"
+                    return "Ã°Å¸â€Å  Volume Ã Â¤Â¬Ã Â¤Â¢Ã Â¤Â¼Ã Â¤Â¾Ã Â¤Â¯Ã Â¤Â¾ Ã Â¤â€”Ã Â¤Â¯Ã Â¤Â¾"
                 else:
-                    return "ðŸ”Š Volume à¤•à¤® à¤•à¤¿à¤¯à¤¾ à¤—à¤¯à¤¾"
+                    return "Ã°Å¸â€Å  Volume Ã Â¤â€¢Ã Â¤Â® Ã Â¤â€¢Ã Â¤Â¿Ã Â¤Â¯Ã Â¤Â¾ Ã Â¤â€”Ã Â¤Â¯Ã Â¤Â¾"
                     
             elif command == 'tell_time':
                 current_time = datetime.now().strftime("%H:%M:%S")
-                return f"ðŸ• à¤…à¤­à¥€ à¤¸à¤®à¤¯ à¤¹à¥ˆ {current_time}"
+                return f"Ã°Å¸â€¢Â Ã Â¤â€¦Ã Â¤Â­Ã Â¥â‚¬ Ã Â¤Â¸Ã Â¤Â®Ã Â¤Â¯ Ã Â¤Â¹Ã Â¥Ë† {current_time}"
                 
             elif command == 'check_weather':
                 if AUTOMATION_AVAILABLE:
                     weather = get_weather_info()
-                    return f"ðŸŒ¤ï¸ Weather: {weather.get('temperature', 'N/A')} - {weather.get('description', 'No data')}"
+                    return f"Ã°Å¸Å’Â¤Ã¯Â¸Â Weather: {weather.get('temperature', 'N/A')} - {weather.get('description', 'No data')}"
                 else:
-                    return "ðŸŒ¤ï¸ Weather information à¤‰à¤ªà¤²à¤¬à¥à¤§ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆ"
+                    return "Ã°Å¸Å’Â¤Ã¯Â¸Â Weather information Ã Â¤â€°Ã Â¤ÂªÃ Â¤Â²Ã Â¤Â¬Ã Â¥ÂÃ Â¤Â§ Ã Â¤Â¨Ã Â¤Â¹Ã Â¥â‚¬Ã Â¤â€š Ã Â¤Â¹Ã Â¥Ë†"
                     
             else:
-                return f"âœ… Command '{command}' detected à¤²à¥‡à¤•à¤¿à¤¨ à¤…à¤­à¥€ implement à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆ"
+                return f"Ã¢Å“â€¦ Command '{command}' detected Ã Â¤Â²Ã Â¥â€¡Ã Â¤â€¢Ã Â¤Â¿Ã Â¤Â¨ Ã Â¤â€¦Ã Â¤Â­Ã Â¥â‚¬ implement Ã Â¤Â¨Ã Â¤Â¹Ã Â¥â‚¬Ã Â¤â€š Ã Â¤Â¹Ã Â¥Ë†"
                 
         except Exception as e:
-            return f"âŒ Error executing Hinglish command: {str(e)}"
+            return f"Ã¢ÂÅ’ Error executing Hinglish command: {str(e)}"
     
     def format_multilingual_response(self, response, language):
         """Format response with appropriate language indicators"""
         try:
             if language == Language.HINDI:
-                return f"ðŸ‡®ðŸ‡³ {response}"
+                return f"Ã°Å¸â€¡Â®Ã°Å¸â€¡Â³ {response}"
             elif language == Language.HINGLISH:
-                return f"ðŸ‡®ðŸ‡³ðŸ‡ºðŸ‡¸ {response}"
+                return f"Ã°Å¸â€¡Â®Ã°Å¸â€¡Â³Ã°Å¸â€¡ÂºÃ°Å¸â€¡Â¸ {response}"
             else:
                 return response
         except:
@@ -892,8 +892,8 @@ class ModernAssistant:
             if any(word in text_lower for word in ['weather', 'temperature', 'rain', 'sunny']):
                 log_action('get_weather_info', {})
                 log_module_usage('automation_tools_new', 'get_weather_info')
-                weather = get_weather_info() if AUTOMATION_AVAILABLE else {"temperature": "22Â°C", "description": "Sunny"}
-                return f"ðŸŒ¤ï¸ Weather: {weather.get('temperature', 'N/A')} - {weather.get('description', 'No data available')}"
+                weather = get_weather_info() if AUTOMATION_AVAILABLE else {"temperature": "22Ã‚Â°C", "description": "Sunny"}
+                return f"Ã°Å¸Å’Â¤Ã¯Â¸Â Weather: {weather.get('temperature', 'N/A')} - {weather.get('description', 'No data available')}"
             
             # System status
             elif any(word in text_lower for word in ['system', 'cpu', 'memory', 'performance']):
@@ -901,10 +901,10 @@ class ModernAssistant:
                 log_module_usage('system', 'get_system_status')
                 if AUTOMATION_AVAILABLE:
                     status = get_system_status()
-                    return f"ðŸ’» System - CPU: {status.get('cpu_percent', 0)}%, Memory: {status.get('memory_percent', 0)}%, Disk: {status.get('disk_percent', 0)}%"
+                    return f"Ã°Å¸â€™Â» System - CPU: {status.get('cpu_percent', 0)}%, Memory: {status.get('memory_percent', 0)}%, Disk: {status.get('disk_percent', 0)}%"
                 else:
                     stats = self.get_real_time_system_stats()
-                    return f"ðŸ’» System - CPU: {stats['cpu_usage']:.1f}%, Memory: {stats['memory_usage']:.1f}%, Disk: {stats['disk_usage']:.1f}%"
+                    return f"Ã°Å¸â€™Â» System - CPU: {stats['cpu_usage']:.1f}%, Memory: {stats['memory_usage']:.1f}%, Disk: {stats['disk_usage']:.1f}%"
             
             # Music/Spotify control
             elif any(word in text_lower for word in ['music', 'spotify', 'play', 'pause', 'song']):
@@ -912,21 +912,21 @@ class ModernAssistant:
                     if 'play' in text_lower or 'pause' in text_lower:
                         log_action('spotify_play_pause', {})
                         log_module_usage('music', 'spotify_play_pause')
-                        return f"ðŸŽµ {spotify_play_pause()}"
+                        return f"Ã°Å¸Å½Âµ {spotify_play_pause()}"
                     elif 'next' in text_lower:
                         log_action('spotify_next_track', {})
                         log_module_usage('music', 'spotify_next_track')
-                        return f"ðŸŽµ {spotify_next_track()}"
+                        return f"Ã°Å¸Å½Âµ {spotify_next_track()}"
                     elif 'previous' in text_lower:
                         log_action('spotify_previous_track', {})
                         log_module_usage('music', 'spotify_previous_track')
-                        return f"ðŸŽµ {spotify_previous_track()}"
+                        return f"Ã°Å¸Å½Âµ {spotify_previous_track()}"
                     else:
                         log_action('get_spotify_status', {})
                         log_module_usage('music', 'get_spotify_status')
                         status = get_spotify_status()
-                        return f"ðŸŽµ Now playing: {status.get('track_name', 'Nothing')} by {status.get('artist_name', 'Unknown')}"
-                return "ðŸŽµ Music controls not available"
+                        return f"Ã°Å¸Å½Âµ Now playing: {status.get('track_name', 'Nothing')} by {status.get('artist_name', 'Unknown')}"
+                return "Ã°Å¸Å½Âµ Music controls not available"
             
             # Application launching
             elif any(word in text_lower for word in ['open', 'launch', 'start', 'run']):
@@ -934,8 +934,8 @@ class ModernAssistant:
                 if app_name and AUTOMATION_AVAILABLE:
                     log_action('smart_open_application', {'app_name': app_name})
                     log_module_usage('app_discovery', 'smart_open_application')
-                    return f"ðŸš€ {smart_open_application(app_name)}"
-                return "ðŸš€ Please specify which application to open"
+                    return f"Ã°Å¸Å¡â‚¬ {smart_open_application(app_name)}"
+                return "Ã°Å¸Å¡â‚¬ Please specify which application to open"
             
             # Memory/Notes
             elif any(word in text_lower for word in ['remember', 'note', 'save']):
@@ -943,31 +943,31 @@ class ModernAssistant:
                 if content and AUTOMATION_AVAILABLE:
                     log_action('write_a_note', {'content': content})
                     log_module_usage('core', 'write_a_note')
-                    return f"ðŸ“ {write_a_note(content)}"
-                return "ðŸ“ Note taking not available"
+                    return f"Ã°Å¸â€œÂ {write_a_note(content)}"
+                return "Ã°Å¸â€œÂ Note taking not available"
             
             # Help
             elif any(word in text_lower for word in ['help', 'commands', 'what can you do']):
-                return """ðŸ¤– YourDaddy Assistant Commands:
+                return """Ã°Å¸Â¤â€“ YourDaddy Assistant Commands:
 
-ðŸŒ¤ï¸ **Weather**: "What's the weather like?"
-ðŸ’» **System**: "Show system status" 
-ðŸŽµ **Music**: "Play music", "Pause", "Next song"
-ðŸš€ **Apps**: "Open Chrome", "Launch Notepad"
-ðŸ“ **Notes**: "Remember to buy groceries"
-ðŸ” **Search**: "Search for Python tutorials"
-ðŸ“Š **Monitor**: Real-time system monitoring
-ðŸŽ¤ **Voice**: Voice commands and wake word
-ðŸ¤– **AI Vision**: Screen analysis and visual Q&A
+Ã°Å¸Å’Â¤Ã¯Â¸Â **Weather**: "What's the weather like?"
+Ã°Å¸â€™Â» **System**: "Show system status" 
+Ã°Å¸Å½Âµ **Music**: "Play music", "Pause", "Next song"
+Ã°Å¸Å¡â‚¬ **Apps**: "Open Chrome", "Launch Notepad"
+Ã°Å¸â€œÂ **Notes**: "Remember to buy groceries"
+Ã°Å¸â€Â **Search**: "Search for Python tutorials"
+Ã°Å¸â€œÅ  **Monitor**: Real-time system monitoring
+Ã°Å¸Å½Â¤ **Voice**: Voice commands and wake word
+Ã°Å¸Â¤â€“ **AI Vision**: Screen analysis and visual Q&A
 
-Just speak naturally - I understand context! ðŸŽ‰"""
+Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
             
             # Default response
             else:
-                return f"ðŸ¤– I heard: '{text}'\n\nTry asking about weather, system status, music control, opening apps, or say 'help' for more options!"
+                return f"Ã°Å¸Â¤â€“ I heard: '{text}'\n\nTry asking about weather, system status, music control, opening apps, or say 'help' for more options!"
                 
         except Exception as e:
-            return f"ðŸ¤– Error: {str(e)}"
+            return f"Ã°Å¸Â¤â€“ Error: {str(e)}"
     
     def analyze_screen(self, prompt="What's on the screen?"):
         """Analyze current screen using multimodal AI"""
@@ -999,7 +999,7 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                     memory_answer = memory_retriever.answer_from_memory(message)
                     if memory_answer:
                         # Found answer in memory!
-                        response_text = f"💭 **From Memory**: {memory_answer}\n\n"
+                        response_text = f"ðŸ’­ **From Memory**: {memory_answer}\n\n"
                         features_used.append("memory_retrieval")
                 except Exception as e:
                     print(f"Memory retrieval error: {e}")
@@ -1014,14 +1014,14 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                 try:
                     # Process image with AI
                     visual_analysis = self.multimodal_ai.analyze_image_from_base64(image_data, message or "What do you see?")
-                    response_text += f"ðŸ–¼ï¸ **Visual Analysis**: {visual_analysis}\n\n"
+                    response_text += f"Ã°Å¸â€“Â¼Ã¯Â¸Â **Visual Analysis**: {visual_analysis}\n\n"
                     features_used.append("multimodal_ai")
                     
                     # If no text message, use image analysis as the message
                     if not message:
                         message = f"Analyze this image: {visual_analysis[:100]}..."
                 except Exception as e:
-                    response_text += f"âŒ Image analysis failed: {str(e)}\n\n"
+                    response_text += f"Ã¢ÂÅ’ Image analysis failed: {str(e)}\n\n"
             
             # 3. MULTILINGUAL PROCESSING
             processed_message = message
@@ -1056,7 +1056,7 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                         if hasattr(self, 'current_llm_config') and self.current_llm_config:
                             provider = self.current_llm_config.get('provider', 'unknown')
                             model = self.current_llm_config.get('model', 'unknown')
-                            network_status = "ðŸŒ Online" if self.current_llm_config.get('network_status') else "ðŸ  Offline"
+                            network_status = "Ã°Å¸Å’Â Online" if self.current_llm_config.get('network_status') else "Ã°Å¸ÂÂ  Offline"
                             provider_info = f" ({network_status} - {provider}:{model})"
                         
                         # Generate response using smart LLM
@@ -1083,15 +1083,15 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                         if suggestions:
                             features_used.append("ai_suggestions")
                     else:
-                        response_text += "âŒ No AI system available for processing"
+                        response_text += "Ã¢ÂÅ’ No AI system available for processing"
                         
                 except Exception as e:
-                    response_text += f"âŒ AI processing failed: {str(e)}\n\n"
+                    response_text += f"Ã¢ÂÅ’ AI processing failed: {str(e)}\n\n"
             
             # 5. SMART AUTOMATION DETECTION
             if AUTOMATION_AVAILABLE and processed_message:
                 try:
-                    from ai_assistant.modules.smart_automation import SmartAutomationEngine
+                    from ai_assistant.modules.automation_engine import SmartAutomationEngine
                     automation_engine = SmartAutomationEngine()
                     
                     # Detect if message requires automation
@@ -1102,7 +1102,7 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                             # Execute automation if no better response
                             automation_result = automation_engine.execute_workflow_by_name(automation_suggestion)
                             if automation_result:
-                                response_text = f"ðŸ¤– **Automation Executed**: {automation_result}"
+                                response_text = f"Ã°Å¸Â¤â€“ **Automation Executed**: {automation_result}"
                                 features_used.append("automation_execution")
                 except Exception as e:
                     print(f"Smart automation error: {e}")
@@ -1126,13 +1126,13 @@ Just speak naturally - I understand context! ðŸŽ‰"""
             
             # 7. ADVANCED INTEGRATION FEATURES
             try:
-                from ai_assistant.modules.advanced_integration import AdvancedIntegration
+                from ai_assistant.modules.automation_engine import AdvancedIntegration
                 advanced_integration = AdvancedIntegration()
                 
                 # Check for integration opportunities
                 integration_result = advanced_integration.process_command(processed_message)
                 if integration_result and integration_result != processed_message:
-                    response_text += f"\n\nðŸ”— **Advanced Integration**: {integration_result}"
+                    response_text += f"\n\nÃ°Å¸â€â€” **Advanced Integration**: {integration_result}"
                     features_used.append("advanced_integration")
             except Exception as e:
                 print(f"Advanced integration error: {e}")
@@ -1211,7 +1211,7 @@ Just speak naturally - I understand context! ðŸŽ‰"""
             print(f"Enhanced chat processing error:\n{error_details}")
             
             return {
-                "response": f"âŒ Enhanced chat processing failed: {str(e)}\n\nFallback response: {self.process_automation_command(message or 'help')}",
+                "response": f"Ã¢ÂÅ’ Enhanced chat processing failed: {str(e)}\n\nFallback response: {self.process_automation_command(message or 'help')}",
                 "features_used": ["error_fallback"],
                 "suggestions": [],
                 "mood": "confused",
@@ -1225,35 +1225,35 @@ Just speak naturally - I understand context! ðŸŽ‰"""
         
         # Smart suggestions based on context
         if "automation" in features_used:
-            suggestions.append({"text": "ðŸ“‹ Show my automation workflows", "action": "show_workflows"})
+            suggestions.append({"text": "Ã°Å¸â€œâ€¹ Show my automation workflows", "action": "show_workflows"})
         
         if "multimodal_ai" in features_used:
-            suggestions.append({"text": "ðŸ“¸ Analyze current screen", "action": "analyze_screen"})
-            suggestions.append({"text": "ðŸ” Extract text from image", "action": "extract_text"})
+            suggestions.append({"text": "Ã°Å¸â€œÂ¸ Analyze current screen", "action": "analyze_screen"})
+            suggestions.append({"text": "Ã°Å¸â€Â Extract text from image", "action": "extract_text"})
         
         if any(word in message_lower for word in ['open', 'launch', 'start']):
             suggestions.extend([
-                {"text": "ðŸš€ Show all apps", "action": "show_apps"},
-                {"text": "ðŸ“Š System status", "action": "system_status"}
+                {"text": "Ã°Å¸Å¡â‚¬ Show all apps", "action": "show_apps"},
+                {"text": "Ã°Å¸â€œÅ  System status", "action": "system_status"}
             ])
         
         if any(word in message_lower for word in ['music', 'play', 'song']):
             suggestions.extend([
-                {"text": "ðŸŽµ Spotify controls", "action": "music_controls"},
-                {"text": "ðŸ”Š Volume control", "action": "volume_control"}
+                {"text": "Ã°Å¸Å½Âµ Spotify controls", "action": "music_controls"},
+                {"text": "Ã°Å¸â€Å  Volume control", "action": "volume_control"}
             ])
         
         if any(word in message_lower for word in ['weather', 'temperature']):
-            suggestions.append({"text": "ðŸ“… Today's schedule", "action": "show_schedule"})
+            suggestions.append({"text": "Ã°Å¸â€œâ€¦ Today's schedule", "action": "show_schedule"})
         
         if any(word in message_lower for word in ['email', 'mail']):
             suggestions.extend([
-                {"text": "ðŸ“§ Check inbox", "action": "check_email"},
-                {"text": "âœ‰ï¸ Compose email", "action": "compose_email"}
+                {"text": "Ã°Å¸â€œÂ§ Check inbox", "action": "check_email"},
+                {"text": "Ã¢Å“â€°Ã¯Â¸Â Compose email", "action": "compose_email"}
             ])
         
         # Always include help
-        suggestions.append({"text": "â“ Show all features", "action": "show_help"})
+        suggestions.append({"text": "Ã¢Ââ€œ Show all features", "action": "show_help"})
         
         return suggestions[:5]  # Limit to 5 suggestions
     
@@ -1393,4 +1393,6 @@ Just speak naturally - I understand context! ðŸŽ‰"""
                 
         except Exception as e:
             return {"error": f"Audio processing failed: {str(e)}"}
+
+
 

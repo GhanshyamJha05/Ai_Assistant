@@ -33,6 +33,92 @@ except ImportError:
     ImageGrab = None
 
 
+# =============================================================================
+# TOKEN MANAGEMENT (consolidated from advanced_chat_system.py)
+# =============================================================================
+
+class TokenCounter:
+    """Token counter for various models."""
+    
+    MODEL_TOKEN_LIMITS = {
+        "gpt-4": 8192,
+        "gpt-4-32k": 32768,
+        "gpt-4-turbo": 128000,
+        "gpt-3.5-turbo": 4096,
+        "gemini-pro": 32768,
+        "gemini-1.5-flash": 1000000,
+        "gemini-1.5-pro": 1000000,
+        "llama-2-7b": 4096,
+        "llama-2-70b": 4096,
+    }
+    
+    def __init__(self, model: str = "gpt-3.5-turbo"):
+        self.model = model
+        self.token_limit = self.MODEL_TOKEN_LIMITS.get(model, 4096)
+        
+        # Try to use tiktoken for accurate counting
+        try:
+            import tiktoken
+            self.encoder = tiktoken.encoding_for_model(model.split("-")[0])
+            self.use_tiktoken = True
+        except:
+            self.encoder = None
+            self.use_tiktoken = False
+    
+    def count(self, text: str) -> int:
+        """Count tokens in text."""
+        if self.use_tiktoken and self.encoder:
+            try:
+                return len(self.encoder.encode(text))
+            except:
+                pass
+        # Fallback: rough estimation (1 token ≈ 4 characters)
+        return len(text) // 4
+    
+    def count_messages(self, messages: List[Dict[str, str]]) -> int:
+        """Count tokens in a message list."""
+        total = 0
+        for msg in messages:
+            total += self.count(json.dumps(msg))
+        return total
+    
+    def fits_in_context(self, messages: List[Dict[str, str]], new_message: str) -> bool:
+        """Check if message list + new message fits in context window."""
+        current_tokens = self.count_messages(messages)
+        new_tokens = self.count(new_message)
+        return (current_tokens + new_tokens) < (self.token_limit * 0.9)
+    
+    def trim_history(self, messages: List[Dict[str, str]], max_tokens: int = None) -> List[Dict[str, str]]:
+        """Trim message history to fit within token limit."""
+        if max_tokens is None:
+            max_tokens = self.token_limit - 1000
+        
+        if not messages:
+            return []
+        
+        trimmed = []
+        total_tokens = 0
+        
+        # Always keep system message
+        if messages and messages[0].get("role") == "system":
+            trimmed.append(messages[0])
+            total_tokens = self.count(json.dumps(messages[0]))
+        
+        # Add messages from end (most recent) backwards
+        for msg in reversed(messages[1:]):
+            msg_tokens = self.count(json.dumps(msg))
+            if total_tokens + msg_tokens > max_tokens:
+                break
+            trimmed.insert(1 if trimmed else 0, msg)
+            total_tokens += msg_tokens
+        
+        return trimmed
+
+
+# =============================================================================
+# CONVERSATION STATE & CONTEXT
+# =============================================================================
+
 class ConversationState(Enum):
     """Conversation state enumeration."""
     IDLE = "idle"
@@ -84,7 +170,7 @@ class ConversationContext:
 class AdvancedConversationalAI:
     """Advanced conversational AI system with context management."""
     
-    def __init__(self, db_path: str = "conversation_ai.db", automation_callback: Optional[Callable] = None):
+    def __init__(self, db_path: str = "data/core/conversation_ai.db", automation_callback: Optional[Callable] = None):
         """Initialize the conversational AI system."""
         self.db_path = db_path
         self.contexts: Dict[str, ConversationContext] = {}
@@ -711,7 +797,17 @@ class AdvancedConversationalAI:
                 # Extract only numbers and basic operators
                 expr = re.sub(r'[^0-9+\-*/()\s.]', '', query)
                 if expr and any(c.isdigit() for c in expr):
-                    result = eval(expr)
+                    import ast
+                    import operator
+                    safe_operators = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv, ast.USub: operator.neg, ast.UAdd: operator.pos}
+                    def evaluate_math(node):
+                        if isinstance(node, ast.Expression): return evaluate_math(node.body)
+                        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)): return node.value
+                        elif isinstance(node, ast.BinOp): return safe_operators[type(node.op)](evaluate_math(node.left), evaluate_math(node.right))
+                        elif isinstance(node, ast.UnaryOp): return safe_operators[type(node.op)](evaluate_math(node.operand))
+                        raise ValueError("Unsupported")
+                    
+                    result = evaluate_math(ast.parse(expr, mode='eval'))
                     return f"The answer is {result}."
             except:
                 pass

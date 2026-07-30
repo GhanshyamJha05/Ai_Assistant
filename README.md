@@ -1,922 +1,498 @@
-# 🤖 YourDaddy AI Assistant
+# YourDaddy AI Assistant
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-4.2.0-blue)
-![Python](https://img.shields.io/badge/python-3.8+-green)
+![Version](https://img.shields.io/badge/version-4.3.0-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Status](https://img.shields.io/badge/status-production-brightgreen)
+![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-61dafb)
+![Backend](https://img.shields.io/badge/backend-Flask%20%2B%20Socket.IO-black)
 
+## Command the chaos. Speak. Done. Next.
 
-**"Command the chaos. Speak. Done. Next."**
+Windows-first AI assistant with chat, voice, automation, learning, memory, and a React dashboard.
 
-**A sophisticated AI-powered personal assistant featuring voice recognition, smart automation, multilingual support, and real-time AI responses powered by Google Gemini and OpenAI.**
+**Last Updated:** July 8, 2026
 
-[Features](#-key-features) • [Quick Start](#-quick-start-2-minutes) • [Installation](#-installation) • [Configuration](#-configuration) • [Documentation](#-documentation)
-
-**Last Updated:** December 21, 2025
+[Quick Start](#quick-start) •
+[Running Modes](#running-modes) •
+[Feature Tour](#feature-tour) •
+[Developer Guide](#developer-guide) •
+[Project Layout](#project-layout)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Overview
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Quick Start](#-quick-start-2-minutes)
-- [Mobile Access](#-mobile--cross-platform-access) **NEW!**
-- [Architecture](#-architecture)
-- [Installation](#-detailed-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [Project Structure](#-project-structure)
-- [API Integration](#-api-integrations)
-- [Testing](#-testing)
-- [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
+YourDaddy AI Assistant is built as a practical desktop AI companion rather than a single chatbot screen. It combines:
 
----
+- real-time LLM responses with Gemini and OpenAI
+- voice input and neural voice output
+- Windows app and file automation
+- learning, memory, and personalization layers
+- a Flask + Socket.IO backend
+- a React + TypeScript frontend for a more visual workflow
 
-## 🌟 Overview
+The project also includes newer platform pieces that make it feel more like an assistant platform than a single app:
 
-**YourDaddy AI Assistant** is a comprehensive, voice-activated AI assistant that combines the power of **Google Gemini 2.0**, **OpenAI GPT**, advanced speech recognition, and intelligent automation to create a seamless personal assistant experience. Built with Python and modern web technologies, it offers multilingual support, multimodal capabilities (text, voice, vision), and extensive system integration. It features a sophisticated dual-backend architecture to handle both real-time user interaction and complex, offline machine learning tasks.
-
-### 🎯 What Makes This Special
-
-- 🧠 **Real-Time AI**: Intelligent responses using Google Gemini 2.0 Pro and OpenAI GPT-3.5/4
-- 🎤 **Voice Control**: Google Assistant-quality voice recognition with wake word detection
-- 🌍 **Multilingual**: Support for English, Hindi, Hinglish, and multiple Indian languages
-- 👁️ **Vision AI**: Image analysis, OCR, and visual understanding
-- 🔄 **Smart Automation**: Windows app control, file operations, and task scheduling
-- 🎵 **Media Integration**: Spotify and YouTube Music control with voice commands
-- 🌐 **Modern Web UI**: React + TypeScript interface with real-time WebSocket updates
-- 🔒 **Secure**: PIN-based authentication and encrypted API key management
-- 📚 **Learning System**: Adaptive learning with feedback loop and pattern recognition
-- 🚫 **Offline Capable**: Core features work without internet using Vosk and local models
+- an agent layer for specialized behaviors
+- intent extraction and workflow dispatch
+- onboarding for personalization
+- proactive suggestions based on usage/context
+- dashboard APIs for learning and memory views
 
 ---
 
-## ✨ Key Features
+## Choose Your Path
 
-### 🤖 AI & Intelligence
-- **Conversational AI**: Context-aware conversations with memory persistence
-- **Google Gemini 2.0**: Latest multimodal AI models with vision support
-- **OpenAI GPT Integration**: GPT-3.5 Turbo and GPT-4 support
-- **Advanced Memory System**: Long-term context retention and relationship mapping
-- **Adaptive Learning**: Pattern recognition and personalized responses with feedback loop
-- **Knowledge Graphs**: Intelligent associations and context understanding
-- **Feedback Learning**: User feedback integration for continuous improvement
-- **Graph Neural Networks**: Advanced learning with relationship mapping
-- **Intent Classification**: Smart command understanding with neural networks
-- **Learning Dashboard**: Real-time visualization of learning progress and metrics
+### If you are a user
 
-### 🎙️ Voice & Speech
-- **Wake Word Detection**: "Hey Daddy", "OK Daddy" activation with local processing
-- **Advanced Speech Recognition**: 
-  - OpenAI Whisper API (online, highest accuracy)
-  - Google Cloud Speech-to-Text
-  - Vosk offline recognition (English & Hindi)
-  - Browser-based Web Speech API
-- **Neural Text-to-Speech**:
-  - Microsoft Edge-TTS (natural neural voices)
-  - Google Cloud TTS
-  - Coqui TTS (offline fallback)
-  - pyttsx3 (system voices)
-- **Multilingual Support**: English, Hindi, Hinglish, Spanish, French, and more
-- **Continuous Listening Mode**: Always-on voice detection with smart activation
-- **Voice Activity Detection**: Advanced VAD with spectral feature analysis
-- **Speaker Verification**: Voice profile management for secure access
+Start here if you want to run the assistant quickly:
 
-### 🖥️ System Integration & Automation
-- **Smart App Discovery**: Automatic detection of 500+ installed Windows applications
-- **Application Control**: Launch, close, and manage any Windows application
-- **File Operations**: Create, move, copy, search, organize files and folders
-- **Taskbar Detection**: Real-time window and application monitoring
-- **System Control**: Volume, brightness, power management
-- **Automation Tools**: Scheduled tasks, batch operations, system optimization
+1. install dependencies
+2. configure local API keys from examples
+3. run the backend
+4. launch the React UI
+5. interact through chat, voice, automation, or dashboard views
 
-### 📅 Productivity & Communication
-- **Google Calendar Integration**: Event creation, reminders, scheduling
-- **Email Automation**: Send, read, and manage emails via voice or text
-- **Task Scheduling**: APScheduler-based automation with cron-like syntax
-- **Document OCR**: Extract text from images and PDFs using Tesseract
-- **Web Scraping**: Intelligent data extraction from websites
-- **News & Weather**: Real-time news updates and weather forecasts
-- **Stock & Crypto Prices**: Financial data monitoring
+### If you are a developer
 
-### 🎵 Media & Entertainment
-- **Spotify Integration**: 
-  - Play, pause, skip, control playback
-  - Create and manage playlists
-  - Search songs, artists, albums
-  - Get music recommendations
-- **YouTube Music**: Search and play music videos
-- **Music Downloader**: yt-dlp integration for audio/video downloads
-- **Media Player Control**: System-wide media control
+Start here if you want to understand or extend the system:
 
-### 🌐 Modern Web Interface
-- **React + TypeScript Frontend**: Modern, responsive UI built with Vite
-- **Real-Time Communication**: WebSocket support for live updates
-- **Flask Backend**: RESTful API with Flask-SocketIO
-- **Mobile-Friendly**: Responsive design works on all devices
-- **Dark/Light Themes**: Customizable appearance
-- **Voice Web Commands**: Browser-based voice interaction
-- **Live Status Updates**: Real-time system and AI status monitoring
-- **Application Grid**: Smart app discovery and control interface
-- **Conversation Space**: Modern chat interface with enhanced UX
-- **Learning Dashboard**: Interactive visualization of learning metrics and feedback
+1. review the runtime layers in [README.md](file:///d:/Projects/Ai_Assistant/README.md#L69-L105)
+2. inspect the backend entry in [main.py](file:///d:/Projects/Ai_Assistant/main.py)
+3. inspect the core backend in [modern_web_backend.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/services/modern_web_backend.py)
+4. inspect the agent and workflow routing pieces in [dispatcher.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/agents/dispatcher.py) and [intent_registry.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/workflow/intent_registry.py)
+5. inspect the frontend app in [App.tsx](file:///d:/Projects/Ai_Assistant/src/project/src/App.tsx)
 
-### 👁️ Multimodal & Vision
-- **Image Analysis**: Visual understanding using Gemini Vision API
-- **Video Processing**: Frame extraction and multi-frame analysis
-- **Screen Capture Analysis**: Screenshot understanding and OCR
-- **Object Detection**: Identify objects, faces, and scenes
-- **Document Understanding**: Analyze document structure and content
-- **Batch Processing**: Process multiple images/documents simultaneously
+---
 
-### 🔒 Security & Privacy
-- **PIN-Based Authentication**: Secure access control with configurable PIN
-- **Encrypted Credentials**: Secure storage of API keys and tokens
-- **Environment Variables**: Secure configuration management
-- **Rate Limiting**: API request throttling and protection
-- **JWT Tokens**: Secure session management
-- **Local Processing**: Offline modes protect privacy
+## Feature Tour
 
-### 📱 Mobile & Cross-Platform Support **NEW!**
-- **Progressive Web App (PWA)**: Install on iPhone/Android like a native app
-- **Mobile-Optimized Interface**: Touch-friendly, responsive design
-- **Offline Mode**: Service worker caching for offline access
-- **Voice on Mobile**: Browser-based voice commands on smartphones
-- **Push Notifications**: Get AI alerts on your phone
-- **Cloud Deployment Ready**: Deploy to Railway, Render, Heroku, etc.
-- **Ngrok Integration**: Instant internet access for testing
-- **QR Code Setup**: Scan and connect in seconds
-- **Camera Integration**: Send photos from phone to AI
-- **Cross-Device Sync**: Access from computer, phone, tablet
+### Conversational AI
 
-**📲 Quick Mobile Access:**
+- Context-aware chat flows
+- Memory-aware responses
+- Multiple model providers
+- Personalization hooks for future adaptation
+
+### Voice Experience
+
+- Wake-word and speech-recognition support
+- Online and offline voice paths
+- Neural text-to-speech output
+- Multilingual-oriented voice usage
+
+### Automation and Control
+
+- Launch and manage Windows apps
+- File and utility automation
+- Scheduled workflows
+- Browser and integration-oriented actions
+
+### Learning and Memory
+
+- Knowledge-graph style memory APIs
+- Feedback submission endpoints
+- Usage-pattern analysis
+
+### Standalone Windows App & Onboarding
+- **Zero-Dependency Executable**: Packaged into a single native `.exe` using PyInstaller and `pywebview`.
+- **First-Run Experience**: A guided EULA and privacy agreement modal ensuring users consent to local data storage.
+- **Interactive Tour**: Uses `driver.js` to spotlight key UI elements (chat, voice control) on the user's first launch.
+- Learning dashboard data surfaces
+
+### Platform Additions
+
+- Agent dispatcher for natural-language workflow routing
+- Autonomous learning agent scaffold
+- First-run onboarding manager
+- Proactive anticipator for contextual suggestions
+
+---
+
+## Why The UI Matters
+
+This project is no longer just a script-first assistant. The UI layer gives users:
+
+- a cleaner dashboard-driven experience
+- clearer status and system visibility
+- a more discoverable command surface
+- better separation between chat, memory, apps, and settings
+- a mobile/PWA-friendly frontend path
+
+For developers, the UI also helps by:
+
+- making state and assistant behavior easier to inspect
+- exposing a more testable frontend/backend contract
+- making future observability and analytics integration easier
+
+---
+
+## Architecture At A Glance
+
+The system is organized around four practical runtime layers:
+
+1. `main.py`
+   Launches the assistant in web, CLI, desktop, or modern desktop mode.
+
+2. `src/ai_assistant/`
+   Core assistant package containing AI logic, agents, automation, auth, services, NLP, workflow, vision, and voice modules.
+
+3. `src/project/`
+   React + TypeScript frontend used as the main modern UI.
+
+4. `scripts/`
+   Setup, validation, diagnostics, and launch helpers.
+
+### Important Runtime Pieces
+
+- [main.py](file:///d:/Projects/Ai_Assistant/main.py)
+  Main entry point and mode selector.
+
+- [modern_web_backend.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/services/modern_web_backend.py)
+  Primary Flask + Socket.IO backend.
+
+- [learning_dashboard_api.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/services/learning_dashboard_api.py)
+  Memory graph and feedback endpoints.
+
+- [dispatcher.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/agents/dispatcher.py)
+  Connects natural-language intent extraction to workflow execution and scheduling.
+
+- [onboarding.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/core/onboarding.py)
+  Captures first-run user preferences.
+
+- [proactive_anticipator.py](file:///d:/Projects/Ai_Assistant/src/ai_assistant/core/proactive_anticipator.py)
+  Generates contextual prompts from time and usage patterns.
+
+---
+
+## Quick Start
+
+### 1. Clone and create a virtual environment
+
 ```bash
-python setup_mobile.py  # One-click mobile setup
-```
-See [MOBILE_PLATFORM_SUPPORT.md](MOBILE_PLATFORM_SUPPORT.md) for complete mobile guide.
-
----
-
-## 🚀 Quick Start (2 Minutes)
-
-### Step 1: Install Dependencies
-```bash
-# Clone the repository
 git clone <repository-url>
-cd assitant
-
-# Install Python dependencies
-pip install -r requirements.txt
+cd Ai_Assistant
+python -m venv .venv
 ```
 
-### Step 2: Setup API Keys (Free - 1 Minute)
-```bash
-# Run the quick setup wizard
-python quick_ai_setup.py
+Windows PowerShell:
 
-# Get FREE Gemini API key:
-# 1. Visit: https://aistudio.google.com/app/apikey
-# 2. Sign in with Google account
-# 3. Click "Create API Key"
-# 4. Copy and paste when prompted
+```bash
+.venv\Scripts\Activate.ps1
 ```
 
-### Step 3: Start the Assistant
+macOS/Linux:
+
 ```bash
-# Start with web interface (recommended)
-python main.py
+source .venv/bin/activate
+```
 
-# Start the modern web backend
-python start_backend.bat  # Windows
-# or
-python ai_assistant/services/modern_web_backend.py
+### 2. Install backend dependencies
 
-# Start React frontend (in new terminal)
+```bash
+pip install -r config/requirements/requirements.txt
+```
+
+Optional dev tooling:
+
+```bash
+pip install pytest pytest-cov black flake8
+```
+
+### 3. Install frontend dependencies
+
+```bash
 cd src/project
 npm install
-npm run dev
-
-# Or use specific interface
-python main.py --interface web --port 8000
-python main.py --interface cli
+cd ../..
 ```
 
-### Step 4: Access & Test
-```
-🌐 Web Interface: http://localhost:8000
-🚀 React Frontend: http://localhost:5173
-🎤 Test Voice: "Hey Daddy, what's the weather today?"
-💬 Test Chat: "Explain quantum computing"
-📊 Learning Dashboard: http://localhost:8000/learning_dashboard.html
-```
+### 4. Create your local config
 
-**Expected**: Intelligent AI responses (not templates!)
+Use the example files in `config/` as templates:
 
----
+- `config/.env.example`
+- `config/api_keys.json.example`
+- `config/app_integration.env.example`
+- `config/user_settings.json.example`
+- `config/multimodal_config.json.example`
 
-## 📱 Mobile & Cross-Platform Access
+Guided setup:
 
-### 🚀 Use Your AI on Your Phone - Same Beautiful Interface!
-
-Your React frontend now works as a **Progressive Web App (PWA)** - install it on your phone like a native app!
-
-#### **🎯 React Frontend Mobile Setup (RECOMMENDED):**
-
-**Windows Quick Start:**
 ```bash
-scripts/launchers/start_react_mobile.bat  # One-click start!
+python scripts/utilities/quick_ai_setup.py
 ```
 
-**Manual Start:**
+### 5. Start the assistant backend
+
+```bash
+python main.py --interface web --port 8000
+```
+
+### 6. Start the React UI
+
+In a second terminal:
+
 ```bash
 cd src/project
-npm install  # First time only
-npm run dev  # Starts on network: http://YOUR_IP:5173
+npm run dev
 ```
 
-**On Your Phone:**
-1. Open browser (Safari on iPhone, Chrome on Android)
-2. Go to `http://YOUR_IP:5173` (shown in terminal)
-3. Wait 30 seconds - install prompt appears automatically
-4. Tap "Install" → App added to home screen!
+### 7. Open the app
 
-**Features:**
-- ✅ **Same beautiful React interface** - not a separate mobile UI
-- ✅ **Install on home screen** - works like native app
-- ✅ **Offline support** - caches resources for offline use
-- ✅ **Real-time dashboard** - all features work on mobile
-- ✅ **Network status indicator** - see when offline
-- ✅ **iOS + Android** - works on all mobile browsers
-
-📖 **Detailed Guide:** [src/project/MOBILE_README.md](src/project/MOBILE_README.md)
-📋 **Technical Summary:** [REACT_MOBILE_SUMMARY.md](REACT_MOBILE_SUMMARY.md)
+- Backend/UI entry: `http://localhost:8000`
+- React frontend: `http://localhost:5173`
 
 ---
 
-#### **Alternative: Standalone Mobile Server (Optional)**
+## Running Modes
 
-For a simpler, lightweight mobile interface:
+| Mode | Command | Purpose |
+|---|---|---|
+| Web | `python main.py --interface web --port 8000` | Primary backend mode |
+| CLI | `python main.py --interface cli` | Lightweight terminal interaction |
+| Desktop | `python main.py --interface desktop` | Legacy desktop path |
+| Modern Desktop | `python main.py --interface desktop_modern` | Modern desktop/webview path |
+| PIN Setup | `python main.py --setup-pin` | First-time or updated auth setup |
+
+Alternative PIN setup script:
 
 ```bash
-# One-command mobile setup
-python setup_mobile.py
-```
-
-**Three Access Methods:**
-
-**1️⃣ Local Network Access**
-- Access via browser: `http://YOUR_IP:5000`
-- Same WiFi network required
-- Fast and private
-
-**2️⃣ Internet Access (Anywhere)**
-```bash
-# Using Ngrok (instant internet access)
-python mobile_server.py --ngrok
-
-# Or deploy to cloud (Railway, Render, Heroku)
-# See DEPLOYMENT_GUIDE.md
-```
-
-**Mobile Features:**
-- ✅ Voice commands on phone
-- ✅ Text chat interface
-- ✅ Camera integration for AI vision
-- ✅ File uploads from phone
-- ✅ Offline mode with caching
-
-#### **📚 Complete Mobile Documentation:**
-- **[MOBILE_PLATFORM_SUPPORT.md](MOBILE_PLATFORM_SUPPORT.md)** - Complete mobile guide
-- **[MOBILE_QUICK_START.md](MOBILE_QUICK_START.md)** - Quick start guide
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Cloud deployment options
-
-**Need help?** Run `python setup_mobile.py` for guided setup wizard!
-
----
-
-## 🏗️ Architecture
-
-This project utilizes a sophisticated **dual-backend architecture** to separate user-facing operations from developer-focused analytics and ML model interaction.
-
-*   **User-Facing Application**: The primary application that users interact with. It consists of a modern React frontend and a Flask backend that handles real-time communication, automation, and core assistant logic.
-*   **Learning & Analytics API**: A separate FastAPI backend that exposes the 27+ advanced machine learning systems via a comprehensive REST API. This server is intended for developers and data scientists to monitor, debug, and analyze the AI's learning processes.
-
-Crucially, these two backends **operate independently**. The main Flask application does not call the FastAPI server. Instead, both backends act as two different "heads" for the same shared core of ML modules.
-
-```
-                  ┌──────────────────┐      ┌────────────────────┐
-                  │      User        │      │     Developer /    │
-                  └──────────────────┘      │      Analyst       │
-                         │                  └────────────────────┘
-     /-------------------|---------------------------\
-     |                   |                           |
-┌────▼──────────┐ ┌──────▼──────────────┐ ┌──────────▼───────────┐
-│ React + Vite  │ │ Flask + SocketIO    │ │  FastAPI (Uvicorn)   │
-│  (Frontend)   │ │ (User-Facing Backend) │ │ (Learning & Analytics │
-│ (src/project/)│ │(modern_web_backend.py)│ │         API)         │
-└──────┬────────┘ └──────────┬──────────┘ │ (learning_api.py)    │
-       │                      │            └──────────┬───────────┘
-       └───────────┬──────────┘                       │
-                   |                                  |
-           ┌───────▼──────────────────────────────────▼────────┐
-           │     Core AI / ML Systems (Shared Python Library)    │
-           │        (27+ Learning Modules in src/ai_assistant/ai) │
-           └──────────────────────────┬──────────────────────────┘
-                                      │
-                 ┌────────────────────┴────────────────────┐
-                 │          Data Persistence Layer         │
-                 │(7+ SQLite Databases in /data directory) │
-                 └────────────────────┬────────────────────┘
-                                      │
-  ┌──────────┬──────────┬─────────────┴──────────┬──────────┬──────────┐
-  │          │          │                        │          │          │
-┌─▼──┐   ┌───▼──┐   ┌───▼──┐              ┌──────▼──┐  ┌─────▼──┐  ┌────▼───┐
-│Gemini│ │OpenAI│ │Spotify │              │ Windows │  │ Google │  │ Voice  │
-│ API  │ │ API  │ │  API   │              │   OS    │  │Services│  │Engines │
-└──────┘ └──────┘ └────────┘              └─────────┘  └────────┘  └────────┘
+python scripts/setup/setup_pin.py
 ```
 
 ---
 
-## 📦 Detailed Installation
+## Interactive Workflows
 
-### Prerequisites
-- **Python**: 3.8 or higher
-- **OS**: Windows 10/11 (primary), Linux/Mac (experimental)
-- **RAM**: 4GB minimum, 8GB recommended
-- **Storage**: 2GB for dependencies and models
+### Onboarding and Personalization
 
-### Complete Installation Steps
+The onboarding flow captures lightweight preferences like:
 
-#### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd assitant
-```
+- profession or daily role
+- preferred answer length
+- preferred tone
 
-#### 2. Create Virtual Environment (Recommended)
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+This lets the assistant shape responses earlier instead of waiting for long-term history.
 
-# Linux/Mac
-python3 -m venv venv
-source venv/bin/activate
-```
+### Intent-to-Workflow Dispatch
 
-#### 3. Install Dependencies
-```bash
-# Install all requirements
-pip install -r requirements.txt
+The newer dispatch layer supports:
 
-# For development (includes testing tools)
-pip install -r requirements.txt pytest pytest-cov black flake8
-```
+- rule-based intent extraction
+- entity extraction
+- workflow lookup
+- scheduled or immediate execution
 
-#### 4. Install Vosk Models (For Offline Voice)
-```bash
-# Download English model
-python -c "from ai_assistant.voice import download_vosk_model; download_vosk_model('en')"
+Example intents represented in code today:
 
-# Download Hindi model
-python -c "from ai_assistant.voice import download_vosk_model; download_vosk_model('hi')"
-```
+- research and summarize
+- scrape and summarize
+- create file
+- notify
+- summarize text
 
-#### 5. Install System Dependencies (Windows)
-```bash
-# Install Tesseract OCR (for document processing)
-# Download from: https://github.com/UB-Mannheim/tesseract/wiki
-# Add to PATH: C:\Program Files\Tesseract-OCR
+### Proactive Assistance
 
-# PyAudio (for microphone access)
-pip install pipwin
-pipwin install pyaudio
-```
+The proactive anticipator can surface context-aware prompts such as:
 
-#### 6. Setup Configuration
-```bash
-# Run setup wizard
-python quick_ai_setup.py
+- morning briefing suggestions
+- home/evening prompts
+- late-night reminders
 
-# Or manually create config files
-cp config/app_integration.env.example config/app_integration.env
-cp config/multimodal_config.json.example config/multimodal_config.json
-```
+This gives the assistant a more interactive, assistant-like feel rather than waiting for every command.
 
-#### 7. Setup API Keys
+### Learning Dashboard APIs
 
-**Option A: Using Setup Wizard (Recommended)**
-```bash
-python quick_ai_setup.py
-```
+The dashboard API currently supports:
 
-**Option B: Manual Setup**
-Create `api_keys.json`:
-```json
-{
-    "GEMINI_API_KEY": "your-gemini-api-key",
-    "OPENAI_API_KEY": "your-openai-api-key",
-    "SPOTIFY_CLIENT_ID": "your-spotify-client-id",
-    "SPOTIFY_CLIENT_SECRET": "your-spotify-client-secret"
-}
-```
+- reading memory graph nodes and edges
+- submitting response feedback
+- deleting memory nodes
 
-#### 8. Verify Installation
-```bash
-# Check dependencies
-python check_dependencies.py
-
-# Test AI integration
-python test_ai_quick.py
-
-# Test voice recognition
-python test_import_core.py
-```
+This is useful both for future UI work and for developer inspection workflows.
 
 ---
 
-## 🔧 Configuration
+## UI Direction
 
-### API Keys Configuration
+The React frontend in `src/project/` is the best place to improve the product experience further.
 
-#### Required Keys
-1. **Gemini API** (Free - Recommended)
-   - Get it: https://aistudio.google.com/app/apikey
-   - Free tier: 60 requests/minute
-   - Required for: AI conversations, vision analysis
+### Current UI strengths
 
-2. **OpenAI API** (Optional - Paid)
-   - Get it: https://platform.openai.com/api-keys
-   - Cost: ~$0.002 per conversation (GPT-3.5)
-   - Required for: OpenAI GPT models, Whisper API
+- clear separation of dashboard areas
+- component-based frontend structure
+- live communication through Socket.IO
+- mobile-friendly/PWA direction
 
-#### Optional Keys
-3. **Spotify API** (Free)
-   - Get it: https://developer.spotify.com/dashboard
-   - Required for: Music control features
+### Good next UI improvements
 
-4. **Google Cloud** (Free tier available)
-   - Services: Calendar, Gmail, Speech-to-Text
-   - Setup: https://console.cloud.google.com
-
-### Configuration Files
-
-#### 1. `api_keys.json` (Recommended)
-```json
-{
-    "GEMINI_API_KEY": "AIza...",
-    "OPENAI_API_KEY": "sk-...",
-    "SPOTIFY_CLIENT_ID": "your-client-id",
-    "SPOTIFY_CLIENT_SECRET": "your-client-secret",
-    "GOOGLE_CLOUD_KEY_PATH": "path/to/credentials.json"
-}
-```
-
-#### 2. `config/user_settings.json`
-```json
-{
-    "language": "en",
-    "voice_enabled": true,
-    "wake_word": "hey daddy",
-    "tts_engine": "edge-tts",
-    "theme": "dark"
-}
-```
-
-#### 3. `config/multimodal_config.json`
-```json
-{
-    "vision_enabled": true,
-    "max_image_size": 4096,
-    "ocr_enabled": true,
-    "video_processing": false
-}
-```
-
-#### 4. Environment Variables (Alternative)
-```bash
-# Windows
-set GEMINI_API_KEY=your-key-here
-set OPENAI_API_KEY=your-key-here
-
-# Linux/Mac
-export GEMINI_API_KEY=your-key-here
-export OPENAI_API_KEY=your-key-here
-```
-
-### Security Settings
-
-#### Setup PIN Authentication
-```bash
-# First time setup
-python setup_pin.py
-
-# Or during startup
-python main.py --setup-pin
-
-# Skip for development (not recommended)
-python main.py --skip-auth
-```
+- stronger visual hierarchy and spacing
+- richer command composer with suggestions
+- clearer task/progress feedback
+- more guided onboarding screens
+- memory graph and learning views with better visualization
+- unified notifications/toasts/activity feed
 
 ---
 
-## 🎮 Usage
+## Developer Guide
 
-### Starting the Assistant
+### Backend checks
 
-#### Web Interface (Recommended)
 ```bash
-# Default (port 8000)
-python main.py
-
-# Custom port
-python main.py --port 5000
-
-# With verbose logging
-python main.py --verbose
-
-# Access at: http://localhost:8000
+python scripts/validation/check_dependencies.py
+python scripts/validation/check_ai_status.py
 ```
 
-#### Command Line Interface
+### Frontend checks
+
 ```bash
-python main.py --interface cli
+cd src/project
+npm run lint
+npm run typecheck
 ```
 
-#### Desktop GUI
+### Python tests
+
 ```bash
-python main.py --interface desktop
-```
-
-### Using Voice Commands
-
-#### Wake Word Activation
-```
-Say: "Hey Daddy" or "OK Daddy"
-Wait for: Activation sound/beep
-Then say: Your command
-```
-
-#### Example Voice Commands
-```
-"Hey Daddy, what's the weather today?"
-"Open Chrome and search for Python tutorials"
-"Play some relaxing music on Spotify"
-"Create a meeting for tomorrow at 3 PM"
-"Send an email to john@example.com"
-"What's in this image?" (with image upload)
-"Translate 'Hello' to Hindi"
-"Set a reminder for 5 PM"
-```
-
-### Using Text Commands
-
-#### Web Interface
-1. Open http://localhost:8000
-2. Type your query in the chat box
-3. Press Enter or click Send
-
-#### CLI Interface
-```bash
-$ python main.py --interface cli
-> What's the capital of France?
-> Open notepad
-> Play music by Coldplay
-> quit  # To exit
-```
-
-### Advanced Usage
-
-#### Automation Scripts
-```bash
-# Schedule automated tasks
-python scripts/setup/setup_automation.py
-
-# Run batch file operations
-python -c "from ai_assistant.file_ops import organize_files_by_type; organize_files_by_type('~/Downloads')"
-```
-
-#### API Endpoints
-
-**Health Check**
-```bash
-curl http://localhost:8000/api/health
-```
-
-**Send Message**
-```bash
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello!", "user_id": "user123"}'
-```
-
-**Get Features**
-```bash
-curl http://localhost:8000/api/features
-```
-
-**Voice Recognition**
-```bash
-curl -X POST http://localhost:8000/api/voice/recognize \
-  -F "audio=@recording.wav"
-```
-
----
-
-## 📁 Project Structure
-
-```
-assitant/
-├── main.py                          # Main entry point with interface selection
-├── check_deps.py                    # Dependency checker
-├── modern_web_backend.py            # Local backend entry
-├── test_voice_enhancement.py        # Voice testing script
-├── fix_syntax.py                    # Syntax fixing utility
-│
-├── src/                             # Main Source Code Directory
-│   ├── ai_assistant/                # Core AI logic package
-│   │   ├── ai/                      # Real-time LLM operations
-│   │   ├── automation/              # Windows and software automation
-│   │   ├── core/                    # Core configs
-│   │   ├── integrations/            # 3rd party APIs (Spotify, calendar, etc.)
-│   │   ├── modules/                 # System modules
-│   │   ├── voice/                   # Voice recognition and synthesis
-│   │   ├── vision/                  # Vision API utilities
-│   │   └── workflow/                # Multi-step tasks
-│   │
-│   ├── project/                     # Frontend React UI
-│   │   ├── src/                     # React components
-│   │   ├── public/                  # Static web assets
-│   │   ├── package.json             # NPM dependencies
-│   │   └── vite.config.ts           # Vite build config
-│   │
-│   ├── config/                      # Config parsers and defaults
-│   ├── data/                        # Core data interfaces
-│   ├── launchers/                   # Python launcher scripts
-│   ├── user_data/                   # User specific resources
-│   ├── utils/                       # Common utility functions
-│   └── web_assets/                  # Assorted web files
-│
-├── scripts/                         # Utility & Setup Scripts
-│   ├── setup/                       # Installation wizards and keystores
-│   ├── launchers/                   # Bash and Batch starting scripts
-│   ├── analysis/                    # Python scripts for analytics
-│   ├── debug/                       # Logging operations
-│   ├── learning/                    # Memory / Learning ops
-│   ├── diagnostics/                 # Diagnostics tools
-│   └── validation/                  # Pre-flight checks
-│
-├── tests/                           # Component and Integration Test Suite
-├── config/                          # Workspace configuration files
-├── data/                            # Core Runtime Datastores
-├── databases/                       # SQLite backend files
-├── model/                           # Local offline ML models
-├── docs/                            # Extensive Documentations
-├── logs/                            # Application Event Logs
-└── deploy/                          # Deployment configurations
-```
-
----
-
-## 🔌 API Integrations
-
-### 1. Google Gemini AI
-- **Purpose**: Primary AI conversational engine
-- **Features**: Text generation, vision analysis, multimodal understanding
-- **Setup**: Get free API key from https://aistudio.google.com/app/apikey
-- **Usage**: 60 requests/minute free tier
-
-### 2. OpenAI
-- **Purpose**: Alternative LLM, Whisper speech recognition
-- **Models**: GPT-3.5-Turbo, GPT-4, Whisper API
-- **Setup**: https://platform.openai.com/api-keys
-- **Cost**: Pay-per-use (~$0.002/conversation)
-
-### 3. Spotify
-- **Purpose**: Music playback and playlist management
-- **Setup**: https://developer.spotify.com/dashboard
-- **Scopes**: streaming, playlist-modify, user-library-read
-
-### 4. Google Cloud Services
-- **Speech-to-Text**: High-accuracy voice recognition
-- **Text-to-Speech**: Natural voice synthesis
-- **Calendar API**: Event management
-- **Gmail API**: Email automation
-- **Setup**: https://console.cloud.google.com
-
-### 5. Vosk (Offline)
-- **Purpose**: Offline speech recognition
-- **Languages**: English, Hindi, 20+ others
-- **Setup**: Automatic model download
-- **No API Key Required**
-
----
-
-## 🧪 Testing
-
-### Run All Tests
-```bash
-# Run all tests
 pytest
-
-# With coverage report
-pytest --cov=ai_assistant --cov-report=html
-
-# Specific test file
-pytest tests/test_ai_quick.py
-
-# Verbose output
 pytest -v
+pytest --cov=src/ai_assistant --cov-report=html
 ```
 
-### Test Specific Components
+### Key extension points
 
-#### AI Integration
-```bash
-python test_ai_quick.py
-python test_real_ai.py
-```
+- `src/ai_assistant/agents/`
+  Add specialized assistant behaviors and orchestration logic.
 
-#### Voice Recognition
-```bash
-python test_import_core.py
-python ai_assistant/voice/test_voice_recognition.py
-```
+- `src/ai_assistant/automation/`
+  Extend Windows, browser, and workflow actions.
 
-#### All 27 Systems
-```bash
-python test_all_27_systems.py
-```
+- `src/ai_assistant/core/`
+  Add cross-cutting assistant services such as onboarding, context, auth, and proactive behavior.
 
-#### Web Backend
-```bash
-python test_api_endpoints.py
-```
+- `src/ai_assistant/services/`
+  Extend APIs, websockets, and web-backend routes.
 
-### Manual Testing
+- `src/project/src/`
+  Improve UI, UX, state handling, and feature discoverability.
 
-#### Test AI Response
-```python
-from ai_assistant.ai import get_ai_response
+### Useful mental model
 
-response = get_ai_response("What is quantum computing?")
-print(response)
-```
+For most product changes, think in this order:
 
-#### Test Voice Recognition
-```python
-from ai_assistant.voice import recognize_speech
+1. What user experience should happen?
+2. Which backend service owns it?
+3. Which assistant/core module powers it?
+4. Which frontend component exposes it?
 
-text, confidence = recognize_speech()
-print(f"You said: {text} (confidence: {confidence})")
-```
+---
 
-#### Test Automation
-```python
-from ai_assistant.automation import open_application
+## Project Layout
 
-open_application("Chrome")
+```text
+Ai_Assistant/
+├── main.py
+├── config/
+│   ├── requirements/
+│   ├── *.example
+│   └── app_settings.json
+├── scripts/
+│   ├── setup/
+│   ├── utilities/
+│   ├── validation/
+│   ├── diagnostics/
+│   └── launchers/
+├── src/
+│   ├── ai_assistant/
+│   │   ├── agents/
+│   │   ├── ai/
+│   │   ├── automation/
+│   │   ├── auth/
+│   │   ├── core/
+│   │   ├── integrations/
+│   │   ├── nlp/
+│   │   ├── services/
+│   │   ├── vision/
+│   │   ├── voice/
+│   │   └── workflow/
+│   └── project/
+│       ├── src/
+│       ├── public/
+│       └── package.json
+└── docs/
 ```
 
 ---
 
-## 🔧 Troubleshooting
+## Configuration Notes
 
-### Common Issues
+Keep secrets local and out of Git. Use example files as templates for:
 
-#### 1. Import Errors
-```bash
-# Problem: ModuleNotFoundError
-# Solution: Ensure virtual environment is activated and dependencies installed
-pip install -r requirements.txt
-```
+- API keys
+- user settings
+- multimodal settings
+- app integration settings
 
-#### 2. API Key Not Working
-```bash
-# Check AI status
-python check_ai_status.py
+Typical integrations include:
 
-# Verify keys are loaded
-python -c "from ai_assistant.ai import check_api_keys; check_api_keys()"
-```
-
-#### 3. Voice Recognition Not Working
-```bash
-# Check microphone permissions (Windows)
-# Settings > Privacy > Microphone > Allow apps
-
-# Test PyAudio installation
-python -c "import pyaudio; print('PyAudio OK')"
-
-# Download Vosk models
-python -c "from ai_assistant.voice import download_vosk_model; download_vosk_model('en')"
-```
-
-#### 4. Web Interface Not Loading
-```bash
-# Check port availability
-netstat -ano | findstr :8000
-
-# Try different port
-python main.py --port 5000
-
-# Check firewall settings
-```
-
-#### 5. Tesseract OCR Not Found
-```bash
-# Windows: Download and install from
-# https://github.com/UB-Mannheim/tesseract/wiki
-
-# Add to PATH or set environment variable
-set TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
-```
-
-### Debug Mode
-```bash
-# Enable verbose logging
-python main.py --verbose
-
-# Check logs
-cat logs/assistant.log
-
-# Debug specific module
-python debug_launcher.py
-```
-
-### Getting Help
-1. Check [docs/](docs/) directory for detailed documentation
-2. Review [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-3. Check [logs/](logs/) for error messages
-4. Run diagnostic tools: `python check_dependencies.py`
+- Gemini
+- OpenAI
+- Spotify
+- Google services
+- local/offline voice models
 
 ---
 
-## 🤝 Contributing
+## Troubleshooting
 
-We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+### Import errors
 
-### Development Setup
+- verify the virtual environment is active
+- reinstall dependencies from `config/requirements/requirements.txt`
+- confirm commands are run from the repository root
+
+### Frontend not loading
+
+- confirm both backend and React dev server are running
+- check whether ports `8000` or `5173` are already occupied
+- re-run `npm install` in `src/project/`
+
+### AI keys not loading
+
+- confirm local config was created from example files
+- run `python scripts/validation/check_ai_status.py`
+- keep local key files on your machine only
+
+### Voice stack issues
+
+- check microphone permissions
+- install PyAudio if required
+- install OCR and speech dependencies only if you plan to use them
+
+---
+
+## Contributing
+
+Suggested workflow:
+
 ```bash
-# Fork and clone repository
-git clone https://github.com/yourusername/assitant.git
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Install development dependencies
-pip install -r requirements.txt pytest black flake8
-
-# Make changes and test
+git checkout -b feature/my-change
 pytest
-black ai_assistant/
-flake8 ai_assistant/
-
-# Commit and push
-git commit -m "Add amazing feature"
-git push origin feature/amazing-feature
+git commit -m "Describe change"
+git push origin feature/my-change
 ```
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see [LICENSE.txt](docs/LICENSE.txt) for details.
+Keep generated files, secrets, local databases, and environment-specific configs out of commits.
 
 ---
 
-## 🙏 Acknowledgments
+## License
 
-- **Google Gemini**: Advanced AI capabilities
-- **OpenAI**: GPT and Whisper models
-- **Vosk**: Offline speech recognition
-- **Edge-TTS**: Neural text-to-speech
-- **Flask & React**: Web framework and UI
-- **All Contributors**: Thank you for your contributions!
-
----
-
-## 📞 Support
-
-- **Documentation**: [docs/README.md](docs/README.md)
-- **API Reference**: [docs/API_REFERENCE_COMPLETE.md](docs/API_REFERENCE_COMPLETE.md)
-- **Quick Reference**: [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
-- **Integration Guide**: [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
-
----
-
-<div align="center">
-
-**Made with ❤️ by the YourDaddy AI Team**
-
-⭐ Star us on GitHub if you find this helpful!
-
-</div>
+This project is licensed under the MIT License. See `docs/LICENSE.txt`.

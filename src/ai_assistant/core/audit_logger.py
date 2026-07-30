@@ -266,4 +266,493 @@ class AuditLogger:
                 message=message,
                 details=details or {},
                 success=success
-            )\n            \n            # Add to queue for processing\n            if not self.event_queue.full():\n                self.event_queue.put(event)\n            else:\n                logger.warning(\"Audit event queue full, dropping event\")\n            \n            # Add to recent events cache for pattern detection\n            with self.cache_lock:\n                self.recent_events.append(event)\n                # Keep only last 1000 events\n                if len(self.recent_events) > 1000:\n                    self.recent_events = self.recent_events[-1000:]\n            \n            return event_id\n            \n        except Exception as e:\n            logger.error(f\"Failed to log audit event: {e}\")\n            return \"\"\n    \n    def start_processing(self):\n        \"\"\"Start background event processing\"\"\"\n        if self.processing_thread is None or not self.processing_thread.is_alive():\n            self.processing_thread = threading.Thread(target=self._process_events, daemon=True)\n            self.processing_thread.start()\n    \n    def _process_events(self):\n        \"\"\"Background thread for processing audit events\"\"\"\n        while self.running:\n            try:\n                # Get event from queue with timeout\n                event = self.event_queue.get(timeout=1.0)\n                \n                # Store in database\n                self._store_event(event)\n                \n                # Check for security patterns\n                self._check_security_patterns(event)\n                \n                # Write to file log\n                self._write_file_log(event)\n                \n                self.event_queue.task_done()\n                \n            except Empty:\n                continue\n            except Exception as e:\n                logger.error(f\"Error processing audit event: {e}\")\n    \n    def _store_event(self, event: AuditEvent):\n        \"\"\"Store event in database\"\"\"\n        try:\n            with sqlite3.connect(self.db_path) as conn:\n                cursor = conn.cursor()\n                \n                # Prepare event data\n                details_json = json.dumps(event.details)\n                event_data = f\"{event.event_id}{event.timestamp.isoformat()}{event.event_type.value}{event.message}{details_json}\"\n                checksum = self._calculate_checksum(event_data)\n                \n                # Encrypt sensitive details if enabled\n                encrypted = False\n                if self.encrypt_logs and event.severity in [SeverityLevel.CRITICAL, SeverityLevel.HIGH]:\n                    try:\n                        from core.encryption import encrypt_sensitive_data\n                        details_json = encrypt_sensitive_data(details_json, \"audit_log\")\n                        encrypted = True\n                    except Exception as e:\n                        logger.warning(f\"Failed to encrypt audit log: {e}\")\n                \n                cursor.execute(\"\"\"\n                    INSERT INTO audit_events \n                    (event_id, timestamp, event_type, severity, user_id, session_id, \n                     source_ip, user_agent, message, details, success, encrypted, checksum)\n                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                \"\"\", (\n                    event.event_id,\n                    event.timestamp,\n                    event.event_type.value,\n                    event.severity.value,\n                    event.user_id,\n                    event.session_id,\n                    event.source_ip,\n                    event.user_agent,\n                    event.message,\n                    details_json,\n                    event.success,\n                    encrypted,\n                    checksum\n                ))\n                \n                conn.commit()\n                \n        except Exception as e:\n            logger.error(f\"Failed to store audit event: {e}\")\n    \n    def _write_file_log(self, event: AuditEvent):\n        \"\"\"Write event to daily log file\"\"\"\n        try:\n            date_str = event.timestamp.strftime(\"%Y-%m-%d\")\n            log_file = self.log_dir / f\"audit_{date_str}.log\"\n            \n            log_entry = {\n                \"timestamp\": event.timestamp.isoformat(),\n                \"event_id\": event.event_id,\n                \"type\": event.event_type.value,\n                \"severity\": event.severity.value,\n                \"user\": event.user_id,\n                \"session\": event.session_id,\n                \"ip\": event.source_ip,\n                \"message\": event.message,\n                \"success\": event.success\n            }\n            \n            with open(log_file, \"a\", encoding=\"utf-8\") as f:\n                f.write(json.dumps(log_entry) + \"\\n\")\n                \n        except Exception as e:\n            logger.error(f\"Failed to write file log: {e}\")\n    \n    def _check_security_patterns(self, event: AuditEvent):\n        \"\"\"Check for security patterns and generate alerts\"\"\"\n        try:\n            # Count recent events of same type\n            current_time = datetime.datetime.now()\n            recent_window = current_time - datetime.timedelta(minutes=5)\n            \n            with self.cache_lock:\n                recent_count = sum(1 for e in self.recent_events \n                                 if e.event_type == event.event_type and \n                                    e.timestamp >= recent_window)\n            \n            # Check if threshold exceeded\n            threshold = self.alert_thresholds.get(event.event_type)\n            if threshold and recent_count >= threshold:\n                self._generate_security_alert(\n                    event.event_type,\n                    f\"Threshold exceeded: {recent_count} {event.event_type.value} events in 5 minutes\",\n                    SeverityLevel.HIGH,\n                    recent_count\n                )\n                \n        except Exception as e:\n            logger.error(f\"Failed to check security patterns: {e}\")\n    \n    def _generate_security_alert(self, event_type: EventType, message: str, \n                               severity: SeverityLevel, event_count: int):\n        \"\"\"Generate security alert\"\"\"\n        try:\n            alert_id = self._generate_event_id()\n            timestamp = datetime.datetime.now()\n            \n            with sqlite3.connect(self.db_path) as conn:\n                cursor = conn.cursor()\n                cursor.execute(\"\"\"\n                    INSERT INTO security_alerts \n                    (alert_id, timestamp, alert_type, severity, message, event_count)\n                    VALUES (?, ?, ?, ?, ?, ?)\n                \"\"\", (\n                    alert_id,\n                    timestamp,\n                    event_type.value,\n                    severity.value,\n                    message,\n                    event_count\n                ))\n                conn.commit()\n            \n            # Log the alert as an audit event\n            self.log_event(\n                EventType.SECURITY_SUSPICIOUS_ACTIVITY,\n                f\"SECURITY ALERT: {message}\",\n                severity,\n                details={\"alert_id\": alert_id, \"event_count\": event_count}\n            )\n            \n            logger.warning(f\"SECURITY ALERT: {message}\")\n            \n        except Exception as e:\n            logger.error(f\"Failed to generate security alert: {e}\")\n    \n    def query_events(self, \n                    start_time: Optional[datetime.datetime] = None,\n                    end_time: Optional[datetime.datetime] = None,\n                    event_types: Optional[List[EventType]] = None,\n                    user_id: Optional[str] = None,\n                    severity: Optional[SeverityLevel] = None,\n                    limit: int = 1000) -> List[Dict[str, Any]]:\n        \"\"\"Query audit events with filters\"\"\"\n        try:\n            with sqlite3.connect(self.db_path) as conn:\n                conn.row_factory = sqlite3.Row\n                cursor = conn.cursor()\n                \n                # Build query\n                conditions = []\n                params = []\n                \n                if start_time:\n                    conditions.append(\"timestamp >= ?\")\n                    params.append(start_time)\n                \n                if end_time:\n                    conditions.append(\"timestamp <= ?\")\n                    params.append(end_time)\n                \n                if event_types:\n                    type_placeholders = \",\".join([\"?\"] * len(event_types))\n                    conditions.append(f\"event_type IN ({type_placeholders})\")\n                    params.extend([et.value for et in event_types])\n                \n                if user_id:\n                    conditions.append(\"user_id = ?\")\n                    params.append(user_id)\n                \n                if severity:\n                    conditions.append(\"severity = ?\")\n                    params.append(severity.value)\n                \n                where_clause = \" AND \".join(conditions) if conditions else \"1=1\"\n                query = f\"\"\"\n                    SELECT * FROM audit_events \n                    WHERE {where_clause} \n                    ORDER BY timestamp DESC \n                    LIMIT ?\n                \"\"\"\n                params.append(limit)\n                \n                cursor.execute(query, params)\n                rows = cursor.fetchall()\n                \n                # Convert to dictionaries and decrypt if needed\n                events = []\n                for row in rows:\n                    event_dict = dict(row)\n                    \n                    # Decrypt details if encrypted\n                    if event_dict.get('encrypted'):\n                        try:\n                            from core.encryption import decrypt_sensitive_data\n                            event_dict['details'] = decrypt_sensitive_data(\n                                event_dict['details'], \"audit_log\"\n                            )\n                        except Exception as e:\n                            logger.warning(f\"Failed to decrypt audit log: {e}\")\n                    \n                    events.append(event_dict)\n                \n                return events\n                \n        except Exception as e:\n            logger.error(f\"Failed to query audit events: {e}\")\n            return []\n    \n    def get_security_alerts(self, resolved: Optional[bool] = None) -> List[Dict[str, Any]]:\n        \"\"\"Get security alerts\"\"\"\n        try:\n            with sqlite3.connect(self.db_path) as conn:\n                conn.row_factory = sqlite3.Row\n                cursor = conn.cursor()\n                \n                if resolved is not None:\n                    cursor.execute(\"\"\"\n                        SELECT * FROM security_alerts \n                        WHERE resolved = ? \n                        ORDER BY timestamp DESC\n                    \"\"\", (resolved,))\n                else:\n                    cursor.execute(\"\"\"\n                        SELECT * FROM security_alerts \n                        ORDER BY timestamp DESC\n                    \"\"\")\n                \n                return [dict(row) for row in cursor.fetchall()]\n                \n        except Exception as e:\n            logger.error(f\"Failed to get security alerts: {e}\")\n            return []\n    \n    def generate_compliance_report(self, start_date: str, end_date: str) -> Dict[str, Any]:\n        \"\"\"Generate compliance report for given date range\"\"\"\n        try:\n            start_dt = datetime.datetime.fromisoformat(start_date)\n            end_dt = datetime.datetime.fromisoformat(end_date)\n            \n            events = self.query_events(start_time=start_dt, end_time=end_dt, limit=100000)\n            \n            # Analyze events\n            report = {\n                \"period\": {\"start\": start_date, \"end\": end_date},\n                \"total_events\": len(events),\n                \"event_breakdown\": {},\n                \"severity_breakdown\": {},\n                \"auth_events\": 0,\n                \"failed_auth_attempts\": 0,\n                \"system_events\": 0,\n                \"api_events\": 0,\n                \"security_events\": 0,\n                \"unique_users\": set(),\n                \"alerts_generated\": len(self.get_security_alerts())\n            }\n            \n            for event in events:\n                event_type = event['event_type']\n                severity = event['severity']\n                \n                # Count by type\n                report['event_breakdown'][event_type] = report['event_breakdown'].get(event_type, 0) + 1\n                \n                # Count by severity\n                report['severity_breakdown'][severity] = report['severity_breakdown'].get(severity, 0) + 1\n                \n                # Category counts\n                if event_type.startswith('auth.'):\n                    report['auth_events'] += 1\n                    if event_type == 'auth.login.failure':\n                        report['failed_auth_attempts'] += 1\n                elif event_type.startswith('system.'):\n                    report['system_events'] += 1\n                elif event_type.startswith('api.'):\n                    report['api_events'] += 1\n                elif event_type.startswith('security.'):\n                    report['security_events'] += 1\n                \n                # Unique users\n                if event['user_id']:\n                    report['unique_users'].add(event['user_id'])\n            \n            report['unique_users'] = len(report['unique_users'])\n            \n            return report\n            \n        except Exception as e:\n            logger.error(f\"Failed to generate compliance report: {e}\")\n            return {}\n    \n    def cleanup_old_logs(self, days_to_keep: int = 90):\n        \"\"\"Clean up old audit logs\"\"\"\n        try:\n            cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_to_keep)\n            \n            with sqlite3.connect(self.db_path) as conn:\n                cursor = conn.cursor()\n                \n                # Archive old events to file before deletion\n                cursor.execute(\n                    \"SELECT * FROM audit_events WHERE timestamp < ?\", \n                    (cutoff_date,)\n                )\n                \n                old_events = cursor.fetchall()\n                if old_events:\n                    archive_file = self.log_dir / f\"archived_events_{cutoff_date.strftime('%Y%m%d')}.json\"\n                    with open(archive_file, 'w') as f:\n                        json.dump([dict(zip([col[0] for col in cursor.description], row)) \n                                  for row in old_events], f, default=str)\n                \n                # Delete old events\n                cursor.execute(\"DELETE FROM audit_events WHERE timestamp < ?\", (cutoff_date,))\n                \n                # Delete old alerts\n                cursor.execute(\n                    \"DELETE FROM security_alerts WHERE timestamp < ? AND resolved = ?\", \n                    (cutoff_date, True)\n                )\n                \n                conn.commit()\n                \n                logger.info(f\"Cleaned up {len(old_events)} old audit events\")\n                \n        except Exception as e:\n            logger.error(f\"Failed to cleanup old logs: {e}\")\n    \n    def stop(self):\n        \"\"\"Stop audit logging\"\"\"\n        self.running = False\n        if self.processing_thread:\n            self.processing_thread.join(timeout=5.0)\n\n\n# Global audit logger instance\n_audit_logger = None\n\ndef get_audit_logger() -> AuditLogger:\n    \"\"\"Get global audit logger instance\"\"\"\n    global _audit_logger\n    if _audit_logger is None:\n        _audit_logger = AuditLogger()\n    return _audit_logger\n\n\n# Convenience functions for common audit events\ndef audit_auth_success(user_id: str, session_id: str, source_ip: str = None):\n    \"\"\"Log successful authentication\"\"\"\n    get_audit_logger().log_event(\n        EventType.AUTH_LOGIN_SUCCESS,\n        f\"User {user_id} authenticated successfully\",\n        SeverityLevel.INFO,\n        user_id=user_id,\n        session_id=session_id,\n        source_ip=source_ip\n    )\n\ndef audit_auth_failure(user_id: str, reason: str, source_ip: str = None):\n    \"\"\"Log failed authentication\"\"\"\n    get_audit_logger().log_event(\n        EventType.AUTH_LOGIN_FAILURE,\n        f\"Authentication failed for {user_id}: {reason}\",\n        SeverityLevel.MEDIUM,\n        user_id=user_id,\n        source_ip=source_ip,\n        success=False\n    )\n\ndef audit_system_command(command: str, user_id: str, success: bool = True):\n    \"\"\"Log system command execution\"\"\"\n    get_audit_logger().log_event(\n        EventType.SYSTEM_COMMAND_EXEC,\n        f\"System command executed: {command}\",\n        SeverityLevel.MEDIUM,\n        user_id=user_id,\n        success=success,\n        details={\"command\": command}\n    )\n\ndef audit_api_request(endpoint: str, user_id: str, source_ip: str = None, success: bool = True):\n    \"\"\"Log API request\"\"\"\n    get_audit_logger().log_event(\n        EventType.API_REQUEST,\n        f\"API request to {endpoint}\",\n        SeverityLevel.LOW,\n        user_id=user_id,\n        source_ip=source_ip,\n        success=success,\n        details={\"endpoint\": endpoint}\n    )\n\ndef audit_data_access(data_type: str, user_id: str, operation: str = \"read\"):\n    \"\"\"Log data access\"\"\"\n    get_audit_logger().log_event(\n        EventType.DATA_ACCESS,\n        f\"Data access: {operation} {data_type}\",\n        SeverityLevel.LOW,\n        user_id=user_id,\n        details={\"data_type\": data_type, \"operation\": operation}\n    )\n\ndef audit_security_event(message: str, severity: SeverityLevel = SeverityLevel.HIGH, \n                        user_id: str = \"system\", details: Dict[str, Any] = None):\n    \"\"\"Log security event\"\"\"\n    get_audit_logger().log_event(\n        EventType.SECURITY_SUSPICIOUS_ACTIVITY,\n        message,\n        severity,\n        user_id=user_id,\n        details=details or {}\n    )\n\n\nif __name__ == \"__main__\":\n    # Test audit logging\n    print(\"Testing audit logging system...\")\n    \n    audit_logger = AuditLogger()\n    \n    # Test various events\n    audit_auth_success(\"test_user\", \"session_123\", \"127.0.0.1\")\n    audit_auth_failure(\"test_user\", \"Invalid PIN\", \"127.0.0.1\")\n    audit_system_command(\"ls -la\", \"test_user\")\n    audit_api_request(\"/api/chat\", \"test_user\", \"127.0.0.1\")\n    \n    # Wait for processing\n    import time\n    time.sleep(2)\n    \n    # Query events\n    events = audit_logger.query_events(limit=10)\n    print(f\"Found {len(events)} events\")\n    \n    # Generate report\n    report = audit_logger.generate_compliance_report(\n        (datetime.datetime.now() - datetime.timedelta(days=1)).isoformat(),\n        datetime.datetime.now().isoformat()\n    )\n    print(f\"Compliance report: {report}\")\n    \n    audit_logger.stop()\n    print(\"✅ Audit logging test completed!\")
+            )
+            
+            # Add to queue for processing
+            if not self.event_queue.full():
+                self.event_queue.put(event)
+            else:
+                logger.warning("Audit event queue full, dropping event")
+            
+            # Add to recent events cache for pattern detection
+            with self.cache_lock:
+                self.recent_events.append(event)
+                # Keep only last 1000 events
+                if len(self.recent_events) > 1000:
+                    self.recent_events = self.recent_events[-1000:]
+            
+            return event_id
+            
+        except Exception as e:
+            logger.error(f"Failed to log audit event: {e}")
+            return ""
+    
+    def start_processing(self):
+        """Start background event processing"""
+        if self.processing_thread is None or not self.processing_thread.is_alive():
+            self.processing_thread = threading.Thread(target=self._process_events, daemon=True)
+            self.processing_thread.start()
+    
+    def _process_events(self):
+        """Background thread for processing audit events"""
+        while self.running:
+            try:
+                # Get event from queue with timeout
+                event = self.event_queue.get(timeout=1.0)
+                
+                # Store in database
+                self._store_event(event)
+                
+                # Check for security patterns
+                self._check_security_patterns(event)
+                
+                # Write to file log
+                self._write_file_log(event)
+                
+                self.event_queue.task_done()
+                
+            except Empty:
+                continue
+            except Exception as e:
+                logger.error(f"Error processing audit event: {e}")
+    
+    def _store_event(self, event: AuditEvent):
+        """Store event in database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Prepare event data
+                details_json = json.dumps(event.details)
+                event_data = f"{event.event_id}{event.timestamp.isoformat()}{event.event_type.value}{event.message}{details_json}"
+                checksum = self._calculate_checksum(event_data)
+                
+                # Encrypt sensitive details if enabled
+                encrypted = False
+                if self.encrypt_logs and event.severity in [SeverityLevel.CRITICAL, SeverityLevel.HIGH]:
+                    try:
+                        from core.encryption import encrypt_sensitive_data
+                        details_json = encrypt_sensitive_data(details_json, "audit_log")
+                        encrypted = True
+                    except Exception as e:
+                        logger.warning(f"Failed to encrypt audit log: {e}")
+                
+                cursor.execute("""
+                    INSERT INTO audit_events 
+                    (event_id, timestamp, event_type, severity, user_id, session_id, 
+                     source_ip, user_agent, message, details, success, encrypted, checksum)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    event.event_id,
+                    event.timestamp,
+                    event.event_type.value,
+                    event.severity.value,
+                    event.user_id,
+                    event.session_id,
+                    event.source_ip,
+                    event.user_agent,
+                    event.message,
+                    details_json,
+                    event.success,
+                    encrypted,
+                    checksum
+                ))
+                
+                conn.commit()
+                
+        except Exception as e:
+            logger.error(f"Failed to store audit event: {e}")
+    
+    def _write_file_log(self, event: AuditEvent):
+        """Write event to daily log file"""
+        try:
+            date_str = event.timestamp.strftime("%Y-%m-%d")
+            log_file = self.log_dir / f"audit_{date_str}.log"
+            
+            log_entry = {
+                "timestamp": event.timestamp.isoformat(),
+                "event_id": event.event_id,
+                "type": event.event_type.value,
+                "severity": event.severity.value,
+                "user": event.user_id,
+                "session": event.session_id,
+                "ip": event.source_ip,
+                "message": event.message,
+                "success": event.success
+            }
+            
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry) + "\
+")
+                
+        except Exception as e:
+            logger.error(f"Failed to write file log: {e}")
+    
+    def _check_security_patterns(self, event: AuditEvent):
+        """Check for security patterns and generate alerts"""
+        try:
+            # Count recent events of same type
+            current_time = datetime.datetime.now()
+            recent_window = current_time - datetime.timedelta(minutes=5)
+            
+            with self.cache_lock:
+                recent_count = sum(1 for e in self.recent_events 
+                                 if e.event_type == event.event_type and 
+                                    e.timestamp >= recent_window)
+            
+            # Check if threshold exceeded
+            threshold = self.alert_thresholds.get(event.event_type)
+            if threshold and recent_count >= threshold:
+                self._generate_security_alert(
+                    event.event_type,
+                    f"Threshold exceeded: {recent_count} {event.event_type.value} events in 5 minutes",
+                    SeverityLevel.HIGH,
+                    recent_count
+                )
+                
+        except Exception as e:
+            logger.error(f"Failed to check security patterns: {e}")
+    
+    def _generate_security_alert(self, event_type: EventType, message: str, 
+                               severity: SeverityLevel, event_count: int):
+        """Generate security alert"""
+        try:
+            alert_id = self._generate_event_id()
+            timestamp = datetime.datetime.now()
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO security_alerts 
+                    (alert_id, timestamp, alert_type, severity, message, event_count)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    alert_id,
+                    timestamp,
+                    event_type.value,
+                    severity.value,
+                    message,
+                    event_count
+                ))
+                conn.commit()
+            
+            # Log the alert as an audit event
+            self.log_event(
+                EventType.SECURITY_SUSPICIOUS_ACTIVITY,
+                f"SECURITY ALERT: {message}",
+                severity,
+                details={"alert_id": alert_id, "event_count": event_count}
+            )
+            
+            logger.warning(f"SECURITY ALERT: {message}")
+            
+        except Exception as e:
+            logger.error(f"Failed to generate security alert: {e}")
+    
+    def query_events(self, 
+                    start_time: Optional[datetime.datetime] = None,
+                    end_time: Optional[datetime.datetime] = None,
+                    event_types: Optional[List[EventType]] = None,
+                    user_id: Optional[str] = None,
+                    severity: Optional[SeverityLevel] = None,
+                    limit: int = 1000) -> List[Dict[str, Any]]:
+        """Query audit events with filters"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                # Build query
+                conditions = []
+                params = []
+                
+                if start_time:
+                    conditions.append("timestamp >= ?")
+                    params.append(start_time)
+                
+                if end_time:
+                    conditions.append("timestamp <= ?")
+                    params.append(end_time)
+                
+                if event_types:
+                    type_placeholders = ",".join(["?"] * len(event_types))
+                    conditions.append(f"event_type IN ({type_placeholders})")
+                    params.extend([et.value for et in event_types])
+                
+                if user_id:
+                    conditions.append("user_id = ?")
+                    params.append(user_id)
+                
+                if severity:
+                    conditions.append("severity = ?")
+                    params.append(severity.value)
+                
+                where_clause = " AND ".join(conditions) if conditions else "1=1"
+                query = f"""
+                    SELECT * FROM audit_events 
+                    WHERE {where_clause} 
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                """
+                params.append(limit)
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Convert to dictionaries and decrypt if needed
+                events = []
+                for row in rows:
+                    event_dict = dict(row)
+                    
+                    # Decrypt details if encrypted
+                    if event_dict.get('encrypted'):
+                        try:
+                            from core.encryption import decrypt_sensitive_data
+                            event_dict['details'] = decrypt_sensitive_data(
+                                event_dict['details'], "audit_log"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to decrypt audit log: {e}")
+                    
+                    events.append(event_dict)
+                
+                return events
+                
+        except Exception as e:
+            logger.error(f"Failed to query audit events: {e}")
+            return []
+    
+    def get_security_alerts(self, resolved: Optional[bool] = None) -> List[Dict[str, Any]]:
+        """Get security alerts"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                if resolved is not None:
+                    cursor.execute("""
+                        SELECT * FROM security_alerts 
+                        WHERE resolved = ? 
+                        ORDER BY timestamp DESC
+                    """, (resolved,))
+                else:
+                    cursor.execute("""
+                        SELECT * FROM security_alerts 
+                        ORDER BY timestamp DESC
+                    """)
+                
+                return [dict(row) for row in cursor.fetchall()]
+                
+        except Exception as e:
+            logger.error(f"Failed to get security alerts: {e}")
+            return []
+    
+    def generate_compliance_report(self, start_date: str, end_date: str) -> Dict[str, Any]:
+        """Generate compliance report for given date range"""
+        try:
+            start_dt = datetime.datetime.fromisoformat(start_date)
+            end_dt = datetime.datetime.fromisoformat(end_date)
+            
+            events = self.query_events(start_time=start_dt, end_time=end_dt, limit=100000)
+            
+            # Analyze events
+            report = {
+                "period": {"start": start_date, "end": end_date},
+                "total_events": len(events),
+                "event_breakdown": {},
+                "severity_breakdown": {},
+                "auth_events": 0,
+                "failed_auth_attempts": 0,
+                "system_events": 0,
+                "api_events": 0,
+                "security_events": 0,
+                "unique_users": set(),
+                "alerts_generated": len(self.get_security_alerts())
+            }
+            
+            for event in events:
+                event_type = event['event_type']
+                severity = event['severity']
+                
+                # Count by type
+                report['event_breakdown'][event_type] = report['event_breakdown'].get(event_type, 0) + 1
+                
+                # Count by severity
+                report['severity_breakdown'][severity] = report['severity_breakdown'].get(severity, 0) + 1
+                
+                # Category counts
+                if event_type.startswith('auth.'):
+                    report['auth_events'] += 1
+                    if event_type == 'auth.login.failure':
+                        report['failed_auth_attempts'] += 1
+                elif event_type.startswith('system.'):
+                    report['system_events'] += 1
+                elif event_type.startswith('api.'):
+                    report['api_events'] += 1
+                elif event_type.startswith('security.'):
+                    report['security_events'] += 1
+                
+                # Unique users
+                if event['user_id']:
+                    report['unique_users'].add(event['user_id'])
+            
+            report['unique_users'] = len(report['unique_users'])
+            
+            return report
+            
+        except Exception as e:
+            logger.error(f"Failed to generate compliance report: {e}")
+            return {}
+    
+    def cleanup_old_logs(self, days_to_keep: int = 90):
+        """Clean up old audit logs"""
+        try:
+            cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_to_keep)
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Archive old events to file before deletion
+                cursor.execute(
+                    "SELECT * FROM audit_events WHERE timestamp < ?", 
+                    (cutoff_date,)
+                )
+                
+                old_events = cursor.fetchall()
+                if old_events:
+                    archive_file = self.log_dir / f"archived_events_{cutoff_date.strftime('%Y%m%d')}.json"
+                    with open(archive_file, 'w') as f:
+                        json.dump([dict(zip([col[0] for col in cursor.description], row)) 
+                                  for row in old_events], f, default=str)
+                
+                # Delete old events
+                cursor.execute("DELETE FROM audit_events WHERE timestamp < ?", (cutoff_date,))
+                
+                # Delete old alerts
+                cursor.execute(
+                    "DELETE FROM security_alerts WHERE timestamp < ? AND resolved = ?", 
+                    (cutoff_date, True)
+                )
+                
+                conn.commit()
+                
+                logger.info(f"Cleaned up {len(old_events)} old audit events")
+                
+        except Exception as e:
+            logger.error(f"Failed to cleanup old logs: {e}")
+    
+    def stop(self):
+        """Stop audit logging"""
+        self.running = False
+        if self.processing_thread:
+            self.processing_thread.join(timeout=5.0)
+
+
+# Global audit logger instance
+_audit_logger = None
+
+def get_audit_logger() -> AuditLogger:
+    """Get global audit logger instance"""
+    global _audit_logger
+    if _audit_logger is None:
+        _audit_logger = AuditLogger()
+    return _audit_logger
+
+
+# Convenience functions for common audit events
+def audit_auth_success(user_id: str, session_id: str, source_ip: str = None):
+    """Log successful authentication"""
+    get_audit_logger().log_event(
+        EventType.AUTH_LOGIN_SUCCESS,
+        f"User {user_id} authenticated successfully",
+        SeverityLevel.INFO,
+        user_id=user_id,
+        session_id=session_id,
+        source_ip=source_ip
+    )
+
+def audit_auth_failure(user_id: str, reason: str, source_ip: str = None):
+    """Log failed authentication"""
+    get_audit_logger().log_event(
+        EventType.AUTH_LOGIN_FAILURE,
+        f"Authentication failed for {user_id}: {reason}",
+        SeverityLevel.MEDIUM,
+        user_id=user_id,
+        source_ip=source_ip,
+        success=False
+    )
+
+def audit_system_command(command: str, user_id: str, success: bool = True):
+    """Log system command execution"""
+    get_audit_logger().log_event(
+        EventType.SYSTEM_COMMAND_EXEC,
+        f"System command executed: {command}",
+        SeverityLevel.MEDIUM,
+        user_id=user_id,
+        success=success,
+        details={"command": command}
+    )
+
+def audit_api_request(endpoint: str, user_id: str, source_ip: str = None, success: bool = True):
+    """Log API request"""
+    get_audit_logger().log_event(
+        EventType.API_REQUEST,
+        f"API request to {endpoint}",
+        SeverityLevel.LOW,
+        user_id=user_id,
+        source_ip=source_ip,
+        success=success,
+        details={"endpoint": endpoint}
+    )
+
+def audit_data_access(data_type: str, user_id: str, operation: str = "read"):
+    """Log data access"""
+    get_audit_logger().log_event(
+        EventType.DATA_ACCESS,
+        f"Data access: {operation} {data_type}",
+        SeverityLevel.LOW,
+        user_id=user_id,
+        details={"data_type": data_type, "operation": operation}
+    )
+
+def audit_security_event(message: str, severity: SeverityLevel = SeverityLevel.HIGH, 
+                        user_id: str = "system", details: Dict[str, Any] = None):
+    """Log security event"""
+    get_audit_logger().log_event(
+        EventType.SECURITY_SUSPICIOUS_ACTIVITY,
+        message,
+        severity,
+        user_id=user_id,
+        details=details or {}
+    )
+
+
+if __name__ == "__main__":
+    # Test audit logging
+    print("Testing audit logging system...")
+    
+    audit_logger = AuditLogger()
+    
+    # Test various events
+    audit_auth_success("test_user", "session_123", "127.0.0.1")
+    audit_auth_failure("test_user", "Invalid PIN", "127.0.0.1")
+    audit_system_command("ls -la", "test_user")
+    audit_api_request("/api/chat", "test_user", "127.0.0.1")
+    
+    # Wait for processing
+    import time
+    time.sleep(2)
+    
+    # Query events
+    events = audit_logger.query_events(limit=10)
+    print(f"Found {len(events)} events")
+    
+    # Generate report
+    report = audit_logger.generate_compliance_report(
+        (datetime.datetime.now() - datetime.timedelta(days=1)).isoformat(),
+        datetime.datetime.now().isoformat()
+    )
+    print(f"Compliance report: {report}")
+    
+    audit_logger.stop()
+    print("✅ Audit logging test completed!")
