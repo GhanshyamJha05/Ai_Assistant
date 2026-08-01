@@ -57,8 +57,9 @@ def create_blueprint(assistant):
             return jsonify({"error": "Chat failed"}), 500
     
     @bp.route('/command', methods=['POST'])
+    @jwt_required()
     def command():
-        """Process text command - NO AUTH REQUIRED"""
+        """Process text command"""
         try:
             data = request.get_json()
             is_valid, error = validate_input(data, 'command', 'command')
