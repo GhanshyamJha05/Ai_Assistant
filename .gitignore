@@ -205,3 +205,6 @@ SECURITY_AUDIT_REPORT.md
 
 ROOM_FOR_IMPROVEMENTS_AND_FUTURE_SCOPES.md
 
+dist_package/
+desktop/build/
+desktop/dist/

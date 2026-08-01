@@ -1,4 +1,4 @@
-﻿# YourDaddy Assistant - Modern Web Backend
+# YourDaddy Assistant - Modern Web Backend
 """
 Modern Flask backend to serve the React frontend and provide real-time APIs
 for YourDaddy Assistant's features.
@@ -100,7 +100,7 @@ except ImportError as e:
 # Import automation tools
 try:
     # Try importing from ai_assistant package first
-    import ai_assistant.automation_tools_new as automation_tools
+    from ai_assistant.automation import automation_tools_new as automation_tools
     # Import app discovery scheduler functions
     from ai_assistant.automation.app_discovery import (
         start_auto_refresh_after_startup, start_periodic_refresh
