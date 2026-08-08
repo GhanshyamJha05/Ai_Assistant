@@ -1,4 +1,4 @@
-﻿# Dynamic Application Discovery Module
+# Dynamic Application Discovery Module
 """
 This module scans the system to discover all installed applications
 and provides intelligent app launching based on voice commands.
@@ -80,56 +80,11 @@ class AppDiscovery:
         self.apps_database = apps
         self.save_cache()
         
-        print(f"âœ… Discovery complete! Found {len(apps)} apps (same as Settings).")
+        print(f"✅ Discovery complete! Found {len(apps)} apps (same as Settings).")
         return apps
     
     # REMOVED: PowerShell Get-StartApps - not needed, using Windows Settings > Apps & Features sources
     
-    def _open_via_windows_search(self, app_name: str) -> bool:
-        """
-        UNIVERSAL APP LAUNCHER: Open any app via Windows Search.
-        This mimics natural user behavior: Win Key -> Type Name -> Enter
-        
-        Works for ALL app types:
-        - Desktop apps (.exe)
-        - Windows Store/UWP apps
-        - PWAs (Progressive Web Apps)
-        - System utilities
-        - Anything visible in Start Menu
-        
-        This is the ONLY launch method we use - simple, reliable, universal.
-        """
-        if not PYAUTOGUI_AVAILABLE:
-            print("  âš ï¸ pyautogui not installed. Install it: pip install pyautogui")
-            return False
-            
-        print(f"  ðŸ” Windows Search: '{app_name}'")
-        try:
-            # Close any existing Start Menu first
-            pyautogui.press('esc')
-            time.sleep(0.2)
-            
-            # Open Start Menu
-            pyautogui.press('win')
-            time.sleep(0.6)  # Wait for Start Menu animation
-            
-            # Type app name
-            pyautogui.write(app_name, interval=0.05)
-            time.sleep(1.2)  # Wait for search indexing
-            
-            # Launch top result
-            pyautogui.press('enter')
-            time.sleep(0.3)
-            
-            # Close Start Menu if still open
-            pyautogui.press('esc')
-            
-            print(f"  âœ… Launched '{app_name}' via Windows Search")
-            return True
-        except Exception as e:
-            print(f"  âŒ Windows Search failed: {e}")
-            return False
-
     def _scan_apps_and_features_registry(self) -> Dict[str, str]:
         r"""
         Scan Registry Uninstall keys - EXACT same source as Settings > Apps & Features.
@@ -742,8 +697,10 @@ def discover_applications() -> str:
         return f"Error during application discovery: {e}"
 
 def smart_open_application(app_name: str) -> str:
-    """Intelligently open any application by name with usage tracking."""
-    print(f"ðŸš€ Smart app launcher: Looking for '{app_name}'...")
+    """Intelligently open any application by name with usage tracking.
+    Supports TWO precise methods: Web Apps and Native Windows Apps.
+    """
+    print(f"🚀 Smart app launcher: Looking for '{app_name}'...")
     
     # Trigger background refresh on first app access (lazy load)
     if not app_discovery._is_refreshing and app_discovery._last_refresh_time is None:
@@ -751,10 +708,9 @@ def smart_open_application(app_name: str) -> str:
     
     # Validate app_name to prevent injection
     if len(app_name) > 200:
-        return "âŒ Application name is too long"
+        return "❌ Application name is too long"
     
-    # ðŸ”¥ðŸ”¥ðŸ”¥ CRITICAL FIX: Normalize app name using Intent Recognizer
-    # This is THE REAL fix - normalize BEFORE searching in the database
+    # Normalize app name using Intent Recognizer
     original_app_name = app_name
     try:
         from ai_assistant.ai.intent_recognizer import IntentRecognizer
@@ -778,73 +734,71 @@ def smart_open_application(app_name: str) -> str:
                 import webbrowser
                 webbrowser.open('https://open.spotify.com')
                 app_discovery.track_app_launch(app_name, 'https://open.spotify.com', success=True)
-                return f"âœ… Opened {app_name} in web browser (native app not installed)"
+                return f"✅ Opened {app_name} in web browser (native app not installed)"
             except Exception as e:
                 app_discovery.track_app_launch(app_name, "", success=False)
-                return f"âŒ Failed to open {app_name}: {e}"
+                return f"❌ Failed to open {app_name}: {e}"
         
         try:
-            # DIRECT LAUNCH (Preferred): If we have a valid path, launch it directly!
-            # This is 100% reliable for .lnk and .exe files found in Start Menu
-            if os.path.exists(app_path) and (app_path.endswith('.lnk') or app_path.endswith('.exe')):
-                print(f"  ðŸš€ Launching directly: {app_path}")
+            # METHOD 2: NATIVE WINDOWS APP OR SHORTCUT (.exe / .lnk)
+            # This is reliable for Desktop apps found in Start Menu
+            if os.path.exists(app_path):
+                print(f"  🚀 Launching Native Windows App directly: {app_path}")
                 os.startfile(app_path)
                 app_discovery.track_app_launch(app_name, app_path, success=True)
-                return f"âœ… Opened {app_name}"
-            
-            # UNIVERSAL METHOD: Windows Search (Win+Type+Enter)
-            # Fallback for AppX apps or if direct launch fails
-            print(f"  ðŸ” Launching '{app_name}' via Windows Search (Universal Method)...")
-            if app_discovery._open_via_windows_search(app_name):
-                app_discovery.track_app_launch(app_name, app_path, success=True)
-                return f"âœ… Launching {app_name} via Windows Search"
+                return f"✅ Opened Native App: {app_name}"
+            # Fallback for Windows App protocols/commands
             else:
-                # If Windows Search failed (pyautogui not available), return error
-                app_discovery.track_app_launch(app_name, app_path, success=False)
-                return f"âŒ Windows Search unavailable - install pyautogui: pip install pyautogui"
+                import subprocess
+                subprocess.Popen(app_path, shell=True)
+                app_discovery.track_app_launch(app_name, app_path, success=True)
+                return f"✅ Opened Web/Windows App using Shell: {app_name}"
         except Exception as e:
-            print(f"  âŒ Launch failed: {e}")
-            # Try to launch directly if Windows search logic failed but we have a path
-            if os.path.exists(app_path):
-                 try:
-                     os.startfile(app_path)
-                     app_discovery.track_app_launch(app_name, app_path, success=True)
-                     return f"âœ… Opened {app_name}"
-                 except:
-                     pass
-            
+            print(f"  ❌ Launch failed: {e}")
             app_discovery.track_app_launch(app_name, app_path, success=False)
-            return f"âŒ Failed to launch {app_name}: {e}"
+            return f"❌ Failed to launch {app_name}: {e}"
     else:
-        # If not found, try Windows Search first (User Requested Fallback)
-        if app_discovery._open_via_windows_search(app_name):
-            return f"I couldn't find {app_name} in my list, but I'm opening it via Windows Search."
-
-        # If not found, try web fallbacks
+        # If not found natively, try web fallbacks
         web_fallbacks = {
+            'youtube': 'https://www.youtube.com',
             'youtube music': 'https://music.youtube.com',
             'spotify': 'https://open.spotify.com',
-            # 'whatsapp': 'https://web.whatsapp.com', # REMOVED: User prefers system launch failure over web fallback
             'discord': 'https://discord.com/app',
             'slack': 'https://app.slack.com',
             'zoom': 'https://zoom.us/join',
-            'teams': 'https://teams.microsoft.com'
+            'teams': 'https://teams.microsoft.com',
+            'netflix': 'https://www.netflix.com',
+            'prime video': 'https://www.primevideo.com',
+            'facebook': 'https://www.facebook.com',
+            'instagram': 'https://www.instagram.com',
+            'twitter': 'https://twitter.com',
+            'x': 'https://twitter.com',
+            'whatsapp': 'https://web.whatsapp.com',
+            'telegram': 'https://web.telegram.org',
+            'github': 'https://github.com',
+            'chatgpt': 'https://chat.openai.com',
+            'claude': 'https://claude.ai',
+            'bard': 'https://bard.google.com',
+            'gemini': 'https://gemini.google.com'
         }
         
-        app_lower = app_name.lower()
-        if app_lower in web_fallbacks:
-            try:
-                # Use webbrowser module for security
-                import webbrowser
-                webbrowser.open(web_fallbacks[app_lower])
-                app_discovery.track_app_launch(app_name, web_fallbacks[app_lower], success=True)
-                return f"âœ… Opened {app_name} web version (desktop app not found)"
-            except Exception as e:
-                app_discovery.track_app_launch(app_name, "", success=False)
-                return f"âŒ Failed to open {app_name}: {e}"
+        app_lower = app_name.lower().strip()
+        
+        # METHOD 1: WEB APP (Fallback)
+        for key, url in web_fallbacks.items():
+            if key in app_lower:
+                try:
+                    import webbrowser
+                    print(f"  🌐 Launching Web App fallback: {url}")
+                    webbrowser.open(url)
+                    app_discovery.track_app_launch(app_name, url, success=True)
+                    return f"✅ Opened Web App: {app_name}"
+                except Exception as e:
+                    app_discovery.track_app_launch(app_name, url, success=False)
+                    return f"❌ Failed to open Web App {app_name}: {e}"
         
         app_discovery.track_app_launch(app_name, "", success=False)
-        return f"âŒ Could not find '{app_name}' on your system. Try saying the full application name or check if it's installed."
+        return f"❌ App '{app_name}' not found locally and no Web App equivalent exists."
 
 def refresh_app_database() -> str:
     """Refresh the application database"""

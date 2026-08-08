@@ -1,12 +1,13 @@
 <div align="center">
-  <h1>🤖 YourDaddy AI Assistant</h1>
-  <p><strong>The Ultimate Open-Source Desktop & Web Monorepo Ecosystem</strong></p>
+  <h1>🌌 PULSAR</h1>
+  <p><strong>Native OS Automation via Agentic LLM</strong></p>
+  <p><em>An Offline Multi-Modal LLM Assistant for Windows</em></p>
 </div>
 
 ---
 
 ## 📖 Table of Contents
-1. [Project Vision & Overview](#1-project-vision--overview)
+1. [Project Vision & Key Features](#1-project-vision--key-features)
 2. [Monorepo Architecture Deep Dive](#2-monorepo-architecture-deep-dive)
 3. [The 27 Advanced Learning Systems](#3-the-27-advanced-learning-systems)
 4. [Complete API Reference Guide](#4-complete-api-reference-guide)
@@ -18,8 +19,18 @@
 
 ---
 
-## 🚀 1. Project Vision & Overview
-YourDaddy AI Assistant is an advanced Operating System Automation Suite featuring over 700 specialized Python modules, 27 distinct machine learning paradigms, and a beautiful React frontend.
+## 🚀 1. Project Vision & Key Features
+
+PULSAR is not just another chatbot. It is a **native Operating System Automation Suite** designed to act as your personal AI desktop agent. Unlike traditional web-based LLMs that are sandboxed in a browser, PULSAR connects directly to your Windows OS to observe, learn, and execute complex workflows on your behalf.
+
+### 🎯 Key Capabilities (Why PULSAR?)
+- **Native Windows Automation:** PULSAR can open apps, click buttons, type text, and manage your files directly.
+- **100% Offline & Private:** Powered by a massive 2.5 million line custom fine-tuning dataset, it runs entirely on local models (like Llama-3 via Ollama/Unsloth) ensuring zero data leakage.
+- **Multi-Modal Intelligence:** Features advanced computer vision (to read your screen) and voice integration (Whisper/TTS) so you can speak to it naturally.
+- **Continuous Learning:** Built with 27 distinct machine learning paradigms (including Active Learning and Meta Learning) that adapt to your personal habits and slang (like Hinglish) over time.
+- **Agentic Execution:** It breaks down complex goals into sub-tasks and uses multi-agent negotiation to find the best way to execute them.
+
+PULSAR features over 700 specialized Python modules, 27 distinct machine learning paradigms, and a beautiful React frontend.
 
 ---
 

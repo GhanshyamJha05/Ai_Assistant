@@ -1,4 +1,4 @@
-﻿"""
+"""
 Application Automation Module
 
 Handles automation of Windows applications including:
@@ -107,52 +107,29 @@ class AppAutomation:
     def __init__(self):
         """Initialize app automation"""
         self.active_windows = {}
-        logger.info("âœ… AppAutomation initialized")
+        logger.info("✅ AppAutomation initialized")
     
     def open_app(self, app_name: str) -> bool:
         """
-        Open an application
-        
-        Args:
-            app_name: Name of app to open
-        
-        Returns:
-            Success status
+        Open an application natively (Windows or Web).
         """
-        logger.info(f"ðŸ“± Opening app: {app_name}")
+        logger.info(f"📱 Opening app: {app_name}")
         
-        # Use existing app discovery if available
         try:
-            from ai_assistant.automation.app_discovery import find_application, launch_application
+            from ai_assistant.automation.app_discovery import smart_open_application
             
-            app_info = find_application(app_name)
-            if app_info:
-                return launch_application(app_info['name'])
-        except ImportError:
-            pass
-        
-        # Fallback: use subprocess
-        try:
-            # Handle common app names - avoid shell=True!
-            if 'notepad' in app_name.lower():
-                subprocess.Popen(["notepad.exe"])
-            elif 'calc' in app_name.lower():
-                subprocess.Popen(["calc.exe"])
-            elif 'cmd' in app_name.lower():
-                subprocess.Popen(["cmd.exe"])
+            # Execute the smart launcher which handles both Web Apps and Native Windows Apps
+            result_msg = smart_open_application(app_name)
+            
+            if "✅" in result_msg:
+                logger.info(result_msg)
+                return True
             else:
-                # For other apps, use os.startfile on Windows or subprocess with shell=False if possible
-                import os
-                if os.name == 'nt':
-                    os.startfile(app_name)
-                else:
-                    subprocess.Popen([app_name])
+                logger.error(result_msg)
+                return False
                 
-            time.sleep(2)  # Give app time to open
-            logger.info(f"âœ… Opened: {app_name}")
-            return True
         except Exception as e:
-            logger.error(f"âŒ Failed to open app: {e}")
+            logger.error(f"❌ Failed to execute open_app: {e}")
             return False
             
     def type_text(self, text: str, interval: float = 0.05) -> bool:
