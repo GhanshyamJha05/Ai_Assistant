@@ -9,6 +9,8 @@ from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "core_ai" / "src"))
+sys.path.insert(0, str(project_root / "backend"))
 
 @pytest.fixture
 def assistant():
@@ -21,9 +23,11 @@ def app_client():
     """Create Flask test client"""
     import os
     os.environ['TESTING'] = 'true'
+    os.environ['ADMIN_PASSWORD'] = 'changeme123'
+    os.environ['ADMIN_PIN'] = '1234'
     
     # Import after setting env var
-    from ai_assistant.services.modern_web_backend import app
+    from modern_web_backend import app
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client

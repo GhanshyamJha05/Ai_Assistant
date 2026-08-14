@@ -78,7 +78,13 @@ class SessionManager:
         return cls._session_start_time
 
 
-class LoggingConfig:
+class LoggingConfigMeta(type):
+    @property
+    def LOG_DIRS(cls):
+        return cls.get_dated_log_dirs()
+
+
+class LoggingConfig(metaclass=LoggingConfigMeta):
     """Centralized logging configuration manager"""
     
     # Base log directory structure
@@ -105,12 +111,6 @@ class LoggingConfig:
             'sessions': date_base / 'sessions',    # Session information
             'activities': date_base / 'activities', # User activities per session
         }
-    
-    # Keep LOG_DIRS as property for backward compatibility
-    @classmethod
-    @property
-    def LOG_DIRS(cls):
-        return cls.get_dated_log_dirs()
     
     # Log format templates
     DETAILED_FORMAT = '%(asctime)s | %(name)s | %(levelname)-8s | [%(filename)s:%(lineno)d] | %(funcName)s | %(message)s'

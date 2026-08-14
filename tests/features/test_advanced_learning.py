@@ -79,9 +79,10 @@ def test_intent_classification():
     
     # Test learning from correction
     classifier.correct_intent(
-        text="Open Chrome",
+        user_input="Open Chrome",
+        predicted_intent="open_application",
         correct_intent="automation",
-        context={}
+        confidence=0.5
     )
     print(f"\n✅ Learned from user correction")
     

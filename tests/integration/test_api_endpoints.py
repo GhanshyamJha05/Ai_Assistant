@@ -55,11 +55,12 @@ def test_chat_endpoint_with_message(app_client):
     assert 'response' in data
     assert isinstance(data['response'], str)
 
-def test_command_endpoint(app_client):
+def test_command_endpoint(app_client, auth_headers):
     """Test command processing endpoint"""
     response = app_client.post('/api/command',
                                 json={'command': 'test'},
-                                content_type='application/json')
+                                content_type='application/json',
+                                headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert 'success' in data

@@ -196,6 +196,8 @@ legacy_backup/
 # User Generated Text & Reports
 *.txt
 !requirements.txt
+!requirements-ci.txt
+!pytest.ini
 *_REPORT.md
 *_PLAN.md
 *_OPTIMIZATION.md
