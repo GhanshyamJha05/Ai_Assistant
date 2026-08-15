@@ -10,14 +10,11 @@ from flask_jwt_extended import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import secrets
 
 # In-memory user database (should be replaced with proper DB in production)
-USERS_DB = {
-    "admin": {
-        "password_hash": generate_password_hash("admin123"),
-        "role": "admin"
-    }
-}
+# Loaded from ADMIN_USERS env var (JSON string) or empty (registration-only)
+USERS_DB = {}
 
 def create_blueprint(assistant):
     """Create and configure the auth blueprint"""
@@ -99,10 +96,12 @@ def create_blueprint(assistant):
             if not pin.isdigit():
                 return jsonify({"error": "PIN must contain only numbers"}), 400
             
-            # Check PIN against environment variable or default
-            valid_pin = os.getenv('ADMIN_PIN', '1234')
-            
-            if pin != valid_pin:
+            # Check PIN against environment variable (required)
+            valid_pin = os.getenv('ADMIN_PIN')
+            if not valid_pin:
+                return jsonify({"error": "Server configuration error: ADMIN_PIN not set"}), 500
+
+            if not secrets.compare_digest(pin, valid_pin):
                 return jsonify({"error": "Invalid PIN"}), 401
             
             # Create JWT token for authenticated user

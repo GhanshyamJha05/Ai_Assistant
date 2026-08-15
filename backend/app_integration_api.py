@@ -41,24 +41,21 @@ def require_auth(f):
     """Decorator to require authentication for API endpoints."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Simple session-based auth for now
         admin_password = os.getenv('ADMIN_PASSWORD')
         if not admin_password:
-            admin_password = 'changeme123'
-            logger.warning("SECURITY WARNING: Using default ADMIN_PASSWORD! Please set it in your environment.")
-        
+            return jsonify({'error': 'Server configuration error: ADMIN_PASSWORD not set'}), 500
+
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
             provided_password = auth_header.split(' ')[1]
-            if provided_password == admin_password:
+            if secrets.compare_digest(provided_password, admin_password):
                 return f(*args, **kwargs)
-        
-        # Check session
+
         if session.get('authenticated'):
             return f(*args, **kwargs)
-            
+
         return jsonify({'error': 'Authentication required'}), 401
-    
+
     return decorated_function
 
 @app.route('/auth/login', methods=['POST'])
@@ -69,10 +66,9 @@ def login():
         password = data.get('password', '')
         admin_password = os.getenv('ADMIN_PASSWORD')
         if not admin_password:
-            admin_password = 'changeme123'
-            logger.warning("SECURITY WARNING: Using default ADMIN_PASSWORD! Please set it in your environment.")
-        
-        if password == admin_password:
+            return jsonify({'error': 'Server configuration error: ADMIN_PASSWORD not set'}), 500
+
+        if secrets.compare_digest(password, admin_password):
             session['authenticated'] = True
             return jsonify({
                 'success': True,

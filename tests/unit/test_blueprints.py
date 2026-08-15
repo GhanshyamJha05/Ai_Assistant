@@ -36,8 +36,8 @@ class TestChatBlueprint:
         response = app_client.post('/api/chat', json={})
         assert response.status_code == 400
     
-    def test_command_endpoint(self, app_client):
-        response = app_client.post('/api/command', json={'command': 'test'})
+    def test_command_endpoint(self, app_client, auth_headers):
+        response = app_client.post('/api/command', json={'command': 'test'}, headers=auth_headers)
         assert response.status_code == 200
         data = response.get_json()
         assert 'success' in data
