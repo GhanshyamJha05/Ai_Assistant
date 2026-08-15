@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Unified Voice Service
 # Consolidated from: voice_service_manager.py, voice_api.py, chat_voice_handlers_new.py
 # =============================================================================
@@ -1024,8 +1024,8 @@ def handle_command(data):
         
         # Check if AI models have finished background initialization
         try:
-            from modern_web_backend import ai_models_ready
-            if not ai_models_ready:
+            import modern_web_backend
+            if not modern_web_backend.ai_models_ready:
                 safe_emit('command_response', {
                     'success': True,
                     'response': "I am still warming up my AI core. Please give me a moment!",

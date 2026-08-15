@@ -228,44 +228,48 @@ def initialize_heavy_ai_models():
     """Run in a background thread to pre-warm the AI models without blocking the UI"""
     global ai_models_ready, ai_models_status
     
-    logger.info("Ã°Å¸Å¡â‚¬ Background AI Initialization started...")
+    logger.info("🚀 Background AI Initialization started...")
     
-    # 1. Start loading the Learning Router
-    ai_models_status = "Loading Learning Matrix..."
-    _get_learning_router_lazy()
-    
-    # 2. Load Smart Memory
-    ai_models_status = "Loading Memory Matrix..."
-    _get_memory_retriever_lazy()
-    
-    # 3. Load Enhanced AI (semantic cache, routers)
-    ai_models_status = "Loading Semantic Engines..."
-    _get_enhanced_ai_lazy()
-    
-    # 4. Load Usage Analyzer
-    ai_models_status = "Loading Pattern Analyzer..."
-    _get_usage_analyzer_lazy()
-    
-    # 5. Load Voice Engines
-    ai_models_status = "Loading Voice Engines..."
-    global vad_detector, noise_reducer
     try:
-        from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector
-        vad_detector = VoiceActivityDetector()
-        logger.info("Ã¢Å“â€¦ Voice Activity Detector initialized in background")
-    except Exception as e:
-        logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â VAD module not available: {e}")
+        # 1. Start loading the Learning Router
+        ai_models_status = "Loading Learning Matrix..."
+        _get_learning_router_lazy()
         
-    try:
-        from ai_assistant.voice.noise_reduction import NoiseReductionSystem
-        noise_reducer = NoiseReductionSystem()
-        logger.info("Ã¢Å“â€¦ Noise Reduction initialized in background")
-    except Exception as e:
-        logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Noise Reduction module not available: {e}")
+        # 2. Load Smart Memory
+        ai_models_status = "Loading Memory Matrix..."
+        _get_memory_retriever_lazy()
         
-    logger.info("Ã¢Å“â€¦ Background AI Initialization COMPLETE!")
-    ai_models_ready = True
-    ai_models_status = "Ready"
+        # 3. Load Enhanced AI (semantic cache, routers)
+        ai_models_status = "Loading Semantic Engines..."
+        _get_enhanced_ai_lazy()
+        
+        # 4. Load Usage Analyzer
+        ai_models_status = "Loading Pattern Analyzer..."
+        _get_usage_analyzer_lazy()
+        
+        # 5. Load Voice Engines
+        ai_models_status = "Loading Voice Engines..."
+        global vad_detector, noise_reducer
+        try:
+            from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector
+            vad_detector = VoiceActivityDetector()
+            logger.info("✅ Voice Activity Detector initialized in background")
+        except Exception as e:
+            logger.warning(f"⚠️ VAD module not available: {e}")
+            
+        try:
+            from ai_assistant.voice.noise_reduction import NoiseReductionSystem
+            noise_reducer = NoiseReductionSystem()
+            logger.info("✅ Noise Reduction initialized in background")
+        except Exception as e:
+            logger.warning(f"⚠️ Noise Reduction module not available: {e}")
+            
+        logger.info("✅ Background AI Initialization COMPLETE!")
+    except Exception as e:
+        logger.error(f"❌ Background AI Initialization failed: {e}")
+    finally:
+        ai_models_ready = True
+        ai_models_status = "Ready"
 
 def start_ai_background_thread():
     """Starts the AI loading thread. Called by desktop app or main."""
@@ -5348,7 +5352,12 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
 
-
+        # Start AI models background initialization
+        try:
+            start_ai_background_thread()
+            print("✅ AI background thread started")
+        except Exception as e:
+            print(f"⚠️ Could not start AI background thread: {e}")
 
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:

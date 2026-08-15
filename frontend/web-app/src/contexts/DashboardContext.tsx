@@ -138,6 +138,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
+    const ttsSpeakingRef = useRef(false); // TRUE while TTS is speaking + cooldown, prevents echo loop
     const [alwaysActive, setAlwaysActive] = useState(false); // Always-active wake word mode
 
     // Fetch Settings on Mount to sync Provider/Model
@@ -490,11 +491,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     return;
                 }
 
-                // BARGE-IN FEATURE: Immediate Silence on User Speech
-                // If the user starts talking (interim or final), stop the AI from speaking immediately.
-                if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                    console.log('🙊 Barge-in: User interrupted AI speech');
-                    window.speechSynthesis.cancel();
+                // PREVENT FEEDBACK LOOP (ECHO)
+                // If the AI is speaking (or just finished speaking), ignore mic input entirely.
+                if (ttsSpeakingRef.current || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                    // console.log('🙊 AI is speaking or in cooldown, ignoring mic input to prevent echo loop.');
+                    return;
                 }
 
                 console.log('🎯 Recognition event received:', {
@@ -1160,6 +1161,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 utterance.onstart = () => {
                     console.log('✅ TTS started');
+                    // Set guard flag BEFORE stopping mic
+                    ttsSpeakingRef.current = true;
                     // Mute microphone to prevent echo loop
                     if (recognition) {
                         try {
@@ -1171,29 +1174,34 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 };
                 
                 utterance.onend = () => {
-                    console.log('✅ TTS ended');
-                    // Resume listening if alwaysActive mode is on
-                    if (recognition && alwaysActive && !userStoppedVoice) {
-                        setTimeout(() => {
+                    console.log('✅ TTS ended, starting 1.5s cooldown before re-enabling mic');
+                    // Keep the guard flag ON for 1.5s after TTS ends
+                    // This prevents the mic from picking up residual speaker audio
+                    setTimeout(() => {
+                        ttsSpeakingRef.current = false;
+                        console.log('✅ TTS cooldown complete, mic re-enabled');
+                        // Resume listening if alwaysActive mode is on
+                        if (recognition && alwaysActive && !userStoppedVoice) {
                             try {
                                 recognition.start();
                             } catch (e) {
                                 console.warn('Could not restart recognition on TTS end:', e);
                             }
-                        }, 300); // 300ms delay to let speakers quiet down
-                    }
+                        }
+                    }, 1500); // 1.5s delay to let speakers fully quiet down
                 };
                 
                 utterance.onerror = (e) => {
                     console.error('❌ TTS error:', e);
-                    // Ensure microphone resumes even if TTS fails
-                    if (recognition && alwaysActive && !userStoppedVoice) {
-                        setTimeout(() => {
+                    // Clear guard and ensure microphone resumes even if TTS fails
+                    setTimeout(() => {
+                        ttsSpeakingRef.current = false;
+                        if (recognition && alwaysActive && !userStoppedVoice) {
                             try {
                                 recognition.start();
                             } catch (err) {}
-                        }, 300);
-                    }
+                        }
+                    }, 1500);
                 };
 
                 synth.speak(utterance);

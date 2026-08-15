@@ -34,10 +34,10 @@ if %ERRORLEVEL% neq 0 (
 
 echo [1/2] Starting Python Backend Server...
 :: Start the backend in a new command window
-start "YourDaddy Backend" cmd /k "python modern_web_backend.py"
+start "YourDaddy Backend" cmd /k "cd backend && python modern_web_backend.py"
 
 echo [2/2] Starting React Frontend...
-cd src\project
+cd frontend\web-app
 :: Ensure dependencies are installed just in case
 if not exist "node_modules\" (
     echo Installing React dependencies...

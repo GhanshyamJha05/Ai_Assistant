@@ -3,10 +3,10 @@
 !pip install -e ".[torch,metrics]"
 !pip install unsloth
 
-import os, shutil, json, gzip, glob
+import os, shutil, json, gzip, glob, re
 
 print("\n🔍 Preparing Dataset...")
-# Auto-detect uploaded dataset in Kaggle
+# Auto-detect uploaded dataset in Kaggle (jaise v3 dataset)
 found_files = glob.glob('/kaggle/**/*windows*.jsonl*', recursive=True)
 valid_files = [f for f in found_files if 'LLaMA-Factory' not in f]
 
@@ -44,12 +44,10 @@ with open(data_file_in, 'r', encoding='utf-8') as infile, open(data_file_out, 'w
                         ast_txt = json.dumps(m["tool_calls"][0].get("function", {}))
                     else: ast_txt = m.get("content", "")
             
-            # Skip empty outputs to avoid training errors
             if not ast_txt: continue
             
             outfile.write(json.dumps({"instruction": sys_txt, "input": usr_txt, "output": ast_txt}, ensure_ascii=False) + '\n')
             count += 1
-            # 10k limit removed to allow full dataset usage
         except Exception: 
             continue
 
@@ -100,6 +98,22 @@ warmup_ratio: 0.1
 bf16: true
 ddp_timeout: 180000000
 """
+
+# --- RESUME FROM CHECKPOINT LOGIC ---
+# Kaggle ke "Add Input" se attach kiye hue purane notebook output me se latest checkpoint dhoondho
+checkpoint_dirs = glob.glob('/kaggle/input/**/LLaMA-Factory/saves/llama3-8b/lora/sft/checkpoint-*', recursive=True)
+latest_checkpoint = None
+
+if checkpoint_dirs:
+    # Checkpoint number ke hisab se sort karo taaki sabse latest (e.g. checkpoint-2000) pick ho
+    checkpoint_dirs.sort(key=lambda x: int(re.search(r'checkpoint-(\d+)', x).group(1)))
+    latest_checkpoint = checkpoint_dirs[-1]
+    print(f"\n🔄 Wapas Training Shuru Karne Ke Liye Checkpoint Mil Gaya: {latest_checkpoint}")
+    
+    # YAML me resume_from_checkpoint line add kar do
+    yaml_config += f"\nresume_from_checkpoint: {latest_checkpoint}\n"
+else:
+    print("\nℹ️ Koi purana checkpoint nahi mila. Check karo ki pichle version ka output attach kiya hai ya nahi!")
 
 with open('/kaggle/working/LLaMA-Factory/train_config.yaml', 'w', encoding='utf-8') as f:
     f.write(yaml_config.strip())
